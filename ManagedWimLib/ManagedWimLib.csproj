@@ -1,0 +1,102 @@
+﻿<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <RootNamespace>ManagedWimLib</RootNamespace>
+    <AssemblyName>ManagedWimLib</AssemblyName>
+  </PropertyGroup>
+  <!-- PackageReference -->
+  <ItemGroup>
+    <PackageReference Include="Joveler.DynLoader" Version="2.3.0" />
+    <PackageReference Include="System.Memory" Version="4.5.5" Condition=" '$(TargetFramework)' == 'net46' or '$(TargetFramework)' == 'netstandard2.0' " />
+    <!-- <PackageReference Include="System.Runtime.InteropServices" Version="4.3.0" Condition=" '$(TargetFramework)' == 'net46' " /> -->
+  </ItemGroup>
+  <!-- Native Library for .NET Framework 4.6 -->
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net46' ">
+    <None Include="runtimes\win-x86\native\*.dll">
+      <Link>x86\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\win-x64\native\*.dll">
+      <Link>x64\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\win-arm64\native\*.dll">
+      <Link>arm64\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <!-- Native Library for .NET Standard 2.0 & .NET Core 3.1 -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0' or '$(TargetFramework)' == 'netcoreapp3.1'">
+    <None Include="runtimes\win-x86\native\*.dll">
+      <Link>runtimes\win-x86\native\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\win-x64\native\*.dll">
+      <Link>runtimes\win-x64\native\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\win-arm64\native\*.dll">
+      <Link>runtimes\win-arm64\native\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\linux-x64\native\*.so">
+      <Link>runtimes\linux-x64\native\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\linux-arm\native\*.so">
+      <Link>runtimes\linux-arm\native\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\linux-arm64\native\*.so">
+      <Link>runtimes\linux-arm64\native\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\osx-x64\native\*.dylib">
+      <Link>runtimes\osx-x64\native\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="runtimes\osx-arm64\native\*.dylib">
+      <Link>runtimes\osx-arm64\native\%(FileName)%(Extension)</Link> <!-- Project Reference -->
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <!-- NuGet Pacakge -->
+  <ItemGroup>
+    <!-- Nuget README -->
+    <None Include="NUGET_README.md" Pack="true" PackagePath="\README.md" />
+    <!-- Build Script for .NET Framework -->
+    <None Include="ManagedWimLib.netfx.targets" Pack="true" PackagePath="build\net46\ManagedWimLib.targets" />
+    <!-- NuGet Pacakge Icon -->
+    <None Include="..\Image\Logo.png" Pack="true" PackagePath="images\Logo.png" />
+    <!-- Native Library -->
+    <None Include="runtimes\win-x86\native\*.dll" Pack="true" PackagePath="runtimes\win-x86\native" />
+    <None Include="runtimes\win-x64\native\*.dll" Pack="true" PackagePath="runtimes\win-x64\native" />
+    <None Include="runtimes\win-arm64\native\*.dll" Pack="true" PackagePath="runtimes\win-arm64\native" />
+    <None Include="runtimes\linux-x64\native\*.so" Pack="true" PackagePath="runtimes\linux-x64\native" />
+    <None Include="runtimes\linux-arm\native\*.so" Pack="true" PackagePath="runtimes\linux-arm\native" />
+    <None Include="runtimes\linux-arm64\native\*.so" Pack="true" PackagePath="runtimes\linux-arm64\native" />
+    <None Include="runtimes\osx-x64\native\*.dylib" Pack="true" PackagePath="runtimes\osx-x64\native" />
+    <None Include="runtimes\osx-arm64\native\*.dylib" Pack="true" PackagePath="runtimes\osx-arm64\native" />
+  </ItemGroup>
+  <!-- etc -->
+  <ItemGroup>
+    <None Include="..\.editorconfig" Link=".editorconfig" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Compressors\Compressor.cs" />
+    <Compile Include="Compressors\Decompressor.cs" />
+    <Compile Include="Helper.cs" />
+    <Compile Include="IterateCallback.cs" />
+    <Compile Include="NativeStructs.cs" />
+    <Compile Include="ProgressCallback.cs" />
+    <Compile Include="WimLibException.cs" />
+    <Compile Include="WimLibLoader.cs" />
+    <Compile Include="WimLibLoadManager.cs" />
+    <Compile Include="WimStruct.cs" />
+  </ItemGroup>
+</Project>

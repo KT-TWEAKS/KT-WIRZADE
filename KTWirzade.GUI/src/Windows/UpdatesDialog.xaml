@@ -1,0 +1,463 @@
+<controls:AcrylicWindow x:Class="KTWirzade.GUI.Windows.UpdatesDialog"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:KTWirzade.GUI.Windows"
+             xmlns:viewmodels="clr-namespace:KTWirzade.GUI.ViewModels"
+             xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
+             xmlns:gui="clr-namespace:KTWirzade.GUI" 
+             xmlns:fluent="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
+             xmlns:system="clr-namespace:System;assembly=mscorlib" 
+             xmlns:generic="clr-namespace:System.Collections.Generic;assembly=mscorlib" 
+             Height="462" Width="422" Style="{DynamicResource Window}" WindowStartupLocation="CenterOwner"
+             RenderTransformOrigin="0.5,0.5" Title="Updates" CornerType="Round" 
+             MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
+             MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}">
+    <UIElement.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform CenterX="100" x:Name="updatesscale" />
+        </TransformGroup>
+    </UIElement.RenderTransform>
+    <Grid Name="RootWindow" HorizontalAlignment="Center" Background="{DynamicResource PrimaryBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="52" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <DockPanel Name="TitleBar" Dock="Top" VerticalAlignment="Top">
+            <Image Style="{StaticResource QualityImage}" Margin="8, 6,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="18" Height="18" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" DockPanel.Dock="Right" VerticalAlignment="Top" IsEnabled="{Binding CloseButtonActive}" Click="CloseButton_Click" />
+            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,9.5,0,5" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Text="Updates" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
+        </DockPanel>
+        <Grid Row="1">
+            <ScrollViewer Name="scrollViewer" Padding="30,0" Width="422" VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Hidden" HorizontalAlignment="Center" PreviewMouseWheel="scrollViewer_PreviewMouseWheel">
+                <ItemsControl Name="PlaybookSidebarItems" VerticalAlignment="Top">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate x:Name="Template">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type gui:PlaybookGUI}">
+                            <Border Name="PlaybookContainer" Opacity="0" Height="34" Width="110" Margin="0,0,15,0" CornerRadius="6" MouseLeftButtonDown="SelectItem">
+                                <Border.Background>
+                                    <SolidColorBrush x:Name="FadeColor" Color="{DynamicResource PlaybookFadeColor}" Opacity="0" />
+                                </Border.Background>
+                                <Grid>
+                                    <TextBlock Margin="10,6,10,0" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" FontSize="14" Text="{Binding Name}" />
+                                    <Rectangle Width="0" Height="3" Margin="46,31,0,0" HorizontalAlignment="Left" Fill="{DynamicResource PlaybookRectColor}" StrokeThickness="0" VerticalAlignment="Top" RadiusX="1" RadiusY="3" />
+                                </Grid>
+                                <FrameworkElement.Triggers>
+                                    <EventTrigger RoutedEvent="Border.Loaded">
+                                        <BeginStoryboard>
+                                            <Storyboard>
+                                                <DoubleAnimation Duration="0:0:0.1" To="1" Storyboard.TargetName="PlaybookContainer" Storyboard.TargetProperty="Opacity" />
+                                            </Storyboard>
+                                        </BeginStoryboard>
+                                    </EventTrigger>
+                                    <EventTrigger RoutedEvent="Border.MouseEnter">
+                                        <EventTrigger.Actions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0:0:0.15" To="0.04" Storyboard.TargetName="FadeColor" Storyboard.TargetProperty="Opacity" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger.Actions>
+                                    </EventTrigger>
+                                    <EventTrigger RoutedEvent="Border.MouseLeave">
+                                        <EventTrigger.Actions>
+                                            <BeginStoryboard>
+                                                <Storyboard>
+                                                    <DoubleAnimation Duration="0:0:0.15" To="0" Storyboard.TargetName="FadeColor" Storyboard.TargetProperty="Opacity" />
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger.Actions>
+                                    </EventTrigger>
+                                </FrameworkElement.Triggers>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <Button Name="MoveLeftButton" Width="25" Height="25" Margin="0,4,0,0" Visibility="Hidden" VerticalAlignment="Top" HorizontalAlignment="Left" Click="MoveLeft_OnClick">
+                <FrameworkElement.Style>
+                    <Style TargetType="{x:Type Button}">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type Button}">
+                                    <Border CornerRadius="0,12,12,0">
+                                        <Border.Background>
+                                            <SolidColorBrush x:Name="LeftArrowBackground" Color="{DynamicResource PlaybookFadeColor}" Opacity="0" />
+                                        </Border.Background>
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <FrameworkElement.Triggers>
+                                            <EventTrigger RoutedEvent="MouseEnter">
+                                                <EventTrigger.Actions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Duration="0:0:0.1" To="0.1" Storyboard.TargetName="LeftArrowBackground" Storyboard.TargetProperty="Opacity" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger.Actions>
+                                            </EventTrigger>
+                                            <EventTrigger RoutedEvent="MouseLeave">
+                                                <EventTrigger.Actions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Duration="0:0:0.2" To="0" Storyboard.TargetName="LeftArrowBackground" Storyboard.TargetProperty="Opacity" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger.Actions>
+                                            </EventTrigger>
+                                        </FrameworkElement.Triggers>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </FrameworkElement.Style>
+                <fluent:SymbolIcon fluent:SymbolIcon.Symbol="ChevronLeft" TextBlock.Foreground="{DynamicResource TextPrimaryBrush}" TextBlock.FontSize="15" FrameworkElement.UseLayoutRounding="True" TextBlock.FontWeight="Bold" />
+            </Button>
+            <Button Name="MoveRightButton" Width="25" Height="25" Margin="0,2,0,0" Visibility="Hidden" VerticalAlignment="Top" HorizontalAlignment="Right" Click="MoveRight_OnClick">
+                <FrameworkElement.Style>
+                    <Style TargetType="{x:Type Button}">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="{x:Type Button}">
+                                    <Border CornerRadius="12,0,0,12">
+                                        <Border.Background>
+                                            <SolidColorBrush x:Name="RightArrowBackground" Color="{DynamicResource PlaybookFadeColor}" Opacity="0" />
+                                        </Border.Background>
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        <FrameworkElement.Triggers>
+                                            <EventTrigger RoutedEvent="MouseEnter">
+                                                <EventTrigger.Actions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Duration="0:0:0.1" To="0.1" Storyboard.TargetName="RightArrowBackground" Storyboard.TargetProperty="Opacity" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger.Actions>
+                                            </EventTrigger>
+                                            <EventTrigger RoutedEvent="MouseLeave">
+                                                <EventTrigger.Actions>
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Duration="0:0:0.2" To="0" Storyboard.TargetName="RightArrowBackground" Storyboard.TargetProperty="Opacity" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger.Actions>
+                                            </EventTrigger>
+                                        </FrameworkElement.Triggers>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </FrameworkElement.Style>
+                <fluent:SymbolIcon fluent:SymbolIcon.Symbol="ChevronRight" FrameworkElement.UseLayoutRounding="True" TextBlock.Foreground="{DynamicResource TextPrimaryBrush}" TextBlock.FontSize="15" TextBlock.FontWeight="Bold" />
+            </Button>
+        </Grid>
+        <Grid Name="MainContainerGrid" Row="2" HorizontalAlignment="Center" Margin="0,0,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="422" />
+                <ColumnDefinition Width="422" />
+                <ColumnDefinition Width="422" />
+            </Grid.ColumnDefinitions>
+            <Grid Column="1" Margin="0,0,0,0">
+                <Grid Name="ContentGrid" Visibility="{Binding ContentGridVisibility}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="147" />
+                        <RowDefinition Height="143" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Name="PBDescriptionGrid" VerticalAlignment="Top" Margin="21,0" DataContext="{Binding SelectedPlaybook}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="122" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid HorizontalAlignment="Center" Width="101" Margin="9,4,12,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="91" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Image Style="{StaticResource QualityImage}" Width="71" MaxHeight="87" HorizontalAlignment="Center" Source="{Binding Icon}" />
+                            <StackPanel Grid.Row="1" HorizontalAlignment="Center">
+                                <TextBlock LineStackingStrategy="BlockLineHeight" LineHeight="15.5" FontSize="14" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                                <TextBlock LineStackingStrategy="BlockLineHeight" Margin="0,-1,0,0" LineHeight="18" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" Text="{Binding Path=DisplayUsername}" />
+                            </StackPanel>
+                        </Grid>
+                        <Border Grid.Column="1" Style="{DynamicResource ContentBox}" Padding="0" Height="122">
+                            <StackPanel>
+                                <Border BorderBrush="{DynamicResource ContentBoxBorderBrush}" BorderThickness="0,0,0,1" UseLayoutRounding="True" Padding="17,10,17,9">
+                                    <TextBlock Text="Description" UseLayoutRounding="True" FontSize="12" FontWeight="Bold" />
+                                </Border>
+                                <TextBlock TextTrimming="CharacterEllipsis" TextWrapping="Wrap" Margin="17, 16" Text="{Binding Details}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                    <Grid Name="PBUpdateGrid" Row="1" Margin="21,0">
+                        <Border VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Panel.ZIndex="2">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="31" />
+                                    <ColumnDefinition Width="130" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <fluent:SymbolIcon fluent:SymbolIcon.Symbol="ArrowSync" FrameworkElement.UseLayoutRounding="True" TextBlock.Foreground="{DynamicResource TextPrimaryBrush}" TextBlock.FontSize="24" FrameworkElement.Margin="-2                     ,1,0,0" FrameworkElement.HorizontalAlignment="Left" FrameworkElement.VerticalAlignment="Center" UIElement.Opacity="{Binding UpdateBoxOpacity}" />
+                                <Grid Column="1" Opacity="{Binding UpdateBoxOpacity}">
+                                    <Grid DataContext="{Binding SelectedPlaybook}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <TextBlock TextTrimming="CharacterEllipsis" Margin="0,-4,0,0" FontSize="14" Text="{Binding Version, StringFormat=v{0}}" />
+                                        <TextBlock Grid.Row="1" Margin="0,1,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Text="{Binding LastCheckedString, StringFormat=Last checked: {0}}" />
+                                        <TextBlock FontSize="11" Margin="0,0,0,-4" Grid.Row="2" VerticalAlignment="Bottom">
+                                        <Hyperlink Click="Hyperlink_OnClick" MouseEnter="Hyperlink_OnMouseEnter" MouseLeave="Hyperlink_OnMouseLeave">Release notes</Hyperlink>
+                                        </TextBlock>
+                                    </Grid>
+                                </Grid>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Name="PercentText" Text="" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" Opacity="0.85" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <Grid Name="LoadContainer" HorizontalAlignment="Right" Visibility="Collapsed" Width="16" Height="16" Margin="0,0,8,0" />
+                                    <Button HorizontalAlignment="Right" Style="{DynamicResource ContentBoxButton}" Visibility="{Binding CheckVisibility}" IsEnabled="{Binding UpdateButtonsActive}" Click="CheckForUpdates_OnClick">
+                                        <TextBlock VerticalAlignment="Center" Text="Check for updates" FontSize="14" Margin="0,0,1,1" />
+                                    </Button>
+                                    <Button HorizontalAlignment="Right" Style="{DynamicResource ContentBoxButton}" Visibility="{Binding InstallVisibility}" IsEnabled="{Binding UpdateButtonsActive}" Click="InstallButton_OnClick">
+                                        <TextBlock VerticalAlignment="Center" Text="Install" FontSize="14" Margin="0,0,1,1" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Grid Name="ModuleGrid" RenderTransformOrigin="0.5,0.5" ZIndex="1">
+                            <UIElement.RenderTransform>
+                                <TransformGroup>
+                                    <ScaleTransform CenterX="5" x:Name="moduletransform" />
+                                </TransformGroup>
+                            </UIElement.RenderTransform>
+                            <Border VerticalAlignment="Top" Height="43" Padding="15,0,15,0" Margin="0,79,0,0" Style="{DynamicResource ContentBox}" Background="{DynamicResource UpdatesUpToDateBrush}" Visibility="{Binding UpToDateVisibility}">
+                                <StackPanel Orientation="Horizontal" UseLayoutRounding="True" Margin="4,0,0,0" VerticalAlignment="Center">
+                                    <Grid>
+                                        <Rectangle RadiusX="14" RadiusY="14" Width="11" Height="12" Fill="#FFFFFFFF" HorizontalAlignment="Left" Margin="2,4,0,0" VerticalAlignment="Top" />
+                                        <fluent:SymbolIcon fluent:SymbolIcon.Symbol="Info" TextBlock.FontSize="19" IconVariant="Filled" TextBlock.Foreground="#256eca" FrameworkElement.Margin="-2,0,0,-2" />
+                                    </Grid>
+                                    <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="13" Margin="14,0,0,0" Text="{Binding UpToDateText}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Height="43" Padding="15,0,15,0" VerticalAlignment="Top" Margin="0,79,0,0" Style="{DynamicResource ContentBox}" Background="{DynamicResource UpdatesUpdateReadyBrush}" Visibility="{Binding UpdateReadyVisibility}">
+                                <StackPanel Orientation="Horizontal" UseLayoutRounding="True" Margin="4,0,0,0" VerticalAlignment="Center">
+                                    <Image Style="{StaticResource QualityImage}" Source="/Icons/checkmark_green_solid_32.png" Height="15" />
+                                    <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="13" Margin="14,0,0,0" DataContext="{Binding SelectedPlaybook}" Text="{Binding PendingUpdate, StringFormat=A new version is available! ({0})}" />
+                                </StackPanel>
+                            </Border>
+                        </Grid>
+                    </Grid>
+                    <Grid Name="PBInfoGrid" Row="2" Margin="21,0" Visibility="{Binding PublisherVisibility}">
+                        <Border VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="58" Padding="15,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="31" />
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <fluent:SymbolIcon fluent:SymbolIcon.Symbol="MailInboxAll" FrameworkElement.UseLayoutRounding="True" TextBlock.Foreground="{DynamicResource TextPrimaryBrush}" TextBlock.FontSize="24" FrameworkElement.Margin="-2,1,0,0" FrameworkElement.HorizontalAlignment="Left" FrameworkElement.VerticalAlignment="Center" UIElement.Opacity="{Binding PublisherOpacity}" />
+                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Publisher Info" FontSize="15" Opacity="{Binding PublisherOpacity}" />
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Right" Orientation="Horizontal" Margin="0,0,1,0">
+                                    <Button Style="{DynamicResource ContentBoxButton}" Visibility="{Binding SourceVisibility}" Margin="{Binding SourceMargin}" IsEnabled="{Binding SourceActive}" Click="SourceButton_OnClick">
+                                        <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="{Binding SourceText}" />
+                                    </Button>
+                                    <Button Style="{DynamicResource ContentBoxButton}" Visibility="{Binding DonateVisibility}" IsEnabled="{Binding DonateActive}" Click="DonateButton_OnClick">
+                                        <TextBlock VerticalAlignment="Center" FontSize="13" Margin="0,0,0,1" Text="{Binding DonateText}" />
+                                    </Button>
+                                    <Button Style="{DynamicResource ContentBoxButton}" IsEnabled="False" Visibility="{Binding NotVerifiedVisibility}">
+                                        <TextBlock VerticalAlignment="Center" Text="Not verified" FontSize="13" Margin="0,0,0,1" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+                <Grid Name="NoneGrid" Row="2" Margin="21,0" Visibility="{Binding NoneGridVisibility}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="290" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Name="DragBoxContainer" Margin="0,0,0,10">
+                        <Button Name="DragBox" Style="{DynamicResource DragBox}" Click="DragBox_OnClick" Drop="DragBox_OnDrop" />
+                        <Grid Name="PBLoadContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Width="25" Height="25" Margin="0,-3,0,0" />
+                    </Grid>
+                    <Border Grid.Row="1" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="58" Padding="15,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <fluent:SymbolIcon fluent:SymbolIcon.Symbol="BookQuestionMark" FrameworkElement.UseLayoutRounding="True" TextBlock.Foreground="{DynamicResource TextPrimaryBrush}" TextBlock.FontSize="24" FrameworkElement.Margin="2,1,0,0" FrameworkElement.HorizontalAlignment="Left" FrameworkElement.VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Create a Playbook" FontSize="15" />
+                            <Button Grid.Column="2" HorizontalAlignment="Right" Style="{DynamicResource ContentBoxButton}" Margin="0,0,1,0" Click="LearnButton_OnClick">
+                                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
+                                    <Image Height="12" Style="{StaticResource QualityImage}" Source="{DynamicResource ExternalLink32}" Margin="0,0,9,0" />
+                                    <TextBlock VerticalAlignment="Center" Text="Learn how" FontSize="14" Margin="0,0,0,1" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+            <Grid Name="TransitionGrid" Column="0">
+                <Grid Name="TransitionContentGrid" Visibility="{Binding TransitionContentGridVisibility}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="147" />
+                        <RowDefinition Height="143" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Name="TransitionPBDescriptionGrid" VerticalAlignment="Top" Margin="21,0" DataContext="{Binding TransitionSelectedPlaybook}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="122" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid HorizontalAlignment="Center" Width="101" Margin="9,4,12,0">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="91" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            <Image Style="{StaticResource QualityImage}" Width="71" MaxHeight="87" HorizontalAlignment="Center" Source="{Binding Icon}" />
+                            <StackPanel Grid.Row="1" HorizontalAlignment="Center">
+                                <TextBlock LineStackingStrategy="BlockLineHeight" LineHeight="15.5" FontSize="14" HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                                <TextBlock LineStackingStrategy="BlockLineHeight" Margin="0,-1,0,0" LineHeight="18" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" HorizontalAlignment="Center" Text="{Binding Path=DisplayUsername}" />
+                            </StackPanel>
+                        </Grid>
+                        <Border Grid.Column="1" Style="{DynamicResource ContentBox}" Padding="0" Height="122">
+                            <StackPanel>
+                                <Border BorderBrush="{DynamicResource ContentBoxBorderBrush}" BorderThickness="0,0,0,1" UseLayoutRounding="True" Padding="17,10,17,9">
+                                    <TextBlock Text="Description" UseLayoutRounding="True" FontSize="12" FontWeight="Bold" />
+                                </Border>
+                                <TextBlock TextTrimming="CharacterEllipsis" TextWrapping="Wrap" Margin="17, 16" Text="{Binding Details}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                    <StackPanel Name="TransitionPBUpdateGrid" Grid.Row="1" Margin="21,0">
+                        <Border VerticalAlignment="Top" Style="{DynamicResource ContentBox}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="31" />
+                                    <ColumnDefinition Width="130" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <fluent:SymbolIcon fluent:SymbolIcon.Symbol="ArrowSync" FrameworkElement.UseLayoutRounding="True" TextBlock.Foreground="{DynamicResource TextPrimaryBrush}" TextBlock.FontSize="24" FrameworkElement.Margin="-2                     ,1,0,0" FrameworkElement.HorizontalAlignment="Left" FrameworkElement.VerticalAlignment="Center" UIElement.Opacity="{Binding TransitionUpdateBoxOpacity}" />
+                                <Grid Column="1" Opacity="{Binding TransitionUpdateBoxOpacity}">
+                                    <Grid DataContext="{Binding TransitionSelectedPlaybook}">
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                            <RowDefinition Height="Auto" />
+                                        </Grid.RowDefinitions>
+                                        <TextBlock TextTrimming="CharacterEllipsis" Margin="0,-4,0,0" FontSize="14" Text="{Binding Version, StringFormat=v{0}}" />
+                                        <TextBlock Grid.Row="1" Margin="0,1,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="11" Text="{Binding LastCheckedString, StringFormat=Last checked: {0}}" />
+                                        <TextBlock FontSize="11" Margin="0,0,0,-4" Grid.Row="2" VerticalAlignment="Bottom">
+                                        <Hyperlink Click="Hyperlink_OnClick" MouseEnter="Hyperlink_OnMouseEnter" MouseLeave="Hyperlink_OnMouseLeave">Release notes</Hyperlink>
+                                        </TextBlock>
+                                    </Grid>
+                                </Grid>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                                    <TextBlock Name="TransitionPercentText" Text="" FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" Opacity="0.85" Margin="0,0,8,0" VerticalAlignment="Center" />
+                                    <Grid Name="TransitionLoadContainer" HorizontalAlignment="Right" Visibility="Collapsed" Width="16" Height="16" Margin="0,0,8,0" />
+                                    <Button HorizontalAlignment="Right" Style="{DynamicResource ContentBoxButton}" Visibility="{Binding TransitionCheckVisibility}" IsEnabled="{Binding TransitionUpdateButtonsActive}" Click="CheckForUpdates_OnClick">
+                                        <TextBlock VerticalAlignment="Center" Text="Check for updates" FontSize="14" Margin="0,0,1,1" />
+                                    </Button>
+                                    <Button HorizontalAlignment="Right" Style="{DynamicResource ContentBoxButton}" Visibility="{Binding TransitionInstallVisibility}" IsEnabled="{Binding TransitionUpdateButtonsActive}" Click="InstallButton_OnClick">
+                                        <TextBlock VerticalAlignment="Center" Text="Install" FontSize="14" Margin="0,0,1,1" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                        <Border VerticalAlignment="Top" Height="43" Padding="15,0,15,0" Margin="0,5,0,0" Style="{DynamicResource ContentBox}" Background="{DynamicResource UpdatesUpToDateBrush}" Visibility="{Binding TransitionUpToDateVisibility}">
+                            <StackPanel Orientation="Horizontal" UseLayoutRounding="True" Margin="4,0,0,0" VerticalAlignment="Center">
+                                <Grid>
+                                    <Rectangle Margin="-1,0,0,-1" RadiusX="14" RadiusY="14" Width="12" Height="12" Fill="#FFFFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <fluent:SymbolIcon fluent:SymbolIcon.Symbol="Info" TextBlock.FontSize="19" IconVariant="Filled" TextBlock.Foreground="#256eca" FrameworkElement.Margin="-2,0,0,-2" />
+                                </Grid>
+                                <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="13" Margin="14,0,0,0" Text="{Binding TransitionUpToDateText}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Height="43" Padding="15,0,15,0" VerticalAlignment="Top" Margin="0,5,0,0" Style="{DynamicResource ContentBox}" Background="{DynamicResource UpdatesUpdateReadyBrush}" Visibility="{Binding TransitionUpdateReadyVisibility}">
+                            <StackPanel Orientation="Horizontal" UseLayoutRounding="True" Margin="4,0,0,0" VerticalAlignment="Center">
+                                <Image Style="{StaticResource QualityImage}" Source="/Icons/checkmark_green_solid_32.png" Height="15" />
+                                <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontWeight="Bold" FontSize="13" Margin="14,0,0,0" DataContext="{Binding TransitionSelectedPlaybook}" Text="{Binding PendingUpdate, StringFormat=A new version is available! ({0})}" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                    <Grid Name="TransitionPBInfoGrid" Row="2" Margin="21,0" Visibility="{Binding TransitionPublisherVisibility}">
+                        <Border VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="58" Padding="15,0">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="31" />
+                                    <ColumnDefinition Width="90" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <fluent:SymbolIcon fluent:SymbolIcon.Symbol="MailInboxAll" FrameworkElement.UseLayoutRounding="True" TextBlock.Foreground="{DynamicResource TextPrimaryBrush}" TextBlock.FontSize="24" FrameworkElement.Margin="-2,1,0,0" FrameworkElement.HorizontalAlignment="Left" FrameworkElement.VerticalAlignment="Center" UIElement.Opacity="{Binding TransitionPublisherOpacity}" />
+                                <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Publisher Info" FontSize="15" Opacity="{Binding TransitionPublisherOpacity}" />
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Right" Orientation="Horizontal" Margin="0,0,1,0">
+                                    <Button Style="{DynamicResource ContentBoxButton}" Visibility="{Binding TransitionSourceVisibility}" Margin="{Binding TransitionSourceMargin}" IsEnabled="{Binding TransitionSourceActive}" Click="SourceButton_OnClick">
+                                        <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="{Binding TransitionSourceText}" />
+                                    </Button>
+                                    <Button Style="{DynamicResource ContentBoxButton}" Visibility="{Binding TransitionDonateVisibility}" IsEnabled="{Binding TransitionDonateActive}" Click="DonateButton_OnClick">
+                                        <TextBlock VerticalAlignment="Center" FontSize="13" Margin="0,0,0,1" Text="{Binding TransitionDonateText}" />
+                                    </Button>
+                                    <Button Style="{DynamicResource ContentBoxButton}" IsEnabled="False" Visibility="{Binding TransitionNotVerifiedVisibility}">
+                                        <TextBlock VerticalAlignment="Center" Text="Not verified" FontSize="13" Margin="0,0,0,1" />
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </Grid>
+                </Grid>
+                <Grid Name="TransitionNoneGrid" Row="2" Margin="21,0" Visibility="{Binding TransitionNoneGridVisibility}">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="290" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Grid Name="TransitionDragBoxContainer" Margin="0,0,0,10">
+                        <Button Name="TransitionDragBox" Style="{DynamicResource DragBox}" Click="DragBox_OnClick" Drop="DragBox_OnDrop" />
+                        <Grid Name="TransitionPBLoadContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Width="25" Height="25" Margin="0,-1,0,0" />
+                    </Grid>
+                    <Border Grid.Row="1" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="58" Padding="15,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="36" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <fluent:SymbolIcon fluent:SymbolIcon.Symbol="BookQuestionMark" FrameworkElement.UseLayoutRounding="True" TextBlock.Foreground="{DynamicResource TextPrimaryBrush}" TextBlock.FontSize="24" FrameworkElement.Margin="2,1,0,0" FrameworkElement.HorizontalAlignment="Left" FrameworkElement.VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Create a Playbook" FontSize="15" />
+                            <Button Grid.Column="2" HorizontalAlignment="Right" Style="{DynamicResource ContentBoxButton}" Margin="0,0,1,0" Click="LearnButton_OnClick">
+                                <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
+                                    <Image Height="12" Style="{StaticResource QualityImage}" Source="{DynamicResource ExternalLink32}" Margin="0,0,9,0" />
+                                    <TextBlock VerticalAlignment="Center" Text="Learn how" FontSize="14" Margin="0,0,0,1" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Grid>
+        </Grid>
+        <Image Source="/Icons/os/arch.png" Visibility="Collapsed" Grid.RowSpan="4" />
+        <Popup Name="Popup" Grid.RowSpan="3" UseLayoutRounding="True" Width="422" Height="462" VerticalOffset="-462" IsOpen="False" StaysOpen="True" PopupAnimation="Fade" AllowsTransparency="True" PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}">
+            <Border UseLayoutRounding="True" Padding="97,56,96,57" CornerRadius="{DynamicResource PopupCornerRadius}" Background="#40000000">
+                <Border UseLayoutRounding="True" Width="229" Height="349" CornerRadius="9" BorderThickness="1" Background="{DynamicResource LicensePopupBackground}">
+                    <Border.BorderBrush>
+                        <SolidColorBrush Color="#8e8e8e" Opacity="0.70" />
+                    </Border.BorderBrush>
+                    <UIElement.Effect>
+                        <DropShadowEffect ShadowDepth="0" BlurRadius="40" Opacity="0.27" />
+                    </UIElement.Effect>
+                    <controls:PatreonModel x:Name="PatreonControl" />
+                </Border>
+            </Border>
+        </Popup>
+    </Grid>
+</controls:AcrylicWindow>

@@ -1,0 +1,49 @@
+<controls:AcrylicWindow x:Class="KTWirzade.GUI.Windows.AboutWindow"
+                        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+                        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+                        xmlns:local="clr-namespace:KTWirzade.GUI.Windows"
+                        xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
+                        xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
+                        mc:Ignorable="d" Title="About" Height="380" Width="250" Style="{DynamicResource AcrylicWindow}" 
+                        WindowStartupLocation="CenterOwner" RenderTransformOrigin="0.5,0.5"
+                        d:DesignHeight="450" d:DesignWidth="800">
+
+    <UIElement.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform CenterX="0" x:Name="aboutscale" />
+        </TransformGroup>
+    </UIElement.RenderTransform>
+    <DockPanel Name="RootWindow" Background="{DynamicResource AboutBrush}">
+        <DockPanel Name="TitleBar" Dock="Top" MaxHeight="50">
+            <Image Style="{StaticResource QualityImage}" Margin="7, 7,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="18" Height="18" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
+            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,9.5,0,5" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Text="About" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
+        </DockPanel>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="173" />
+                <RowDefinition Height="50" />
+                <RowDefinition Height="70" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Image Style="{DynamicResource QualityImage}" Source="{DynamicResource AmelioratedLogo}" VerticalAlignment="Center" Height="117" />
+            <StackPanel Grid.Row="1">
+                <TextBlock FontSize="16" FontWeight="Bold" Text="Ameliorated Software" HorizontalAlignment="Center" />
+                <TextBlock Name="VersionText" HorizontalAlignment="Center" Text="AME Closed Beta" FontSize="11" />
+            </StackPanel>
+            <TextBlock Grid.Row="2" Margin="18,0" TextWrapping="Wrap" TextAlignment="Center" HorizontalAlignment="Center" Text="This application was designed by a small team of privacy and functional software enthusiasts at Ameliorated." FontSize="13" />
+            <StackPanel Grid.Row="3" HorizontalAlignment="Center" Margin="22,0,22,0" Orientation="Horizontal" VerticalAlignment="Top">
+                <Button Name="DiscordButton" Padding="12,4,12,0" Margin="0,-4,0,0" Style="{DynamicResource TopButtonOpaque}" Click="DiscordButton_OnClick">
+                    <StackPanel Orientation="Horizontal">
+                        <wpf:SymbolIcon wpf:SymbolIcon.Symbol="CalendarChat" TextBlock.Foreground="{DynamicResource TextPrimaryBrush}" TextBlock.FontSize="22" />
+                        <TextBlock FontSize="13" Text="Discord" Margin="5,2,0,0" />
+                    </StackPanel>
+                </Button>
+                <Image Style="{StaticResource QualityImage}" Margin="14,0,0,0" Source="/Icons/actrons.png" Height="23" VerticalAlignment="Center" />
+                <TextBlock Margin="8,0,0,0" Text="Actrons" VerticalAlignment="Center" FontSize="12" />
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</controls:AcrylicWindow>

@@ -1,0 +1,90 @@
+<UserControl x:Class="KTWirzade.GUI.Views.IsoLicensePageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:KTWirzade.GUI.Views"
+             xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
+             xmlns:gui="clr-namespace:KTWirzade.GUI"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    
+    <StackPanel Margin="0,0,0,-13">
+        <StackPanel Margin="0,0,0,0" MinHeight="70">
+            <TextBlock Style="{DynamicResource Header}" Margin="0,0,0,13" TextTrimming="WordEllipsis" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" Text="{Binding ISO.Title}" />
+            <TextBlock HorizontalAlignment="Left" FontSize="13" Text="Please acknowledge the various license agreements on this page" Foreground="{DynamicResource PageSubtextColor}" />
+            <controls:TextDropDownBox x:Name="CoreDropDown" Click="CoreDropDown_OnClick" MaxHeight="238" ThumbHeight="50" Margin="0,25,0,15" Title="AME Core">
+                <controls:TextDropDownBox.Contents>
+                    <StackPanel Margin="0,0,0,0" CanHorizontallyScroll="False" Height="357">
+                        <TextBlock FontWeight="Bold" UseLayoutRounding="True" RenderOptions.ClearTypeHint="Enabled" Text="MIT License" TextWrapping="Wrap" />
+                        <TextBlock />
+                        <TextBlock Margin="0,2,0,0" TextWrapping="Wrap" Text="Copyright (c) 2023 Ameliorated LLC" />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" Text="Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:" />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" Text="The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" Text="THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE." />
+                    </StackPanel>
+                </controls:TextDropDownBox.Contents>
+            </controls:TextDropDownBox>
+            <controls:TextDropDownBox x:Name="GUIDropDown" Click="GUIDropDown_OnClick" MaxHeight="238" Title="AME GUI">
+                <controls:TextDropDownBox.Contents>
+                    <StackPanel Margin="0,0,0,0" CanHorizontallyScroll="False" Height="1006">
+                        <TextBlock FontWeight="Bold" UseLayoutRounding="True" RenderOptions.ClearTypeHint="Enabled" Text="END USER LICENSE AGREEMENT (EULA)" TextWrapping="Wrap" />
+                        <TextBlock />
+                        <TextBlock Margin="0,2,0,0" Text="PLEASE READ THIS END USER LICENSE AGREEMENT (&quot;AGREEMENT&quot;) CAREFULLY BEFORE USING THE GRAPHICAL USER INTERFACE (GUI) COMPONENTS OF THE AME BETA SOFTWARE (&quot;SOFTWARE&quot;) PROVIDED BY AMELIORATED LLC (&quot;AMELIORATED&quot;). BY USING THE SOFTWARE, YOU ARE AGREEING TO BE BOUND BY THE TERMS OF THIS AGREEMENT. IF YOU DO NOT AGREE TO THE TERMS OF THIS AGREEMENT, DO NOT USE THE SOFTWARE." TextWrapping="Wrap" />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="LICENSE GRANT" />
+                        <TextBlock TextWrapping="Wrap" Text="Ameliorated grants you a non-exclusive, non-transferable license to use the GUI components of the Software solely for your own personal or business purposes, subject to the terms and conditions of this Agreement." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="OWNERSHIP" />
+                        <TextBlock TextWrapping="Wrap" Text="The Software is owned and copyrighted by Ameliorated. Ameliorated reserves all rights not expressly granted to you." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="RESTRICTIONS" />
+                        <TextBlock TextWrapping="Wrap" Text="You may not modify, sell, or sublicense the GUI components of the Software except as expressly permitted by Ameliorated in writing. You may not reverse engineer, decompile, or disassemble the GUI components of the Software." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="DISCLAIMER OF WARRANTIES" />
+                        <TextBlock TextWrapping="Wrap" Text="THE GUI COMPONENTS OF THE SOFTWARE ARE PROVIDED &quot;AS IS&quot; WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="LIMITATION OF LIABILITY" />
+                        <TextBlock TextWrapping="Wrap" Text="IN NO EVENT SHALL AMELIORATED BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION WITH THE USE OR INABILITY TO USE THE GUI COMPONENTS OF THE SOFTWARE, EVEN IF AMELIORATED HAS BEEN ADVISED OF THE POSSIBILITY OF SUCH DAMAGES." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="TERMINATION" />
+                        <TextBlock TextWrapping="Wrap" Text="This Agreement will terminate immediately without notice from Ameliorated if you fail to comply with any provision of this Agreement. Upon termination, you must immediately cease all use of the GUI components of the Software and destroy all copies of the GUI components of the Software in your possession." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="MISCELLANEOUS" />
+                        <TextBlock TextWrapping="Wrap" Text="This Agreement represents the entire agreement between you and Ameliorated with respect to the GUI components of the Software and supersedes all prior or contemporaneous communications and proposals, whether oral or written, between you and Ameliorated. This Agreement shall be governed by and construed in accordance with the laws of the State of Washington without giving effect to any principles of conflicts of law. If any provision of this Agreement is held to be unenforceable for any reason, such provision shall be reformed only to the extent necessary to make it enforceable, and such decision shall not affect the enforceability of such provision under other circumstances or the remaining provisions hereof. This Agreement may only be modified by a writing signed by an authorized officer of Ameliorated." />
+                        <TextBlock />
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Text="BY USING THE GUI COMPONENTS OF THE SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS AGREEMENT, UNDERSTAND IT, AND AGREE TO BE BOUND BY ITS TERMS AND CONDITIONS." />
+                    </StackPanel>
+                </controls:TextDropDownBox.Contents>
+            </controls:TextDropDownBox>
+        </StackPanel>
+        <Popup Name="Popup" UseLayoutRounding="True" Width="700" Height="490" VerticalOffset="-490" IsOpen="False" StaysOpen="True" PopupAnimation="Fade" AllowsTransparency="True" PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}" MouseLeftButtonDown="FocusWindow">
+            <Border UseLayoutRounding="True" Padding="132,126,133,128" CornerRadius="{DynamicResource PopupCornerRadius}" Background="#44000000">
+                <Border UseLayoutRounding="True" Width="365" Height="176" CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource LicensePopupBorder}" Background="{DynamicResource LicensePopupBackground}">
+                    <UIElement.Effect>
+                        <DropShadowEffect ShadowDepth="0" BlurRadius="40" Opacity="0.27" />
+                    </UIElement.Effect>
+                    <StackPanel>
+                        <StackPanel Margin="27,18,85,0" Height="105">
+                            <TextBlock FontSize="16" FontWeight="Bold" Text="Accept license agreement?" />
+                            <TextBlock FontSize="13" Margin="0,21,0,25" Text="I have read and agree to the terms of the license agreement." TextWrapping="Wrap" />
+                        </StackPanel>
+                        <Border Margin="0,2,0,0" UseLayoutRounding="True" CornerRadius="0,0,7,7" BorderBrush="{DynamicResource LicensePopupSeparatorBrush}" Height="47" Background="{DynamicResource LicensePopupLowerBrush}" BorderThickness="0,1,0,0">
+                            <StackPanel UseLayoutRounding="True" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,2,13,0">
+                                <Button UseLayoutRounding="True" Style="{DynamicResource BlueButton}" Margin="0,0,13,0" Click="AgreeButton_OnClick">
+                                    <TextBlock Text="Agree" Foreground="#FFFFFFFF" FontSize="11" Margin="0" />
+                                </Button>
+                                <Button UseLayoutRounding="True" Padding="0" Width="78" Style="{DynamicResource SpecialButton}" Click="DisagreeButton_OnClick">
+                                    <TextBlock Text="Disagree" Margin="0,1,0,0" FontSize="11" />
+                                </Button>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Popup>
+    </StackPanel>
+</UserControl>

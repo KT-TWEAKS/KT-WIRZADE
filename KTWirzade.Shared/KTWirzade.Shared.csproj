@@ -1,0 +1,233 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{9BDA9D32-E9A1-4DB8-9D90-443792107E28}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>KTWirzade.Shared</RootNamespace>
+    <AssemblyName>KTWirzade.Shared</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <LangVersion>8</LangVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+    <AllowedReferenceRelatedFileExtensions>
+      *.xml
+    </AllowedReferenceRelatedFileExtensions>
+    <Nullable>disable</Nullable>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PathMap>$([System.IO.Path]::GetFullPath('$(SolutionDir)'))=./</PathMap>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>embedded</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Single File|x64' ">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+    <Optimize>true</Optimize>
+    <DebugType>embedded</DebugType>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>SINGLE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Single File|arm64' ">
+    <OutputPath>bin\arm64\Release\</OutputPath>
+    <PlatformTarget>arm64</PlatformTarget>
+    <Optimize>true</Optimize>
+    <DebugType>embedded</DebugType>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>SINGLE</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug Single File|x64' ">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <PlatformTarget>x64</PlatformTarget>
+    <Optimize>true</Optimize>
+    <Nullable>disable</Nullable>
+    <DebugType>embedded</DebugType>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <DefineConstants>SINGLE;DEBUG</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="PresentationCore" />
+    <Reference Include="PresentationFramework" />
+    <Reference Include="System" />
+    <Reference Include="System.Configuration.Install" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.DirectoryServices" />
+    <Reference Include="System.DirectoryServices.AccountManagement" />
+    <Reference Include="System.IO.Compression, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Management" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.ServiceProcess" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Xml" />
+    <Reference Include="WindowsBase" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Actions\DownloadAction.cs" />
+    <Compile Include="Actions\RegistryValueAction.cs" />
+    <Compile Include="Actions\SoftwareAction.cs" />
+    <Compile Include="Actions\SystemPackageAction.cs" />
+    <Compile Include="Actions\TaskAction.cs" />
+    <Compile Include="Actions\TaskKillAction.cs" />
+    <Compile Include="Actions\ScheduledTaskAction.cs" />
+    <Compile Include="Actions\LineInFileAction.cs" />
+    <Compile Include="Actions\CmdAction.cs" />
+    <Compile Include="Actions\ShortcutAction.cs" />
+    <Compile Include="Actions\PowerShellAction.cs" />
+    <Compile Include="Actions\RunAction.cs" />
+    <Compile Include="Actions\FileAction.cs" />
+    <Compile Include="Actions\AppxAction.cs" />
+    <Compile Include="Actions\LanguageAction.cs" />
+    <Compile Include="Actions\RegistryKeyAction.cs" />
+    <Compile Include="Actions\ServiceAction.cs" />
+    <Compile Include="Actions\UpdateAction.cs" />
+    <Compile Include="Actions\UserAction.cs" />
+    <Compile Include="Actions\WriteStatusAction.cs" />
+    <Compile Include="AmeliorationUtil.cs" />
+    <Compile Include="Models\WindowsUpdate.cs" />
+    <Compile Include="AugmentedProcess.cs" />
+    <Compile Include="Defender.cs" />
+    <Compile Include="Exceptions\ErrorHandlingException.cs" />
+    <Compile Include="Globals.cs" />
+    <Compile Include="ISO.cs" />
+    <Compile Include="OOBE.cs" />
+    <Compile Include="Playbook.cs" />
+    <Compile Include="ProcessPrivilege.cs" />
+    <Compile Include="ProviderStatus.cs" />
+    <Compile Include="Exceptions\InvalidRegistryEntryException.cs" />
+    <Compile Include="Exceptions\TaskInProgressException.cs" />
+    <Compile Include="NativeProcess.cs" />
+    <Compile Include="Parser\PlaybookParser.cs" />
+    <Compile Include="Parser\TaskActionResolver.cs" />
+    <Compile Include="Predicates\IPredicate.cs" />
+    <Compile Include="Requirements.cs" />
+    <Compile Include="Tasks\OutputProcessor.cs" />
+    <Compile Include="Tasks\TaskAction.cs" />
+    <Compile Include="Tasks\UninstallTaskPrivilege.cs" />
+    <Compile Include="Tasks\ITaskAction.cs" />
+    <Compile Include="Tasks\UninstallTaskStatus.cs" />
+    <Compile Include="Tasks\UninstallTask.cs" />
+    <Compile Include="USB\BZip2.cs" />
+    <Compile Include="USB\Drive.cs" />
+    <Compile Include="USB\Drivers.cs" />
+    <Compile Include="USB\Format.cs" />
+    <Compile Include="USB\InterMethods.cs" />
+    <Compile Include="USB\Interop.cs" />
+    <Compile Include="USB\ISO.cs" />
+    <Compile Include="USB\ISOWIM.cs" />
+    <Compile Include="USB\OSDownload.cs" />
+    <Compile Include="USB\USB.cs" />
+    <Compile Include="WimWrapper.cs" />
+    <Compile Include="WimLib\Compressors\Compressor.cs" />
+    <Compile Include="WimLib\Compressors\Decompressor.cs" />
+    <Compile Include="WimLib\DynLoader\DynLoaderBase.cs" />
+    <Compile Include="WimLib\DynLoader\LoadManagerBase.cs" />
+    <Compile Include="WimLib\DynLoader\NativeMethods.cs" />
+    <Compile Include="WimLib\DynLoader\PlatformConvention.cs" />
+    <Compile Include="WimLib\DynLoader\SafeLibHandle.cs" />
+    <Compile Include="WimLib\Helper.cs" />
+    <Compile Include="WimLib\IterateCallback.cs" />
+    <Compile Include="WimLib\NativeStructs.cs" />
+    <Compile Include="WimLib\ProgressCallback.cs" />
+    <Compile Include="WimLib\WimLibException.cs" />
+    <Compile Include="WimLib\WimLibLoader.cs" />
+    <Compile Include="WimLib\WimLibLoadManager.cs" />
+    <Compile Include="WimLib\WimStruct.cs" />
+    <Compile Include="WinUtil.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <!--COM references removed for cross-platform build compatibility-->
+  <ItemGroup>
+    <WCFMetadata Include="Connected Services\" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Ben.Demystifier" Version="0.4.1" />
+    <PackageReference Include="DiscUtils.Udf" Version="0.16.13" />
+    <PackageReference Include="Downloader" Version="3.1.2" />
+    <PackageReference Include="JetBrains.Annotations" Version="2024.2.0-eap1" />
+    <PackageReference Include="Microsoft.Wim" Version="1.2.11" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="Polly.Core" Version="8.6.6" />
+    <PackageReference Include="SharpSevenZip" Version="2.0.36" />
+    <PackageReference Include="System.IO" Version="4.3.0" />
+    <PackageReference Include="System.IO.FileSystem" Version="4.3.0" />
+    <PackageReference Include="System.IO.FileSystem.Primitives" Version="4.3.0" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
+    <PackageReference Include="System.Runtime" Version="4.3.0" />
+    <PackageReference Include="System.Security.Cryptography.Algorithms" Version="4.3.1" />
+    <PackageReference Include="System.Security.Cryptography.Encoding" Version="4.3.0" />
+    <PackageReference Include="System.Security.Cryptography.Primitives" Version="4.3.0" />
+    <PackageReference Include="System.Security.Cryptography.X509Certificates" Version="4.3.0" />
+    <PackageReference Include="System.Security.Principal.Windows" Version="5.0.0" />
+    <PackageReference Include="System.Text.Json" Version="10.0.7" />
+    <PackageReference Include="System.Xml.XDocument" Version="4.3.0" />
+    <PackageReference Include="TaskScheduler" Version="2.12.2" />
+    <PackageReference Include="TimeZoneConverter" Version="7.0.0" />
+    <PackageReference Include="YamlDotNet" Version="11.2.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\UsrClass.dat" />
+    <EmbeddedResource Include="Properties\Z-AME-NoDefender-Package31bf3856ad364e35amd641.0.0.0.cab" />
+    <EmbeddedResource Include="Properties\Z-AME-NoDefender-Package31bf3856ad364e35arm641.0.0.0.cab" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\uefi-ntfs-ame.img" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="7z.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Single File|arm64' Or '$(Configuration)|$(Platform)' == 'Single File|x64' Or '$(Configuration)|$(Platform)' == 'Debug Single File|x64' ">
+    <PostBuildEvent>for /f "usebackq delims=" %%A in (`DIR /B /S /A:d "$(SolutionDir)" ^| FINDSTR /R /c:".*\\bin\\.*\\de$" /c:".*\\bin\\.*\\en$" /c:".*\\bin\\.*\\es$" /c:".*\\bin\\.*\\fr$" /c:".*\\bin\\.*\\it$" /c:".*\\bin\\.*\\ja$" /c:".*\\bin\\.*\\ko$" /c:".*\\bin\\.*\\ru$" /c:".*\\bin\\.*\\zh-Hans$" /c:".*\\bin\\.*\\zh-Hant$" /c:".*\\bin\\.*\\pl$" /c:".*\\bin\\.*\\zh-CN$"`) do (RMDIR /Q /S "%%A" &amp; cmd /c "exit /b 0")
+      PowerShell -NoP -C "Start-Process '$(SolutionDir)\KTWirzade.GUI\gui-builder\ame-builder.exe' -ArgumentList 'Shared','""""x64\$(Configuration)""""' -NoNewWindow -Wait"
+    </PostBuildEvent>
+    <AllowedReferenceRelatedFileExtensions>
+      <!-- Prevent default XML files copied to output.-->
+      .allowedextension
+    </AllowedReferenceRelatedFileExtensions>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' != 'Single File|arm64' And '$(Configuration)|$(Platform)' != 'Single File|x64' And '$(Configuration)|$(Platform)' != 'Debug Single File|x64' ">
+    <PostBuildEvent>for /f "usebackq delims=" %%A in (`DIR /B /S /A:d "$(SolutionDir)" ^| FINDSTR /R /c:".*\\bin\\.*\\de$" /c:".*\\bin\\.*\\en$" /c:".*\\bin\\.*\\es$" /c:".*\\bin\\.*\\fr$" /c:".*\\bin\\.*\\it$" /c:".*\\bin\\.*\\ja$" /c:".*\\bin\\.*\\ko$" /c:".*\\bin\\.*\\ru$" /c:".*\\bin\\.*\\zh-Hans$" /c:".*\\bin\\.*\\zh-Hant$" /c:".*\\bin\\.*\\pl$" /c:".*\\bin\\.*\\zh-CN$"`) do (RMDIR /Q /S "%%A" &amp; cmd /c "exit /b 0")</PostBuildEvent>
+  </PropertyGroup>
+  <Import Project="..\Interprocess\Interprocess.projitems" Label="Shared" />
+  <Import Project="..\Core\Core.projitems" Label="Shared" />
+</Project>

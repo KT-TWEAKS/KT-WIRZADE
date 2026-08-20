@@ -1,0 +1,46 @@
+# Build outputs
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.pdb
+.vs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# NuGet
+packages/
+*.nupkg
+project.lock.json
+project.assets.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+Logs/
+
+# Temp / runtime extraction
+%TEMP%/
+AppData/
+
+# Backup files
+*.bak
+*.tmp
+*.orig
+
+# Playbook extracted at runtime
+Playbooks/
+
+# Test outputs
+TestResults/
+*.trx
+coverage*.xml

@@ -1,0 +1,202 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" 
+                    xmlns:controls="clr-namespace:KTWirzade.GUI.Controls" 
+                    xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf">
+    
+    <BitmapImage x:Key="MouseCursorBitmap" UriSource="/Icons/aero_arrow.png" />
+    <BitmapImage x:Key="WusaSearchingBitmap" CreateOptions="IgnoreColorProfile" UriSource="/Icons/wusa_searching.png" />
+    <BitmapImage x:Key="WusaUninstallPromptBitmap" CreateOptions="IgnoreColorProfile" UriSource="/Icons/wusa_uninstall_prompt.png" />
+    <BitmapImage x:Key="WusaUninstallingBitmap" CreateOptions="IgnoreColorProfile" UriSource="/Icons/wusa_uninstalling.png" />
+    <Style x:Key="Window" TargetType="{x:Type controls:AcrylicWindow}">
+        <Setter Property="Background" Value="#00FFFFFF" />
+        <Setter Property="Window.Topmost" Value="False" />
+        <Setter Property="FrameworkElement.ForceCursor" Value="True" />
+        <Setter Property="Window.ResizeMode" Value="NoResize" />
+        <Setter Property="Window.WindowStyle" Value="SingleBorderWindow" />
+        <Setter Property="Window.AllowsTransparency" Value="False" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:AcrylicWindow}">
+                    <Border BorderThickness="1" BorderBrush="{DynamicResource WindowBorder}" RenderOptions.EdgeMode="{DynamicResource WindowEdgeMode}">
+                        <Border.Background>
+                            <SolidColorBrush Color="Black" Opacity="0.01" RenderOptions.EdgeMode="Unspecified" />
+                        </Border.Background>
+                        <Border ClipToBounds="True">
+                            <ContentPresenter RenderOptions.EdgeMode="Unspecified" />
+                        </Border>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="VMwareMainWindow" TargetType="{x:Type controls:AcrylicWindow}">
+        <Setter Property="Background" Value="#00FFFFFF" />
+        <Setter Property="Window.Topmost" Value="False" />
+        <Setter Property="FrameworkElement.ForceCursor" Value="True" />
+        <Setter Property="Window.ResizeMode" Value="NoResize" />
+        <Setter Property="Window.WindowStyle" Value="None" />
+        <Setter Property="Window.AllowsTransparency" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type controls:AcrylicWindow}">
+                    <Border BorderThickness="1" BorderBrush="{DynamicResource WindowBorder}" RenderOptions.EdgeMode="{DynamicResource WindowEdgeMode}">
+                        <Border.Background>
+                            <SolidColorBrush Color="Black" Opacity="0.01" RenderOptions.EdgeMode="Unspecified" />
+                        </Border.Background>
+                        <Border ClipToBounds="True">
+                            <ContentPresenter RenderOptions.EdgeMode="Unspecified" />
+                        </Border>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="BlueButton" TargetType="{x:Type Button}">
+        <Setter Property="Height" Value="22" />
+        <Setter Property="MinWidth" Value="78" />
+        <Setter Property="Width" Value="78" />
+        <Setter Property="Padding" Value="19,2" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Border Name="Container" UseLayoutRounding="True" Height="{TemplateBinding FrameworkElement.Height}" CornerRadius="3" BorderThickness="1" Background="#0067c0">
+                        <Border.BorderBrush>
+                            <LinearGradientBrush StartPoint="1,0">
+                                <GradientStop Offset="0.885" Color="#fa0067c0" />
+                                <GradientStop Offset="0.99" x:Name="BottomStop" Color="#044984" />
+                            </LinearGradientBrush>
+                        </Border.BorderBrush>
+                        <Grid>
+                            <Rectangle Name="Rect" UseLayoutRounding="True" Margin="0,0,0,0" Fill="#1673c5" RadiusX="2" RadiusY="2" />
+                            <Grid Name="ContentContainer">
+                                <ContentPresenter Name="Content" HorizontalAlignment="Center" Margin="{TemplateBinding Control.Padding}" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <EventTrigger RoutedEvent="MouseEnter">
+                            <EventTrigger.Actions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="Container" Storyboard.TargetProperty="Background.Color" To="#ff227ad2" Duration="0:0:0.05" />
+                                        <ColorAnimation Storyboard.TargetName="Rect" Storyboard.TargetProperty="Fill.Color" To="#ff227ad2" Duration="0:0:0.05" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger.Actions>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="MouseLeave">
+                            <EventTrigger.Actions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Storyboard.TargetName="Container" Storyboard.TargetProperty="Background.Color" To="#0067c0" Duration="0:0:0.05" />
+                                        <ColorAnimation Storyboard.TargetName="Rect" Storyboard.TargetProperty="Fill.Color" To="#0067c0" Duration="0:0:0.05" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger.Actions>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="Click">
+                            <EventTrigger.Actions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Content" Duration="0:0:0.07" Storyboard.TargetProperty="Opacity">
+                                            <LinearDoubleKeyFrame Value="0.7" KeyTime="0:0:0" />
+                                            <LinearDoubleKeyFrame Value="0.7" KeyTime="0:0:0.07" />
+                                            <LinearDoubleKeyFrame Value="1" KeyTime="0:0:0.07" />
+                                        </DoubleAnimationUsingKeyFrames>
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="BottomStop" Duration="0:0:0.07" Storyboard.TargetProperty="Color">
+                                            <LinearColorKeyFrame Value="#fa0067c0" KeyTime="0:0:0" />
+                                            <LinearColorKeyFrame Value="#fa0067c0" KeyTime="0:0:0.07" />
+                                            <LinearColorKeyFrame Value="#044984" KeyTime="0:0:0.07" />
+                                        </ColorAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger.Actions>
+                        </EventTrigger>
+                        <Trigger Property="IsEnabled" Value="False">
+                            <TriggerBase.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.15" To="0.5" Storyboard.TargetName="Container" Storyboard.TargetProperty="Opacity" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </TriggerBase.EnterActions>
+                            <TriggerBase.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.17" To="1" Storyboard.TargetName="Container" Storyboard.TargetProperty="Opacity" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </TriggerBase.ExitActions>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    <Style x:Key="VerificationDropButton" TargetType="{x:Type Button}">
+        <Setter Property="WindowChrome.IsHitTestVisibleInChrome" Value="True" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type Button}">
+                    <Grid Name="ButtonContainer">
+                        <Border Name="DarkenBorder" Margin="3,4,3,4" BorderBrush="#00FFFFFF" BorderThickness="0,1,0,0" Height="{TemplateBinding FrameworkElement.Height}" CornerRadius="7,7,16,16">
+                            <Border.Background>
+                                <SolidColorBrush Color="{DynamicResource ButtonTextPrimaryColor}" Opacity="0" />
+                            </Border.Background>
+                        </Border>
+                        <Border BorderBrush="{DynamicResource VerificationPopupBorderBrush}" BorderThickness="0,1,0,0" Height="{TemplateBinding FrameworkElement.Height}" CornerRadius="0,0,10,10" Background="{TemplateBinding Control.Background}">
+                            <ContentPresenter />
+                        </Border>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <EventTrigger RoutedEvent="MouseEnter">
+                            <EventTrigger.Actions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.13" To="0.85" Storyboard.TargetName="DarkenBorder" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Opacity)" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger.Actions>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="MouseLeave">
+                            <EventTrigger.Actions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.13" To="0" Storyboard.TargetName="DarkenBorder" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Opacity)" />
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger.Actions>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="Click">
+                            <EventTrigger.Actions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Duration="0:0:0.1" Storyboard.TargetName="DarkenBorder" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Opacity)">
+                                            <DoubleAnimationUsingKeyFrames.KeyFrames>
+                                                <LinearDoubleKeyFrame Value="0.85" KeyTime="0:0:0.1" />
+                                            </DoubleAnimationUsingKeyFrames.KeyFrames>
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger.Actions>
+                        </EventTrigger>
+                        <EventTrigger RoutedEvent="PreviewMouseDown">
+                            <EventTrigger.Actions>
+                                <BeginStoryboard HandoffBehavior="Compose">
+                                    <Storyboard>
+                                        <DoubleAnimationUsingKeyFrames Duration="0:0:0.1" Storyboard.TargetName="DarkenBorder" Storyboard.TargetProperty="(Border.Background).(SolidColorBrush.Opacity)">
+                                            <DoubleAnimationUsingKeyFrames.KeyFrames>
+                                                <LinearDoubleKeyFrame Value="1" KeyTime="0:0:0.1" />
+                                            </DoubleAnimationUsingKeyFrames.KeyFrames>
+                                        </DoubleAnimationUsingKeyFrames>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger.Actions>
+                        </EventTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+    
+</ResourceDictionary>

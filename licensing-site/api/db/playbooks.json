@@ -1,0 +1,49 @@
+{
+  "playbooks": [
+    {
+      "id": "example-001",
+      "productCode": "KTW-DEBLOAT-001",
+      "name": "KT WIRZADE Debloat",
+      "author": "KT Wirzade Team",
+      "version": "1.0.0",
+      "description": "Playbook oficial de debloat do Windows. Remove bloatware, otimiza performance e protege sua privacidade.",
+      "website": "https://ktwirzade.com",
+      "git": "https://github.com/kt-wirzade/ktwirzade-debloat",
+      "verified": true,
+      "verifiedAt": "2026-01-01T00:00:00Z",
+      "hash": "a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456",
+      "icon": null,
+      "tags": ["debloat", "windows", "otimizacao"]
+    },
+    {
+      "id": "example-002",
+      "productCode": "KTW-PRIVACY-002",
+      "name": "KT WIRZADE Privacy Shield",
+      "author": "KT Wirzade Team",
+      "version": "2.1.0",
+      "description": "Protecao avancada de privacidade. Bloqueia telemetria, rastreamento e coleta de dados nao autorizada.",
+      "website": "https://ktwirzade.com",
+      "git": "https://github.com/kt-wirzade/ktwirzade-privacy",
+      "verified": true,
+      "verifiedAt": "2026-03-15T00:00:00Z",
+      "hash": "b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567a",
+      "icon": null,
+      "tags": ["privacidade", "seguranca", "telemetria"]
+    },
+    {
+      "id": "example-003",
+      "productCode": "KTW-GAMING-003",
+      "name": "KT WIRZADE Gaming Optimizer",
+      "author": "KT Wirzade Team",
+      "version": "1.5.0",
+      "description": "Otimizacao completa para gaming. Desativa servicos desnecessarios, ajusta prioridades e maximiza FPS.",
+      "website": "https://ktwirzade.com",
+      "git": "https://github.com/kt-wirzade/ktwirzade-gaming",
+      "verified": true,
+      "verifiedAt": "2026-06-20T00:00:00Z",
+      "hash": "c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567ab2",
+      "icon": null,
+      "tags": ["gaming", "otimizacao", "performance"]
+    }
+  ]
+}

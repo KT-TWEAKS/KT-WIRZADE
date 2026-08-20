@@ -1,0 +1,61 @@
+<UserControl x:Class="KTWirzade.GUI.Pages.SelectPage.SelectISOPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:KTWirzade.GUI.Pages.SelectPage"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    
+    <StackPanel Margin="27,18,26,0">
+        <TextBlock Name="Title" FontSize="16" FontWeight="Bold" Text="Download ISO" />
+        <Grid Name="ModuleGrid" Height="93" Opacity="0" Margin="0,-93,0,0">
+            <StackPanel Name="BrowserModule" Visibility="Collapsed">
+                <UIElement.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform CenterX="100" x:Name="browsertransform" />
+                    </TransformGroup>
+                </UIElement.RenderTransform>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="BrowserText" FontSize="13" Width="276" Height="35" Margin="0,21,0,0" Text="Please agree to the following before downloading SteamOS." TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <CheckBox Name="CheckBox" IsChecked="False" Style="{DynamicResource Unchecked}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,15,0,0" Checked="CheckBox_OnChecked">
+                    <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13">
+                        <TextBlock.Inlines>
+                            <Run Text="Agree to Valve's" />
+                            <Hyperlink Click="Hyperlink_OnClick" MouseEnter="Hyperlink_OnMouseEnter" MouseLeave="Hyperlink_OnMouseLeave">license agreement</Hyperlink>
+                        </TextBlock.Inlines>
+                    </TextBlock>
+                </CheckBox>
+            </StackPanel>
+            <StackPanel Name="BrowserModuleBinbows" Visibility="Collapsed">
+                <UIElement.RenderTransform>
+                    <TransformGroup>
+                        <ScaleTransform CenterX="100" x:Name="browsertransformbinbows" />
+                    </TransformGroup>
+                </UIElement.RenderTransform>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Name="BrowserTextBinbows" FontSize="13" Width="276" Height="35" Margin="0,21,0,0" Text="Please agree to the following before downloading Windows 11." TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <CheckBox Name="CheckBoxBinbows" IsChecked="False" Style="{DynamicResource Unchecked}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,15,0,0" Checked="BinbowsCheckBox_OnChecked">
+                    <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13">
+                        <TextBlock.Inlines>
+                            <Run Text="Agree to Microsoft's" />
+                            <Hyperlink Click="Hyperlink_OnClick" MouseEnter="Hyperlink_OnMouseEnter" MouseLeave="Hyperlink_OnMouseLeave">license agreement</Hyperlink>
+                        </TextBlock.Inlines>
+                    </TextBlock>
+                </CheckBox>
+            </StackPanel>
+        </Grid>
+        <StackPanel Name="ContentGrid">
+            <TextBlock Name="DescriptionText" FontSize="13" HorizontalAlignment="Left" Width="276" Height="35" Margin="0,21,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" Text="{Binding Description}" />
+            <Grid>
+                <Grid Name="LineBlocksContainer">
+                    <TextBlock Name="TopLineBlock" Margin="0,10,0,0" Visibility="Hidden" Text="We strongly recommend all of these options" FontSize="13" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Name="BottomLineBlock" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,132,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" TextTrimming="CharacterEllipsis" Visibility="Hidden" Text="Automatically login this user on startup" />
+                </Grid>
+                <StackPanel Name="OptionsContainer" VerticalAlignment="Top" Margin="{Binding OptionsMargin}" />
+            </Grid>
+        </StackPanel>
+    </StackPanel>
+</UserControl>

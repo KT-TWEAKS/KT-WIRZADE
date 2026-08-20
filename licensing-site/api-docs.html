@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentacao da API - KT WIRZADE</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><path d='M16 2 L28 8 V16 C28 24 22 30 16 32 C10 30 4 24 4 16 V8 Z' fill='%2300d4aa'/><polyline points='10,16 14,20 22,12' stroke='white' stroke-width='3' fill='none'/></svg>">
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="nav-logo">
+      <img src="assets/logo.svg" alt="KT WIRZADE">
+    </a>
+    <button class="nav-mobile-toggle" aria-label="Menu">&#9776;</button>
+    <ul class="nav-links">
+      <li><a href="index.html">Inicio</a></li>
+      <li><a href="verify.html">Verificar</a></li>
+      <li><a href="playbooks.html">Playbooks</a></li>
+      <li><a href="api-docs.html" class="active">API</a></li>
+      <li><button class="theme-toggle" aria-label="Tema">&#9790;</button></li>
+    </ul>
+  </div>
+</nav>
+
+<div style="padding-top: 120px; padding-bottom: 40px;">
+  <div class="container">
+    <div class="section-tag">Desenvolvedores</div>
+    <h1 class="section-title">Documentacao da API</h1>
+    <p class="section-desc">Endpoints REST para verificacao e gestao de playbooks KT WIRZADE.</p>
+  </div>
+</div>
+
+<div class="container" style="max-width: 900px; margin-bottom: 80px;">
+
+  <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 40px;">
+    <h3 style="margin-bottom: 12px;">Base URL</h3>
+    <div class="code-block">http://localhost:3000/api</div>
+    <p style="color: var(--text-muted); margin-top: 12px; font-size: 0.9rem;">Todos os endpoints retornam JSON. Rate limit: 60 requisicoes/minuto.</p>
+  </div>
+
+  <!-- GET /api/verify -->
+  <div class="api-endpoint">
+    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/api/verify</span>
+      <span class="api-desc">Verificar playbook</span>
+    </div>
+    <div class="api-endpoint-body">
+      <p style="color: var(--text-muted); margin-bottom: 16px;">Verifica a autenticidade de um playbook usando ProductCode ou hash SHA256.</p>
+
+      <div class="api-params">
+        <h4>Parametros (Query String)</h4>
+        <div class="param-row">
+          <span class="param-name">prodID</span>
+          <span class="param-type">string</span>
+          <span>ProductCode do playbook (ex: KTW-DEBLOAT-001)</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">hash</span>
+          <span class="param-type">string</span>
+          <span>Hash SHA256 do arquivo</span>
+        </div>
+      </div>
+
+      <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;">Exemplo de Requisicao</h4>
+      <div class="code-block">GET /api/verify?prodID=KTW-DEBLOAT-001</div>
+
+      <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 16px 0 8px;">Resposta (200 OK)</h4>
+      <div class="code-block">{
+  <span class="key">"verified"</span>: <span class="bool">true</span>,
+  <span class="key">"status"</span>: <span class="string">"verified"</span>,
+  <span class="key">"playbook"</span>: {
+    <span class="key">"id"</span>: <span class="string">"example-001"</span>,
+    <span class="key">"name"</span>: <span class="string">"KT WIRZADE Debloat"</span>,
+    <span class="key">"author"</span>: <span class="string">"KT Wirzade Team"</span>,
+    <span class="key">"version"</span>: <span class="string">"1.0.0"</span>,
+    <span class="key">"description"</span>: <span class="string">"Playbook oficial de debloat..."</span>,
+    <span class="key">"website"</span>: <span class="string">"https://ktwirzade.com"</span>,
+    <span class="key">"git"</span>: <span class="string">"https://github.com/kt-wirzade/..."</span>,
+    <span class="key">"verifiedAt"</span>: <span class="string">"2026-01-01T00:00:00Z"</span>
+  }
+}</div>
+
+      <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 16px 0 8px;">Resposta - Nao Encontrado</h4>
+      <div class="code-block">{
+  <span class="key">"verified"</span>: <span class="bool">false</span>,
+  <span class="key">"status"</span>: <span class="string">"unverified"</span>,
+  <span class="key">"playbook"</span>: <span class="bool">null</span>,
+  <span class="key">"message"</span>: <span class="string">"Playbook nao encontrado na base de dados."</span>
+}</div>
+    </div>
+  </div>
+
+  <!-- GET /api/playbooks -->
+  <div class="api-endpoint">
+    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/api/playbooks</span>
+      <span class="api-desc">Listar playbooks</span>
+    </div>
+    <div class="api-endpoint-body">
+      <p style="color: var(--text-muted); margin-bottom: 16px;">Lista todos os playbooks verificados. Suporta busca e filtro por tag.</p>
+
+      <div class="api-params">
+        <h4>Parametros (Query String)</h4>
+        <div class="param-row">
+          <span class="param-name">search</span>
+          <span class="param-type">string</span>
+          <span>Termo de busca (nome, descricao, autor)</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">tag</span>
+          <span class="param-type">string</span>
+          <span>Filtrar por tag (ex: debloat, gaming)</span>
+        </div>
+      </div>
+
+      <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;">Exemplo de Requisicao</h4>
+      <div class="code-block">GET /api/playbooks?search=debloat&tag=otimizacao</div>
+
+      <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 16px 0 8px;">Resposta (200 OK)</h4>
+      <div class="code-block">{
+  <span class="key">"playbooks"</span>: [
+    {
+      <span class="key">"id"</span>: <span class="string">"example-001"</span>,
+      <span class="key">"name"</span>: <span class="string">"KT WIRZADE Debloat"</span>,
+      <span class="key">"author"</span>: <span class="string">"KT Wirzade Team"</span>,
+      <span class="key">"version"</span>: <span class="string">"1.0.0"</span>,
+      <span class="key">"verified"</span>: <span class="bool">true</span>,
+      <span class="key">"tags"</span>: [<span class="string">"debloat"</span>, <span class="string">"windows"</span>]
+    }
+  ],
+  <span class="key">"total"</span>: <span class="number">1</span>
+}</div>
+    </div>
+  </div>
+
+  <!-- GET /api/playbooks/:id -->
+  <div class="api-endpoint">
+    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="api-method get">GET</span>
+      <span class="api-path">/api/playbooks/:id</span>
+      <span class="api-desc">Detalhes do playbook</span>
+    </div>
+    <div class="api-endpoint-body">
+      <p style="color: var(--text-muted); margin-bottom: 16px;">Retorna os detalhes completos de um playbook especifico.</p>
+
+      <div class="api-params">
+        <h4>Parametros (URL)</h4>
+        <div class="param-row">
+          <span class="param-name">id</span>
+          <span class="param-type">string</span>
+          <span>ID do playbook (ex: example-001)</span>
+        </div>
+      </div>
+
+      <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;">Resposta (200 OK)</h4>
+      <div class="code-block">{
+  <span class="key">"playbook"</span>: {
+    <span class="key">"id"</span>: <span class="string">"example-001"</span>,
+    <span class="key">"productCode"</span>: <span class="string">"KTW-DEBLOAT-001"</span>,
+    <span class="key">"name"</span>: <span class="string">"KT WIRZADE Debloat"</span>,
+    <span class="key">"author"</span>: <span class="string">"KT Wirzade Team"</span>,
+    <span class="key">"version"</span>: <span class="string">"1.0.0"</span>,
+    <span class="key">"description"</span>: <span class="string">"..."</span>,
+    <span class="key">"verified"</span>: <span class="bool">true</span>,
+    <span class="key">"verifiedAt"</span>: <span class="string">"2026-01-01T00:00:00Z"</span>,
+    <span class="key">"hash"</span>: <span class="string">"a1b2c3d4..."</span>,
+    <span class="key">"tags"</span>: [<span class="string">"debloat"</span>]
+  }
+}</div>
+
+      <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 16px 0 8px;">Resposta - Nao Encontrado (404)</h4>
+      <div class="code-block">{
+  <span class="key">"error"</span>: <span class="string">"Playbook nao encontrado."</span>
+}</div>
+    </div>
+  </div>
+
+  <!-- POST /api/playbooks/register -->
+  <div class="api-endpoint">
+    <div class="api-endpoint-header" onclick="toggleEndpoint(this)">
+      <span class="api-method post">POST</span>
+      <span class="api-path">/api/playbooks/register</span>
+      <span class="api-desc">Registrar playbook (admin)</span>
+    </div>
+    <div class="api-endpoint-body">
+      <p style="color: var(--text-muted); margin-bottom: 16px;">Registra um novo playbook na base de dados. Requer chave de administrador.</p>
+
+      <div class="api-params">
+        <h4>Headers</h4>
+        <div class="param-row">
+          <span class="param-name">X-Admin-Key</span>
+          <span class="param-type">string</span>
+          <span>Chave de administrador (obrigatorio)</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">Content-Type</span>
+          <span class="param-type">string</span>
+          <span>application/json</span>
+        </div>
+      </div>
+
+      <div class="api-params">
+        <h4>Body (JSON)</h4>
+        <div class="param-row">
+          <span class="param-name">productCode</span>
+          <span class="param-type">string *</span>
+          <span>ProductCode unico (obrigatorio)</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">name</span>
+          <span class="param-type">string *</span>
+          <span>Nome do playbook (obrigatorio)</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">author</span>
+          <span class="param-type">string</span>
+          <span>Autor do playbook</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">version</span>
+          <span class="param-type">string</span>
+          <span>Versao (ex: 1.0.0)</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">description</span>
+          <span class="param-type">string</span>
+          <span>Descricao do playbook</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">website</span>
+          <span class="param-type">string</span>
+          <span>URL do site oficial</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">git</span>
+          <span class="param-type">string</span>
+          <span>URL do repositorio GitHub</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">hash</span>
+          <span class="param-type">string</span>
+          <span>Hash SHA256 do arquivo</span>
+        </div>
+        <div class="param-row">
+          <span class="param-name">tags</span>
+          <span class="param-type">string[]</span>
+          <span>Lista de tags</span>
+        </div>
+      </div>
+
+      <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 8px;">Exemplo de Requisicao</h4>
+      <div class="code-block">POST /api/playbooks/register
+Headers: { "X-Admin-Key": "ktwirzade-admin-2026", "Content-Type": "application/json" }
+
+{
+  <span class="key">"productCode"</span>: <span class="string">"KTW-CLEAN-004"</span>,
+  <span class="key">"name"</span>: <span class="string">"KT WIRZADE System Clean"</span>,
+  <span class="key">"author"</span>: <span class="string">"KT Wirzade Team"</span>,
+  <span class="key">"version"</span>: <span class="string">"1.0.0"</span>,
+  <span class="key">"description"</span>: <span class="string">"Limpeza completa do sistema"</span>,
+  <span class="key">"tags"</span>: [<span class="string">"limpeza"</span>, <span class="string">"sistema"</span>]
+}</div>
+
+      <h4 style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin: 16px 0 8px;">Resposta (201 Created)</h4>
+      <div class="code-block">{
+  <span class="key">"playbook"</span>: {
+    <span class="key">"id"</span>: <span class="string">"plb-a1b2c3d4"</span>,
+    <span class="key">"productCode"</span>: <span class="string">"KTW-CLEAN-004"</span>,
+    <span class="key">"name"</span>: <span class="string">"KT WIRZADE System Clean"</span>,
+    <span class="key">"verified"</span>: <span class="bool">false</span>
+  },
+  <span class="key">"message"</span>: <span class="string">"Playbook registrado com sucesso."</span>
+}</div>
+    </div>
+  </div>
+
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer-bottom">
+      <p>&copy; 2026 KT WIRZADE. Todos os direitos reservados.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="js/main.js"></script>
+<script>
+function toggleEndpoint(header) {
+  const body = header.nextElementSibling;
+  body.classList.toggle('show');
+}
+</script>
+</body>
+</html>
