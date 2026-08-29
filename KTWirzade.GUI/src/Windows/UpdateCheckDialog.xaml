@@ -1,0 +1,76 @@
+<controls:AcrylicWindow x:Class="KTWirzade.GUI.Windows.UpdateCheckDialog"
+                        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                        xmlns:local="clr-namespace:KTWirzade.GUI.Windows"
+                        xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
+                        xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
+                        mc:Ignorable="d" Title="Atualizacoes - KT WIRZADE" Height="400" Width="500" Style="{DynamicResource Window}"
+                        WindowStartupLocation="CenterOwner" RenderTransformOrigin="0.5,0.5"
+                        d:DesignHeight="400" d:DesignWidth="500">
+
+    <DockPanel Name="RootWindow" Background="{DynamicResource AboutBrush}">
+        <DockPanel Name="TitleBar" Dock="Top" MaxHeight="36">
+            <Image Style="{StaticResource QualityImage}" Margin="7,7,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="16" Height="16" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,36" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
+            <TextBlock VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,9.5,0,5" FontSize="12" Text="Atualizacoes" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
+      </DockPanel>
+
+        <Grid Margin="20,8,20,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,8,0,0">
+                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}">
+                    <Run Text="Versao atual:" />
+                    <Run Name="CurrentVersionRun" Text="v1.0.0" />
+              </TextBlock>
+          </StackPanel>
+
+            <Border Grid.Row="1" Name="StatusBox" Margin="0,12,0,0" CornerRadius="6" Padding="14,12" Background="{DynamicResource NoticeBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
+                <StackPanel Orientation="Horizontal">
+                    <wpf:SymbolIcon Name="StatusIcon" Symbol="ArrowSync" FontSize="16" Margin="0,0,10,0" TextBlock.Foreground="{DynamicResource ProgressBarBrush}" />
+                    <TextBlock Name="StatusText" FontSize="13" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap">
+                        Verificando atualizacoes...
+                  </TextBlock>
+              </StackPanel>
+          </Border>
+
+            <Border Grid.Row="2" Name="ReleaseNotesBox" Margin="0,12,0,0" CornerRadius="6" Padding="14,10" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Name="ReleaseTitleText" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
+                        <TextBlock Name="ReleaseDateText" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,2,0,8" />
+                        <TextBlock Name="ReleaseNotesText" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                  </StackPanel>
+              </ScrollViewer>
+          </Border>
+
+            <DockPanel Grid.Row="3" Margin="0,12,0,0">
+                <Button Name="DownloadButton" DockPanel.Dock="Left" Padding="14,8" MinWidth="120" Style="{DynamicResource BlueButton}" Click="DownloadButton_Click" Visibility="Collapsed" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal">
+                        <wpf:SymbolIcon Symbol="ArrowDownload" FontSize="13" Foreground="White" Margin="0,0,8,0" />
+                        <TextBlock Text="Baixar" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                  </StackPanel>
+              </Button>
+                <Button Name="RecheckButton" DockPanel.Dock="Right" Padding="14,8" MinWidth="120" Style="{DynamicResource BasicButton}" Click="RecheckButton_Click" Cursor="Hand">
+                    <StackPanel Orientation="Horizontal">
+                        <wpf:SymbolIcon Symbol="ArrowSync" FontSize="12" Margin="0,0,8,0" />
+                        <TextBlock Text="Verificar novamente" FontSize="12" />
+                  </StackPanel>
+              </Button>
+                <Button Name="SkipButton" DockPanel.Dock="Right" Padding="14,8" MinWidth="110" Style="{DynamicResource BasicButton}" Click="SkipButton_Click" Visibility="Collapsed" Cursor="Hand" Margin="0,0,8,0">
+                    <StackPanel Orientation="Horizontal">
+                        <wpf:SymbolIcon Symbol="Dismiss" FontSize="12" Margin="0,0,8,0" />
+                        <TextBlock Text="Ignorar esta versão" FontSize="12" />
+                  </StackPanel>
+              </Button>
+          </DockPanel>
+      </Grid>
+  </DockPanel>
+</controls:AcrylicWindow>

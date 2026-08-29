@@ -1,0 +1,65 @@
+# Build outputs
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.pdb
+.vs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# NuGet
+packages/
+*.nupkg
+project.lock.json
+project.assets.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+Logs/
+
+# Backup files
+*.bak
+*.tmp
+*.orig
+
+# Residuo do layout antigo de extracao (WizardFiles) - nao e referenciado
+# pelo csproj nem pelo build.bat; os recursos ficam em Resources/ na raiz.
+KTWirzade.GUI/src/Resources/WizardFiles/
+
+# Playbooks (pacotes .apbx e fontes) ficam SOMENTE locais para estudo -
+# nao sao parte do produto. O APBX DevKit reempacota qualquer um deles.
+playbooks/
+
+# Test outputs
+TestResults/
+*.trx
+coverage*.xml
+
+# Site publico tem repo proprio (KT-TWEAKS/kt-wirzade-site) - nao versionado aqui
+site/
+docs-site/
+
+# Site de licenciamento/registro de playbooks (ferramenta privada do admin,
+# deploy em licensing-site.vercel.app) - repo proprio, nao versionado aqui
+licensing-site/
+.vercelignore
+
+# Tooling local
+.freebuff/
+
+# Backup pessoal (nao e parte do produto)
+kelvenapk-backup/
+
+# Artefatos de release (zips gerados para upload no GitHub Releases)
+KT-WIRZADE-v*.zip

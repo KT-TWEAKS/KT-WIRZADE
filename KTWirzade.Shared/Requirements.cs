@@ -1,0 +1,474 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Management;
+using System.Net;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows;
+using System.Xml.Serialization;
+using Core;
+using Interprocess;
+using Microsoft.Win32;
+using KTWirzade.Shared;
+using KTWirzade.Shared.Actions;
+using KTWirzade.Shared.Tasks;
+// using WUApiLib; // COM reference removed for cross-platform build compatibility
+
+namespace KTWirzade.Shared
+{
+    public static class Requirements
+    {
+        [Serializable]
+        public enum Requirement
+        {
+            [XmlEnum("Internet")]
+            Internet = 0,
+            [XmlEnum("NoInternet")]
+            NoInternet = 1,
+            [XmlEnum("DefenderDisabled")]
+            DefenderDisabled = 2,
+            [XmlEnum("DefenderToggled")]
+            DefenderToggled = 3,
+            [XmlEnum("NoPendingUpdates")]
+            NoPendingUpdates = 4,
+            [XmlEnum("Activation")]
+            Activation = 5,
+            [XmlEnum("NoAntivirus")]
+            NoAntivirus = 6,
+            [XmlEnum("LocalAccounts")]
+            LocalAccounts = 11,
+            [XmlEnum("PasswordSet")]
+            PasswordSet = 11,
+            [XmlEnum("AdministratorPasswordSet")]
+            AdministratorPasswordSet = 8,
+            [XmlEnum("PluggedIn")]
+            PluggedIn = 9,
+            [XmlEnum("NoTweakware")]
+            NoTweakware = 10,
+            [XmlEnum("FreshInstall")]
+            FreshInstall = 12,
+            [XmlEnum("UCPDDisabled")]
+            UCPDDisabled = 13,
+        }
+
+        public static async Task<Requirement[]> MetRequirements(this Requirement[] requirements, bool checkNoPendingUpdate = false)
+        {
+            var requirementEnum = (Requirement[])Enum.GetValues(typeof(Requirement));
+            if (requirements == null)
+            {
+                return requirementEnum;
+            }
+            // Add all requirements that are not included
+            var metRequirements = requirementEnum.Except(requirements).ToList();
+
+            if (requirements.Contains(Requirement.Internet))
+                if (await new Internet().IsMet()) metRequirements.Add(Requirement.Internet);
+                else metRequirements.Add(Requirement.NoInternet);
+
+            if (requirements.Contains(Requirement.NoAntivirus))
+                if (true) metRequirements.Add(Requirement.NoAntivirus);
+
+            // Handled upstream
+            if (requirements.Contains(Requirement.Activation))
+                if (true) metRequirements.Add(Requirement.Activation);
+            
+            if (requirements.Contains(Requirement.DefenderDisabled))
+                if (await new DefenderDisabled().IsMet()) metRequirements.Add(Requirement.DefenderDisabled);
+            
+            if (requirements.Contains(Requirement.PluggedIn))
+                if (await new Battery().IsMet()) metRequirements.Add(Requirement.PluggedIn);
+            
+            if (requirements.Contains(Requirement.FreshInstall))
+                if (await new FreshInstall().IsMet()) metRequirements.Add(Requirement.FreshInstall);
+            
+            if (requirements.Contains(Requirement.NoPendingUpdates))
+                if (!checkNoPendingUpdate || (new [] {
+                        Requirement.FreshInstall,
+                        Requirement.PluggedIn
+                    }.All(metRequirements.Contains) &&
+                    await new NoPendingUpdates().IsMet())) metRequirements.Add(Requirement.NoPendingUpdates);
+
+            if (requirements.Contains(Requirement.UCPDDisabled))
+                if (await new UCPDDisabled().IsMet()) metRequirements.Add(Requirement.UCPDDisabled);
+            
+            if (requirements.Contains(Requirement.DefenderToggled))
+                if (await new DefenderToggled().IsMet()) metRequirements.Add(Requirement.DefenderToggled);
+
+            if (requirements.Contains(Requirement.LocalAccounts))
+                metRequirements.Add(Requirement.LocalAccounts);
+
+            if (requirements.Contains(Requirement.AdministratorPasswordSet))
+                metRequirements.Add(Requirement.AdministratorPasswordSet);
+            
+            return metRequirements.ToArray();
+        }
+        
+        public interface IRequirements
+        {
+            Task<bool> IsMet();
+            Task<bool> Meet();
+        }
+        public class RequirementBase
+        {
+            public class ProgressEventArgs : EventArgs
+            {
+                public int PercentAdded;
+                public ProgressEventArgs(int percent)
+                {
+                    PercentAdded = percent;
+                }
+            }
+            
+            public event EventHandler<ProgressEventArgs> ProgressChanged;
+
+            protected void OnProgressAdded(int percent)
+            {
+                ProgressChanged?.Invoke(this, new ProgressEventArgs(percent));
+            }
+        }
+
+        public class Battery : RequirementBase, IRequirements
+        {
+            [StructLayout(LayoutKind.Sequential)]
+            public class PowerState
+            {
+                public ACLineStatus ACLineStatus;
+                public BatteryFlag BatteryFlag;
+                public Byte BatteryLifePercent;
+                public Byte Reserved1;
+                public Int32 BatteryLifeTime;
+                public Int32 BatteryFullLifeTime;
+
+                // direct instantation not intended, use GetPowerState.
+                private PowerState() {}
+
+                public static PowerState GetPowerState()
+                {
+                    PowerState state = new PowerState();
+                    if (GetSystemPowerStatusRef(state))
+                        return state;
+
+                    throw new ApplicationException("Unable to get power state");
+                }
+
+                [DllImport("Kernel32", EntryPoint = "GetSystemPowerStatus")]
+                private static extern bool GetSystemPowerStatusRef(PowerState sps);
+            }
+
+            // Note: Underlying type of byte to match Win32 header
+            public enum ACLineStatus : byte
+            {
+                Offline = 0, Online = 1, Unknown = 255
+            }
+
+            public enum BatteryFlag : byte
+            {
+                High = 1, Low = 2, Critical = 4, Charging = 8,
+                NoSystemBattery = 128, Unknown = 255
+            }
+
+            public async Task<bool> IsMet()
+            {
+                try
+                {
+                    PowerState state = PowerState.GetPowerState();
+                    if ((state.BatteryFlag == BatteryFlag.NoSystemBattery || state.BatteryFlag == BatteryFlag.Charging)
+                        || state.ACLineStatus == ACLineStatus.Online || (state.ACLineStatus == ACLineStatus.Unknown && state.BatteryFlag == BatteryFlag.Unknown))
+                        return true;
+                    else
+                        return false;
+                }
+                catch { }
+                return true;
+            }
+
+            public Task<bool> Meet() => throw new NotImplementedException();
+        }
+
+        public class Internet : RequirementBase, IRequirements
+        {
+            [DllImport("wininet.dll", SetLastError = true)]
+            private static extern bool InternetCheckConnection(string lpszUrl, int dwFlags, int dwReserved);
+            
+            [DllImport("wininet.dll", SetLastError=true)]
+            extern static bool InternetGetConnectedState(out int lpdwFlags, int dwReserved);
+            
+            public async Task<bool> IsMet()
+            {
+                try
+                {
+                    try
+                    {
+                        if (!InternetCheckConnection("http://archlinux.org", 1, 0))
+                        {
+                            if (!InternetCheckConnection("http://google.com", 1, 0))
+                                return false;
+                        }
+                        return true;
+                    }
+                    catch
+                    {
+                        var request = (HttpWebRequest)WebRequest.Create("http://google.com");
+                        request.KeepAlive = false;
+                        request.Timeout = 5000;
+                        using (var response = (HttpWebResponse)request.GetResponse())
+                            return true;
+                    }
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            public Task<bool> Meet() => throw new NotImplementedException();
+        }
+
+        public class DefenderDisabled : RequirementBase, IRequirements
+        {
+            public async Task<bool> IsMet()
+            {
+                return !Process.GetProcessesByName("MsMpEng").Any() && !Process.GetProcessesByName("SecurityHealthService").Any() && !Process.GetProcessesByName("MpDefenderCoreService").Any();
+            }
+
+            public async Task<bool> Meet() => throw new NotImplementedException();
+        }
+        
+        public class DefenderToggled : RequirementBase, IRequirements
+        {
+            // Mirrors CLI.GetDefenderToggles semantics: a toggle counts as satisfied when
+            // its registry value is in the "off" state, and MISSING/unreadable keys count
+            // as satisfied (component absent). Returns true only when everything is off,
+            // i.e. the user has actually toggled Defender down as the playbook requires.
+            public async Task<bool> IsMet()
+            {
+                bool realtimeOff = true, reportingOff = true, consentOff = true, tamperOff = true;
+
+                try
+                {
+                    using var defenderKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows Defender");
+                    using var policiesKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows Defender");
+
+                    var realtimeKey = policiesKey?.OpenSubKey("Real-Time Protection") ?? defenderKey?.OpenSubKey("Real-Time Protection");
+
+                    if (realtimeKey != null)
+                    {
+                        try
+                        {
+                            realtimeOff = (int)realtimeKey.GetValue("DisableRealtimeMonitoring") == 1;
+                        }
+                        catch
+                        {
+                            // value missing -> treat as off (matches CLI behavior)
+                            realtimeOff = true;
+                        }
+                    }
+
+                    int reporting = 0, consent = 0, tamper = -1;
+
+                    var spynetKey = policiesKey?.OpenSubKey("SpyNet") ?? defenderKey?.OpenSubKey("SpyNet");
+                    try
+                    {
+                        if (spynetKey != null) reporting = (int)spynetKey.GetValue("SpyNetReporting");
+                    }
+                    catch { }
+                    try
+                    {
+                        if (spynetKey != null) consent = (int)spynetKey.GetValue("SubmitSamplesConsent");
+                    }
+                    catch { }
+
+                    try
+                    {
+                        using var featuresKey = defenderKey?.OpenSubKey("Features");
+                        if (featuresKey != null) tamper = (int)featuresKey.GetValue("TamperProtection");
+                    }
+                    catch { }
+
+                    reportingOff = reporting == 0;
+                    consentOff = consent == 0 || consent == 2 || consent == 4;
+                    // TamperProtection: 5 = user-disabled, 0/missing = state unknown -> lenient.
+                    // 4 = active -> not toggled.
+                    tamperOff = tamper != 4;
+
+                    return realtimeOff && reportingOff && consentOff && tamperOff;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+
+            public async Task<bool> Meet()
+            {
+                throw new NotImplementedException();
+            }
+        }
+        
+        // WUApiLib COM types removed for cross-platform build compatibility
+        // class SearchCompletedCallback : ISearchCompletedCallback
+        // {
+        //     public void Invoke(ISearchJob searchJob, ISearchCompletedCallbackArgs callbackArgs)
+        //     {
+        //         this.CompleteTask();
+        //     }
+        //     
+        //     private TaskCompletionSource<bool> taskSource = new TaskCompletionSource<bool>();
+        //     protected void CompleteTask()
+        //     {
+        //         taskSource.SetResult(true);
+        //     }
+        //
+        //     public Task Task
+        //     {
+        //         get
+        //         {
+        //             return taskSource.Task;
+        //         }
+        //     }
+        // }
+
+        public class NoPendingUpdates : RequirementBase, IRequirements
+        {
+            public async Task<bool> IsMet()
+            {
+                // Using WUApiLib can crash the entire application if
+                // Windows Update is faulty. For that reason we use a
+                // separate process. To replicate, use an ameliorated
+                // system and copy wuapi.dll & wuaeng.dll to System32.
+                // var result = await InterLink.ExecuteDisposableSafeAsync(TargetLevel.User, () => CheckDisposable(), logExceptions: true);
+                // if (result.Failed)
+                //     return true;
+                // return result.Value;
+                return true; // Placeholder: WUApiLib COM reference removed
+            }
+
+            public Task<bool> Meet() => throw new NotImplementedException();
+            
+            // [InterprocessMethod(Level.User)]
+            // private static bool CheckDisposable()
+            // {
+            //     try
+            //     {
+            //         var updateSession = new UpdateSession();
+            //         var updateSearcher = updateSession.CreateUpdateSearcher();
+            //         updateSearcher.Online = false;
+            //         SearchCompletedCallback searchCompletedCallback = new SearchCompletedCallback();
+            //         ISearchJob searchJob = updateSearcher.BeginSearch("IsInstalled=0 And IsHidden=0 And Type='Software' And DeploymentAction=*", searchCompletedCallback, null);
+            //         try
+            //         {
+            //             searchCompletedCallback.Task.Wait(50000);
+            //         }
+            //         catch (OperationCanceledException)
+            //         {
+            //             searchJob.RequestAbort();
+            //         }
+            //         ISearchResult searchResult = updateSearcher.EndSearch(searchJob);
+            //         if (searchResult.Updates.Cast<IUpdate>().Any(x => x.IsDownloaded))
+            //         {
+            //             return false;
+            //         }
+            //     }
+            //     catch (Exception e)
+            //     {
+            //         Log.EnqueueExceptionSafe(e);
+            //         return true;
+            //     }
+            //     return true;
+            // }
+        }
+        
+        public class NoAntivirus : RequirementBase, IRequirements
+        {
+            public async Task<bool> IsMet()
+            {
+                return !WinUtil.GetEnabledAvList(false).Any();
+            }
+
+            public Task<bool> Meet() => throw new NotImplementedException();
+        }
+
+        public class Activation : RequirementBase, IRequirements
+        {
+            public async Task<bool> IsMet()
+            {
+                return WinUtil.IsGenuineWindows();
+            }
+
+            public Task<bool> Meet() => throw new NotImplementedException();
+        }
+        
+        public class FreshInstall : RequirementBase, IRequirements
+        {
+            public async Task<bool> IsMet()
+            {
+                try
+                {
+                    RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                    if (key != null)
+                    {
+                        object installDateValue = key.GetValue("InstallDate");
+                        if (installDateValue != null)
+                        {
+                            int installDateUnix = (int)installDateValue;
+                            DateTime installDate = DateTimeOffset.FromUnixTimeSeconds(installDateUnix).DateTime;
+
+                            TimeSpan timeSinceInstall = DateTime.Now - installDate;
+
+                            if (timeSinceInstall.TotalHours > 40)
+                                return false;
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Log.EnqueueExceptionSafe(e);
+                }
+                return true;
+            }
+
+            public async Task<bool> Meet() => throw new NotImplementedException();
+        }
+        public class UCPDDisabled : RequirementBase, IRequirements
+        {
+            public async Task<bool> IsMet()
+            {
+                try
+                {
+                    RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\UCPD");
+                    if (key != null)
+                    {
+                        int startValue= (int)key.GetValue("Start");
+                        if (startValue != 4)
+                            return false;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Log.EnqueueExceptionSafe(e);
+                }
+                return true;
+            }
+
+            public async Task<bool> Meet() => throw new NotImplementedException();
+        }
+        
+        public class WindowsBuild
+        {
+            public bool IsMet(string[] builds)
+            {
+                return builds.Any(x => x.Equals(Win32.SystemInfoEx.WindowsVersion.BuildNumber.ToString()));
+            }
+
+            public Task<bool> Meet() => throw new NotImplementedException();
+        }
+        
+    }
+}

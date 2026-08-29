@@ -1,0 +1,47 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.31911.260
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KTWirzade.CLI", "KTWirzade.CLI\KTWirzade.CLI.csproj", "{476D3799-2CFC-4670-94E5-9AF51B234B07}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Core", "Core\Core.shproj", "{DEBB633C-F189-49AE-92DD-4EB71CECCF90}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Interprocess", "Interprocess\Interprocess.shproj", "{64B44592-888F-4C21-97EC-5DD7D84ED300}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KTWirzade.Shared", "KTWirzade.Shared\KTWirzade.Shared.csproj", "{9BDA9D32-E9A1-4DB8-9D90-443792107E28}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KTWirzade.GUI", "KTWirzade.GUI\src\KTWirzade.GUI.csproj", "{1CBDA84C-2B2F-40A7-AEC0-84EC5EA0F677}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KTWirzade.DevTool", "KTWirzade.DevTool\KTWirzade.DevTool.csproj", "{01839DBB-5A69-4E7B-AB54-A05524426F1E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KTWirzade.DevKit", "KTWirzade.DevKit\KTWirzade.DevKit.csproj", "{3C9F8A2D-71E4-4B8C-9D2F-5A1E77C40B93}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{476D3799-2CFC-4670-94E5-9AF51B234B07}.Debug|x64.ActiveCfg = Debug|x64
+		{476D3799-2CFC-4670-94E5-9AF51B234B07}.Debug|x64.Build.0 = Debug|x64
+		{476D3799-2CFC-4670-94E5-9AF51B234B07}.Release|x64.ActiveCfg = Release|x64
+		{476D3799-2CFC-4670-94E5-9AF51B234B07}.Release|x64.Build.0 = Release|x64
+		{9BDA9D32-E9A1-4DB8-9D90-443792107E28}.Debug|x64.ActiveCfg = Debug|x64
+		{9BDA9D32-E9A1-4DB8-9D90-443792107E28}.Debug|x64.Build.0 = Debug|x64
+		{9BDA9D32-E9A1-4DB8-9D90-443792107E28}.Release|x64.ActiveCfg = Release|x64
+		{9BDA9D32-E9A1-4DB8-9D90-443792107E28}.Release|x64.Build.0 = Release|x64
+		{1CBDA84C-2B2F-40A7-AEC0-84EC5EA0F677}.Debug|x64.ActiveCfg = Debug|x64
+		{1CBDA84C-2B2F-40A7-AEC0-84EC5EA0F677}.Release|x64.ActiveCfg = Release|x64
+		{01839DBB-5A69-4E7B-AB54-A05524426F1E}.Debug|x64.ActiveCfg = Debug|x64
+		{01839DBB-5A69-4E7B-AB54-A05524426F1E}.Release|x64.ActiveCfg = Release|x64
+		{3C9F8A2D-71E4-4B8C-9D2F-5A1E77C40B93}.Debug|x64.ActiveCfg = Debug|x64
+		{3C9F8A2D-71E4-4B8C-9D2F-5A1E77C40B93}.Release|x64.ActiveCfg = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FA892C1E-4359-4EA2-896C-89C65B23423A}
+	EndGlobalSection
+EndGlobal

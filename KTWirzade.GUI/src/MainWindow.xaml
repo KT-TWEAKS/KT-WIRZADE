@@ -1,0 +1,358 @@
+<controls:AcrylicWindow x:Class="KTWirzade.GUI.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:KTWirzade.GUI"
+        mc:Ignorable="d"
+        xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
+        xmlns:gui="clr-namespace:KTWirzade.GUI" 
+        xmlns:fluent="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
+        xmlns:viewmodels="clr-namespace:KTWirzade.GUI.ViewModels"
+        xmlns:views="clr-namespace:KTWirzade.GUI.Views" 
+        xmlns:isomodepages="clr-namespace:KTWirzade.GUI.Pages.IsoModePage"
+        xmlns:isopage="clr-namespace:KTWirzade.GUI.Pages.IsoPage"
+        xmlns:modepage="clr-namespace:KTWirzade.GUI.Pages.ModePage"
+        xmlns:selectpage="clr-namespace:KTWirzade.GUI.Pages.SelectPage"
+        Height="540" Width="800" MinHeight="490" MinWidth="700" WindowStartupLocation="CenterScreen"
+        RenderTransformOrigin="0.5,0.5" IsMainWindow="True" Resizable="True" ResizeMode="CanResize"
+        Background="{DynamicResource PrimaryBrush}"
+        Title="{Binding Source={x:Static gui:GlobalsGUI.AppTitle}}"
+        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}" 
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}">
+
+    <UIElement.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform CenterX="100" x:Name="windowscale" />
+        </TransformGroup>
+    </UIElement.RenderTransform>
+    <FrameworkElement.Resources>
+        <ResourceDictionary>
+            <Style x:Key="SidebarScrollBar" TargetType="{x:Type ScrollBar}">
+                <Setter Property="Width" Value="6" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="{x:Type ScrollBar}">
+                            <Grid Background="Transparent">
+                                <Track x:Name="PART_Track" IsDirectionReversed="True">
+                                    <Track.Thumb>
+                                        <Thumb>
+                                            <Thumb.Template>
+                                                <ControlTemplate TargetType="{x:Type Thumb}">
+                                                    <Border Background="{DynamicResource TextSecondaryBrush}" CornerRadius="3" Opacity="0.4" Margin="1,0" />
+                                                </ControlTemplate>
+                                            </Thumb.Template>
+                                        </Thumb>
+                                    </Track.Thumb>
+                                </Track>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="baseStyle" TargetType="{x:Type Control}">
+                <Setter Property="FontSize" Value="12" />
+            </Style>
+            <Style x:Key="{x:Type Label}" TargetType="{x:Type Label}" BasedOn="{StaticResource baseStyle}" />
+            <Style x:Key="{x:Type TextBox}" TargetType="{x:Type TextBox}" BasedOn="{StaticResource baseStyle}" />
+            <Style x:Key="{x:Type ListView}" TargetType="{x:Type ListView}" BasedOn="{StaticResource baseStyle}" />
+            <Style x:Key="{x:Type Image}" TargetType="{x:Type Image}">
+                <Setter Property="RenderOptions.BitmapScalingMode" Value="Fant" />
+            </Style>
+            <Style x:Key="{x:Type Ellipse}" TargetType="{x:Type Ellipse}">
+                <Setter Property="RenderOptions.BitmapScalingMode" Value="HighQuality" />
+            </Style>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:LoadPageViewModel}}" DataType="{x:Type viewmodels:LoadPageViewModel}">
+                <views:LoadPageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:SelectPageViewModel}}" DataType="{x:Type viewmodels:SelectPageViewModel}">
+                <views:SelectPageView />
+           </DataTemplate>
+            <DataTemplate DataType="{x:Type viewmodels:DashboardViewModel}">
+                <views:DashboardView />
+           </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:IntroPageViewModel}}" DataType="{x:Type viewmodels:IntroPageViewModel}">
+                <views:IntroPageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:RequirementsPageViewModel}}" DataType="{x:Type viewmodels:RequirementsPageViewModel}">
+                <views:RequirementsPageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:LicensePageViewModel}}" DataType="{x:Type viewmodels:LicensePageViewModel}">
+                <views:IsoLicensePageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:ModePageViewModel}}" DataType="{x:Type viewmodels:ModePageViewModel}">
+                <views:ModePageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:ProgressPageViewModel}}" DataType="{x:Type viewmodels:ProgressPageViewModel}">
+                <views:ProgressPageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:FinishPageViewModel}}" DataType="{x:Type viewmodels:FinishPageViewModel}">
+                <views:FinishPageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:FinishErrorPageViewModel}}" DataType="{x:Type viewmodels:FinishErrorPageViewModel}">
+                <views:FinishErrorPageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:IsoPageViewModel}}" DataType="{x:Type viewmodels:IsoPageViewModel}">
+                <views:IsoPageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:IsoRequirementsPageViewModel}}" DataType="{x:Type viewmodels:IsoRequirementsPageViewModel}">
+                <views:IsoRequirementsPageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:IsoLicensePageViewModel}}" DataType="{x:Type viewmodels:IsoLicensePageViewModel}">
+                <views:IsoLicensePageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:IsoModePageViewModel}}" DataType="{x:Type viewmodels:IsoModePageViewModel}">
+                <views:IsoModePageView />
+            </DataTemplate>
+            <DataTemplate x:Key="{DataTemplateKey {x:Type viewmodels:IsoOptionsPageViewModel}}" DataType="{x:Type viewmodels:IsoOptionsPageViewModel}">
+                <views:IsoOptionsPageView />
+            </DataTemplate>
+        </ResourceDictionary>
+    </FrameworkElement.Resources>
+    <Grid Name="RootWindow">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="46" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Rectangle Grid.RowSpan="2" Fill="{DynamicResource PrimaryBrush}">
+            <UIElement.Clip>
+                <CombinedGeometry GeometryCombineMode="Exclude">
+                    <CombinedGeometry.Geometry1>
+                        <RectangleGeometry Rect="0,0,4000,2441.4" />
+                    </CombinedGeometry.Geometry1>
+                    <CombinedGeometry.Geometry2>
+                        <GeometryGroup FillRule="Nonzero">
+                            <RectangleGeometry RadiusX="8" RadiusY="8" Rect="196.6,46.5,4000,2390" />
+                            <RectangleGeometry Rect="196.6,66.5,4000,2370" />
+                        </GeometryGroup>
+                    </CombinedGeometry.Geometry2>
+                </CombinedGeometry>
+            </UIElement.Clip>
+        </Rectangle>
+        <DockPanel Name="TitleBar" Dock="Top" Height="46">
+            <Image Style="{StaticResource QualityImage}" Margin="18, 2,0,0" Source="/Icons/ICO.ico" Width="18" Height="18" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,46" DockPanel.Dock="Right" VerticalAlignment="Top" Command="{Binding CloseButtonCommand}" Visibility="{Binding CloseButtonVisibility}" IsEnabled="{Binding CloseButtonActive}" />
+            <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Margin="0,1,16,0">
+                <Border Name="LanguageSelector" VerticalAlignment="Center" Margin="0,0,9,0" Padding="8,3" CornerRadius="3" Cursor="Hand" MouseLeftButtonDown="LanguageSelector_Click">
+                    <StackPanel Orientation="Horizontal">
+                        <fluent:SymbolIcon Symbol="Globe" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource ButtonTextPrimaryBrush}" />
+                        <TextBlock Name="LanguageText" FontSize="11" VerticalAlignment="Center" Text="PT" TextBlock.Foreground="{DynamicResource ButtonTextPrimaryBrush}" />
+                   </StackPanel>
+               </Border>
+                <Border Name="NetworkIndicator" VerticalAlignment="Center" Margin="0,0,9,0" Padding="8,3" CornerRadius="3" Cursor="Hand" MouseLeftButtonDown="NetworkIndicator_Click">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="{DynamicResource StatusSuccessSoftBrush}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                                    <Setter Property="Background" Value="{DynamicResource StatusWarningSoftBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                   </Border.Style>
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Name="NetworkDot" Width="8" Height="8" Margin="0,0,6,0" VerticalAlignment="Center">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{DynamicResource StatusSuccessBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                                            <Setter Property="Fill" Value="{DynamicResource StatusWarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                           </Ellipse.Style>
+                       </Ellipse>
+                        <TextBlock Name="NetworkText" FontSize="11" VerticalAlignment="Center" Text="{Binding NetworkStatusText}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{DynamicResource StatusSuccessBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOnline}" Value="False">
+                                            <Setter Property="Foreground" Value="{DynamicResource StatusWarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                           </TextBlock.Style>
+                       </TextBlock>
+                   </StackPanel>
+               </Border>
+                <Button Name="UpdatesButton" Margin="0,1,9,7" Padding="7,0,9,0" Style="{DynamicResource TopButtonOpaque}" IsEnabled="{Binding UpdatesButtonActive}" Click="UpdatesButton_OnClick">
+                    <ContentControl.Content>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <fluent:SymbolIcon TextBlock.Foreground="{DynamicResource ButtonTextPrimaryBrush}" fluent:SymbolIcon.Symbol="DrawerArrowDownload" TextBlock.FontSize="20" FrameworkElement.Margin="0,0,6,0" RenderOptions.BitmapScalingMode="Fant" />
+                            <TextBlock Grid.Column="1" Foreground="{DynamicResource ButtonTextPrimaryBrush}" Margin="{DynamicResource UpdatesButtonTextMargin}" Text="Updates" />
+                        </Grid>
+                    </ContentControl.Content>
+                </Button>
+                <controls:VerificationButton x:Name="VerificationButton" Margin="0,0,0,0" IsEnabled="{Binding StatusButtonActive}" Visibility="{Binding StatusButtonVisibility}" />
+            </StackPanel>
+            <TextBlock Name="TitleSpace" VerticalAlignment="Center" Margin="16,-11,0,1" Padding="0,0,0,0" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="35" Text="{Binding Path=Title, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" MouseLeftButtonDown="TitleBar_MouseDown" />
+        </DockPanel>
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid Margin="0,0,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <ScrollViewer Name="PlaybooksColumn" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Width="196">
+                    <ScrollViewer.Resources>
+                        <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource SidebarScrollBar}" />
+                    </ScrollViewer.Resources>
+                    <StackPanel>
+                        <ItemsControl Name="PlaybookSidebarItems" UseLayoutRounding="True" Grid.Row="0" Margin="0,3,0,0" VerticalAlignment="Top" Tag="{Binding}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type gui:IDragItem}">
+                                    <Grid Margin="0,0,0,12">
+                                        <Border Name="PlaybookContainer" Opacity="0" Height="86.5" Width="177.5" BorderThickness="0" HorizontalAlignment="Center" CornerRadius="6" IsHitTestVisible="{Binding Path=ItemClickable}" MouseLeftButtonDown="SelectItem">
+                                            <UIElement.Clip>
+                                                <RectangleGeometry RadiusX="6" RadiusY="6" Rect="0,0,177.5,86.5" />
+                                            </UIElement.Clip>
+                                            <Border.Background>
+                                                <SolidColorBrush x:Name="FadeColor" Color="{DynamicResource PlaybookFadeColor}" Opacity="{Binding FadeOpacity}" />
+                                            </Border.Background>
+                                            <Grid>
+                                                <Button Name="RemovePlaybookButton" Opacity="0" Style="{DynamicResource RemovePlaybookButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,3,0" IsEnabled="{Binding Path=DataContext.RemovePlaybookButtonActive, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Click="RemoveItemButton_OnClick" />
+                                                <Rectangle Grid.Column="0" Width="3" Margin="0,25,0,0" Fill="{DynamicResource PlaybookRectColor}" StrokeThickness="0" HorizontalAlignment="Left" VerticalAlignment="Top" RadiusX="3" RadiusY="1" Height="{Binding SidebarInitialHeight}" />
+                                                <Grid Margin="12,12,12,5" UseLayoutRounding="True">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="41" />
+                                                        <ColumnDefinition Width="*" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Grid.Column="0" Width="33" Height="33" CornerRadius="6" ClipToBounds="True" HorizontalAlignment="Left" VerticalAlignment="Top">
+                                                        <Image RenderOptions.BitmapScalingMode="Fant" UseLayoutRounding="True" Width="33" Height="33" Source="{Binding Icon}" Loaded="ItemImage_OnLoaded" />
+                                                    </Border>
+                                                    <StackPanel Grid.Column="1" Margin="6,0,0,0" UseLayoutRounding="False">
+                                                        <TextBlock LineStackingStrategy="BlockLineHeight" Foreground="{DynamicResource TextPrimaryBrush}" LineHeight="13.5" FontSize="14" MaxWidth="93" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis" Text="{Binding Path=Name}" FontWeight="SemiBold" />
+                                                        <TextBlock LineStackingStrategy="BlockLineHeight" LineHeight="20.5" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" Text="{Binding Path=DisplayUsername}" Margin="0,1,0,0" />
+                                                        <Grid MinHeight="25">
+                                                            <TextBlock LineStackingStrategy="BlockLineHeight" FontSize="10" Foreground="{DynamicResource TextPrimaryBrush}" LineHeight="14" Margin="0,3,0,0" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" VerticalAlignment="Top" Text="{Binding Path=ShortDescription}" />
+                                                            <controls:ProgressBarDeterminate VerticalAlignment="Bottom" Maximum="100" Visibility="{Binding Path=DataContext.ProgressVisibility, RelativeSource={RelativeSource AncestorType=Grid}}" Value="{Binding Path=DataContext.ProgressValue, RelativeSource={RelativeSource AncestorType=Grid}}" />
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </Grid>
+                                            </Grid>
+                                            <FrameworkElement.Triggers>
+                                                <EventTrigger RoutedEvent="Border.Loaded">
+                                                    <BeginStoryboard>
+                                                        <Storyboard>
+                                                            <DoubleAnimation Duration="0:0:0.25" To="1" Storyboard.TargetName="PlaybookContainer" Storyboard.TargetProperty="Opacity" />
+                                                        </Storyboard>
+                                                    </BeginStoryboard>
+                                                </EventTrigger>
+                                                <EventTrigger RoutedEvent="Border.MouseEnter">
+                                                    <EventTrigger.Actions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Duration="0:0:0.15" To="0.04" Storyboard.TargetName="FadeColor" Storyboard.TargetProperty="Opacity" />
+                                                                <DoubleAnimation Duration="0:0:0.07" To="1" Storyboard.TargetName="RemovePlaybookButton" Storyboard.TargetProperty="Opacity" />
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger.Actions>
+                                                </EventTrigger>
+                                                <EventTrigger RoutedEvent="Border.MouseLeave">
+                                                    <EventTrigger.Actions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Duration="0:0:0.15" Storyboard.TargetName="FadeColor" Storyboard.TargetProperty="Opacity" To="{Binding Path=FadeOpacity}" />
+                                                                <DoubleAnimation Duration="0:0:0.07" To="0" Storyboard.TargetName="RemovePlaybookButton" Storyboard.TargetProperty="Opacity" />
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </EventTrigger.Actions>
+                                                </EventTrigger>
+                                            </FrameworkElement.Triggers>
+                                        </Border>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Grid Name="DragBoxContainer">
+                            <Button Name="DragBox" UseLayoutRounding="True" SnapsToDevicePixels="True" Style="{DynamicResource DragBoxMain}" Drop="DragBox_OnDrop" Click="DragBox_OnClick" />
+                            <Grid Name="PBLoadContainer" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" Width="25" Height="25" Margin="0,-3,0,0" />
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+                <Grid Column="1">
+                    <Border Background="{DynamicResource PageBackground}" Opacity="1" CornerRadius="8,0,0,0" />
+                    <Border Name="ViewModelBorder" CornerRadius="7,0,0,0" BorderThickness="1,1,0,0" BorderBrush="{DynamicResource PageBorderBrush}" Background="#00FFFFFF">
+                        <ContentControl SnapsToDevicePixels="True" UseLayoutRounding="True" Margin="26,20,30,24" Grid.Row="0">
+                            <ContentControl.Content>
+                                <Binding Path="CurrentViewModel" NotifyOnTargetUpdated="True" />
+                            </ContentControl.Content>
+                            <UIElement.RenderTransform>
+                                <TranslateTransform />
+                            </UIElement.RenderTransform>
+                            <FrameworkElement.Triggers>
+                                <EventTrigger RoutedEvent="Binding.TargetUpdated">
+                                    <BeginStoryboard>
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.22">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                            <DoubleAnimation Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.Y)" From="10" To="0" Duration="0:0:0.26">
+                                                <DoubleAnimation.EasingFunction>
+                                                    <CubicEase EasingMode="EaseOut" />
+                                                </DoubleAnimation.EasingFunction>
+                                            </DoubleAnimation>
+                                        </Storyboard>
+                                    </BeginStoryboard>
+                                </EventTrigger>
+                            </FrameworkElement.Triggers>
+                        </ContentControl>
+                    </Border>
+                </Grid>
+            </Grid>
+            <Border Grid.Row="1" BorderThickness="0,1,0,0" Height="48" Padding="7" Margin="0,0,-1,0" UseLayoutRounding="True" Background="{DynamicResource SecondaryBrush}" BorderBrush="{DynamicResource ButtonDockBorderBrush}" SnapsToDevicePixels="True">
+                <Grid>
+                    <StackPanel Margin="1">
+                        <Grid Name="ButtonsGrid" MinWidth="75" Margin="0,-1,0,0" HorizontalAlignment="Stretch">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Left">
+                                <Button Name="DashboardButton" Visibility="Visible" MinWidth="90" IsEnabled="True" Margin="5,4,2,4" Style="{DynamicResource BasicButton}" Click="DashboardButton_OnClick" ToolTip="Voltar ao Dashboard">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="-3,0">
+                                        <fluent:SymbolIcon Symbol="Home" FontSize="11" Margin="0,0,6,0" />
+                                        <TextBlock Text="Início" />
+                                  </StackPanel>
+                              </Button>
+                                <Button Name="AboutButton" Visibility="Visible" MinWidth="75" IsEnabled="True" Margin="2,4,2,4" Style="{DynamicResource BasicButton}" Click="AboutButton_OnClick">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="-3,0">
+                                        <Image Height="10" Style="{StaticResource QualityImage}" Source="{DynamicResource ExternalLink32}" Margin="0,0,6,0" />
+                                        <TextBlock Text="Sobre" />
+                                 </StackPanel>
+                             </Button>
+                                <Button Name="RollbackButton" Visibility="Visible" MinWidth="75" IsEnabled="True" Margin="2,4,5,4" Style="{DynamicResource BasicButton}" Click="RollbackButton_OnClick" ToolTip="Reverter alteracoes de playbooks anteriores">
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="-3,0">
+                                        <fluent:SymbolIcon Symbol="ArrowUndo" FontSize="11" Margin="0,0,6,0" />
+                                        <TextBlock Text="Rollback" />
+                                </StackPanel>
+                            </Button>
+                         </StackPanel>
+                           <Grid Name="DeCrippleLoadContainer" Column="2" HorizontalAlignment="Right" Visibility="Collapsed" Width="16" Height="16" />
+                           <Button Name="PreviousButton" Grid.Column="3" MinWidth="75" Margin="7,4" Style="{DynamicResource BasicButton}" Command="{Binding PreviousButtonCommand}" IsEnabled="{Binding PreviousButtonActive}" Visibility="{Binding PreviousButtonVisibility}" Content="{Binding PreviousButtonContent}" />
+                           <Button Name="NextButton" Grid.Column="4" MinWidth="75" Margin="7,4" Style="{DynamicResource BasicButton}" Command="{Binding NextButtonCommand}" IsEnabled="{Binding NextButtonActive}" Visibility="{Binding NextButtonVisibility}" Content="{Binding NextButtonContent}" />
+                           <Button Name="CancelButton" HorizontalAlignment="Center" Grid.Column="5" MinWidth="75" Margin="7,4,5,4" Style="{DynamicResource BasicButton}" IsEnabled="{Binding Path=CancelButtonActive}" Content="{Binding CancelButtonContent}" Command="{Binding CancelButtonCommand}" Visibility="{Binding CancelButtonVisibility}" />
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</controls:AcrylicWindow>

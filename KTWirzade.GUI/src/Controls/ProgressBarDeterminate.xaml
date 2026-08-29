@@ -1,0 +1,12 @@
+<UserControl x:Class="KTWirzade.GUI.Controls.ProgressBarDeterminate"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:KTWirzade.GUI.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Border Name="Container" Background="{Binding ProgressBackground}" Height="{Binding BarHeight}" CornerRadius="{Binding CornerRadius}">
+        <Border Name="Rect" HorizontalAlignment="Left" Width="0" BorderThickness="{Binding RectBorderThickness}" BorderBrush="{Binding RectBorderBrush}" Background="{Binding RectFill}" Height="{Binding BarHeight}" CornerRadius="{Binding CornerRadius}" />
+    </Border>
+</UserControl>
