@@ -17,7 +17,7 @@ using Core;
 namespace KTWirzade.Shared.Actions
 {
     // Integrate ame-assassin later
-    internal class AppxAction : Tasks.TaskAction, ITaskAction
+    public class AppxAction : Tasks.TaskAction, ITaskAction
     {
         public void RunTaskOnMainThread(Output.OutputWriter output) { throw new NotImplementedException(); }
         
@@ -47,7 +47,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(bool), Alias = "unregister")]
         public bool Unregister { get; set; } = false;
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 30;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Notify;
@@ -191,7 +191,9 @@ namespace KTWirzade.Shared.Actions
             output.WriteLineSafe("Info", $"Using ame-assassin at: {ameAssassinPath}");
 
             string verboseArg = Verbose ? " -Verbose" : "";
-            string unregisterArg = Unregister ? " -Verbose" : "";
+            // Was "-Verbose" (copy/paste bug), which sent the verbose flag twice
+            // and never forwarded the unregister request to ame-assassin.
+            string unregisterArg = Unregister ? " -Unregister" : "";
             string kernelDriverArg = AmeliorationUtil.UseKernelDriver ? " -UseKernelDriver" : "";
 
             var psi = new ProcessStartInfo()
@@ -233,18 +235,21 @@ namespace KTWirzade.Shared.Actions
                 throw new InvalidOperationException("Failed to start ame-assassin process.");
             }
 
-            proc.OutputDataReceived += ProcOutputHandler;
-            proc.ErrorDataReceived += ProcOutputHandler;
-
-            proc.BeginOutputReadLine();
-            proc.BeginErrorReadLine();
-
-            bool exited = proc.WaitForExit(30000);
-
-            // WaitForExit alone seems to not be entirely reliable
-            while (!exited && ExeRunning("ame-assassin", proc.Id))
+            using (proc)
             {
-                exited = proc.WaitForExit(30000);
+                proc.OutputDataReceived += ProcOutputHandler;
+                proc.ErrorDataReceived += ProcOutputHandler;
+
+                proc.BeginOutputReadLine();
+                proc.BeginErrorReadLine();
+
+                bool exited = proc.WaitForExit(30000);
+
+                // WaitForExit alone seems to not be entirely reliable
+                while (!exited && ExeRunning("ame-assassin", proc.Id))
+                {
+                    exited = proc.WaitForExit(30000);
+                }
             }
 
             HasFinished = true;
@@ -255,10 +260,17 @@ namespace KTWirzade.Shared.Actions
 
         private static string FindAmeAssassin()
         {
-            if (AmeliorationUtil.Playbook?.Path == null) return null;
+            // The CLI extracts ame-assassin next to its own executable; the playbook may
+            // also ship a copy under Executables/Tools. Check the app directory first.
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string currentDir = Directory.GetCurrentDirectory();
 
             string[] candidates = new[]
             {
+                Path.Combine(baseDir, "ame-assassin", "ame-assassin.exe"),
+                Path.Combine(baseDir, "ame-assassin.exe"),
+                Path.Combine(currentDir, "ame-assassin", "ame-assassin.exe"),
+                Path.Combine(currentDir, "ame-assassin.exe"),
                 Path.Combine(AmeliorationUtil.Playbook.Path, "Executables", "ame-assassin", "ame-assassin.exe"),
                 Path.Combine(AmeliorationUtil.Playbook.Path, "Executables", "ame-assassin.exe"),
                 Path.Combine(AmeliorationUtil.Playbook.Path, "ame-assassin", "ame-assassin.exe"),
@@ -297,6 +309,8 @@ namespace KTWirzade.Shared.Actions
 
         }
 
+        private static bool s_explorerStoppedForFallback;
+
         private async Task<bool> RunPowerShellFallback(Output.OutputWriter output)
         {
             string escapedName = Name.Replace("'", "''");
@@ -308,6 +322,8 @@ namespace KTWirzade.Shared.Actions
                 Level.App => "AppId",
                 _ => "PackageFullName"
             };
+            // Blacklist critical system AppX packages to prevent Explorer restart loops
+            string blacklistFilter = " -and $_.PackageFullName -notlike '*Windows.ShellExperienceHost*' -and $_.PackageFullName -notlike '*Windows.StartMenuExperienceHost*' -and $_.PackageFullName -notlike '*Microsoft.Windows.ShellExperienceHost*' -and $_.PackageFullName -notlike '*Microsoft.Windows.StartMenuExperienceHost*' -and $_.PackageFullName -notlike '*Microsoft.Windows.Explorer*' -and $_.Name -notlike '*ShellExperienceHost*' -and $_.Name -notlike '*StartMenuExperienceHost*'";
 
             this.outputWriter = output;
 
@@ -318,25 +334,39 @@ namespace KTWirzade.Shared.Actions
                 "Set-Service -Name AppXSvc -StartupType Manual; " +
                 "Get-Service -Name AppXSvc,ClipSVC | Select-Object Name, Status | Format-Table -AutoSize");
 
-            output.WriteLineSafe("Info", $"Step 2/5: Stopping explorer.exe (releases locked AppX packages)...");
-            await RunPowerShellCommand(output,
-                "Get-Process -Name explorer -ErrorAction SilentlyContinue | Stop-Process -Force; " +
-                "Start-Sleep -Seconds 1");
+            // Matar o explorer mais de uma vez por aplicacao causa loop de restart do
+            // shell (o winlogon recria o processo em ~1-2s). Mata no maximo uma vez por run.
+            if (!s_explorerStoppedForFallback)
+            {
+                s_explorerStoppedForFallback = true;
+                output.WriteLineSafe("Info", $"Step 2/5: Stopping explorer.exe (releases locked AppX packages)...");
+                await RunPowerShellCommand(output,
+                    "Get-Process -Name explorer -ErrorAction SilentlyContinue | Stop-Process -Force; " +
+                    "Start-Sleep -Seconds 1");
+            }
+            else
+            {
+                output.WriteLineSafe("Info", $"Step 2/5: explorer.exe ja foi parado nesta aplicacao - pulando para evitar loop de restart.");
+            }
 
             output.WriteLineSafe("Info", $"Step 3/5: Removing Appx packages matching '{nameFilter}'...");
+            output.WriteLineSafe("Info", $"[AppxAction] Blacklist active for ShellExperienceHost/StartMenuExperienceHost/Microsoft.Windows.Explorer to prevent Explorer restart loops.");
             string removeCommand = Operation == AppxOperation.ClearCache
-                ? $"Get-AppxPackage -AllUsers | Where-Object {{ $_.PackageFullName -like '{nameFilter}' -or $_.Name -like '{nameFilter}' }} | ForEach-Object {{ [IO.Path]::GetFullPath($_.InstallLocation) | ForEach-Object {{ if (Test-Path $_) {{ Remove-Item -Path $_ -Recurse -Force -ErrorAction Continue }} }} }}; Write-Host 'ClearCache completed'"
+                ? $"Get-AppxPackage -AllUsers | Where-Object {{ ($_.PackageFullName -like '{nameFilter}' -or $_.Name -like '{nameFilter}'){blacklistFilter} }} | ForEach-Object {{ $loc = $_.InstallLocation; if ($loc -and (Test-Path -LiteralPath $loc)) {{ Remove-Item -LiteralPath $loc -Recurse -Force -ErrorAction SilentlyContinue }} }}; Write-Host 'ClearCache completed'"
                 : (Type == Level.App
-                    ? $"Get-AppxPackage -AllUsers | Where-Object {{ $_.{typeFilter} -like '{nameFilter}' }} | Remove-AppxPackage -ErrorAction Continue; Write-Host 'Remove App completed'"
-                    : $"Get-AppxPackage -AllUsers | Where-Object {{ $_.{typeFilter} -like '{nameFilter}' }} | Remove-AppxPackage -AllUsers -ErrorAction Continue; Write-Host 'Remove Family/Package completed'");
+                    ? $"Get-AppxPackage -AllUsers | Where-Object {{ $_.{typeFilter} -like '{nameFilter}'{blacklistFilter} }} | Remove-AppxPackage -ErrorAction Continue; Write-Host 'Remove App completed'"
+                    : $"Get-AppxPackage -AllUsers | Where-Object {{ $_.{typeFilter} -like '{nameFilter}'{blacklistFilter} }} | Remove-AppxPackage -AllUsers -ErrorAction Continue; Write-Host 'Remove Family/Package completed'");
             await RunPowerShellCommand(output, removeCommand);
 
             if (Operation != AppxOperation.ClearCache)
             {
                 output.WriteLineSafe("Info", $"Step 4/5: Removing provisioned packages...");
+                // Provisioned package objects have no AppId/PackageFullName filter property
+                // matching Level.App; match by DisplayName (always present) instead.
+                string provisionBlacklist = " -and $_.PackageName -notlike '*Windows.ShellExperienceHost*' -and $_.PackageName -notlike '*Windows.StartMenuExperienceHost*' -and $_.PackageName -notlike '*Microsoft.Windows.ShellExperienceHost*' -and $_.PackageName -notlike '*Microsoft.Windows.StartMenuExperienceHost*' -and $_.PackageName -notlike '*Microsoft.Windows.Explorer*' -and $_.DisplayName -notlike '*ShellExperienceHost*' -and $_.DisplayName -notlike '*StartMenuExperienceHost*'";
                 string provisionCommand = Type == Level.App
-                    ? $"Get-AppxProvisionedPackage -Online | Where-Object {{ $_.{typeFilter} -like '{nameFilter}' }} | Remove-AppxProvisionedPackage -Online -ErrorAction Continue; Write-Host 'Provisioned remove completed'"
-                    : $"Get-AppxProvisionedPackage -Online | Where-Object {{ $_.PackageFullName -like '{nameFilter}' }} | Remove-AppxProvisionedPackage -Online -ErrorAction Continue; Write-Host 'Provisioned remove completed'";
+                    ? $"Get-AppxProvisionedPackage -Online | Where-Object {{ $_.DisplayName -like '{nameFilter}'{provisionBlacklist} }} | Remove-AppxProvisionedPackage -Online; Write-Host 'Provisioned remove completed'"
+                    : $"Get-AppxProvisionedPackage -Online | Where-Object {{ ($_.PackageName -like '{nameFilter}' -or $_.DisplayName -like '{nameFilter}'){provisionBlacklist} }} | Remove-AppxProvisionedPackage -Online; Write-Host 'Provisioned remove completed'";
                 await RunPowerShellCommand(output, provisionCommand);
             }
 
@@ -345,6 +375,9 @@ namespace KTWirzade.Shared.Actions
                 "Set-Service -Name AppXSvc -StartupType Manual; " +
                 "Start-Service -Name AppXSvc -ErrorAction SilentlyContinue; " +
                 "Start-Service -Name ClipSVC -ErrorAction SilentlyContinue");
+            // Sem Start-Process explorer.exe: o winlogon recria o shell sozinho em ~1-2s,
+            // e iniciar o explorer a partir de um processo TrustedInstaller criaria o shell
+            // com o nivel de integridade errado (outra fonte de mal comportamento do explorer).
 
             HasFinished = true;
             InProgress = false;
@@ -353,11 +386,13 @@ namespace KTWirzade.Shared.Actions
 
         private async Task RunPowerShellCommand(Output.OutputWriter output, string command)
         {
+            var cleaned = command.Replace("\"\"\"", "\"");
+            var encoded = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(cleaned));
             var psi = new ProcessStartInfo()
             {
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                Arguments = $"-NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -Command \"{command}\"",
+                Arguments = $"-NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -EncodedCommand {encoded}",
                 FileName = "powershell.exe",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true
@@ -376,6 +411,11 @@ namespace KTWirzade.Shared.Actions
             proc.BeginErrorReadLine();
 
             await Task.Run(() => proc.WaitForExit());
+
+            // Removal failures used to be swallowed and reported as success; at least
+            // surface them in the log so the user can tell what did not apply.
+            if (proc.ExitCode != 0)
+                output.WriteLineSafe("Warning", $"PowerShell step finished with exit code {proc.ExitCode} (some operations may have failed).");
         }
 
 

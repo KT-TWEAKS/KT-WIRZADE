@@ -1,0 +1,65 @@
+<controls:AcrylicWindow x:Class="KTWirzade.GUI.Windows.CustomizationDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:KTWirzade.GUI.Windows"
+        xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
+        xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
+        xmlns:gui="clr-namespace:KTWirzade.GUI"
+        mc:Ignorable="d"
+        Height="600" Width="700" Style="{DynamicResource Window}"
+        WindowStartupLocation="CenterOwner" RenderTransformOrigin="0.5,0.5"
+        Title="Personalizar Playbook" CornerType="Round"
+        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}">
+
+    <UIElement.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform CenterX="100" x:Name="securityscale" />
+        </TransformGroup>
+    </UIElement.RenderTransform>
+    <Grid Name="RootWindow">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="50" />
+        </Grid.RowDefinitions>
+        <Rectangle Name="FillRect" Grid.RowSpan="3" Fill="{DynamicResource PrimaryBrush}" Margin="0,0,0,0">
+            <UIElement.Clip>
+                <CombinedGeometry GeometryCombineMode="Exclude">
+                    <CombinedGeometry.Geometry1>
+                        <RectangleGeometry Rect="0,0,1000,3000" />
+                    </CombinedGeometry.Geometry1>
+                    <CombinedGeometry.Geometry2>
+                        <GeometryGroup x:Name="ExcludeGeometries" />
+                    </CombinedGeometry.Geometry2>
+                </CombinedGeometry>
+            </UIElement.Clip>
+        </Rectangle>
+        <DockPanel Name="TitleBar" Dock="Top" Height="40" VerticalAlignment="Top" ZIndex="2">
+            <Image Style="{StaticResource QualityImage}" Margin="8, 6,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="21" Height="21" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
+            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Width="600" Text="Personalizar Playbook" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
+        </DockPanel>
+
+        <ScrollViewer Grid.Row="1" Margin="20,10,20,10" VerticalScrollBarVisibility="Auto">
+            <StackPanel Name="CustomizationsPanel">
+                <!-- Sections will be added dynamically in code-behind -->
+                <TextBlock Name="NoCustomizationsText" Text="Este playbook não possui customizações opcionais."
+                           FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}"
+                           HorizontalAlignment="Center" Margin="0,50,0,0"
+                           Visibility="Collapsed"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,20,10">
+            <Button Name="UseDefaultsButton" Content="Usar Padrões" Margin="0,0,10,0"
+                    Style="{DynamicResource ContentBoxButton}" Padding="15,5,15,5"
+                    Click="UseDefaultsButton_Click"/>
+            <Button Name="ApplyButton" Content="Aplicar Customização"
+                    Style="{DynamicResource ContentBoxButton}" Padding="15,5,15,5"
+                    Click="ApplyButton_Click"/>
+        </StackPanel>
+    </Grid>
+</controls:AcrylicWindow>

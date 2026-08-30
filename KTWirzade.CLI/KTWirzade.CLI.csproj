@@ -15,9 +15,9 @@
     <Deterministic>true</Deterministic>
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <TargetFrameworkProfile />
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <NuGetPackageImportStamp>
     </NuGetPackageImportStamp>
-    <PublishUrl>C:\Users\yohas\Documents\AME\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
     <UpdateEnabled>false</UpdateEnabled>
@@ -38,7 +38,7 @@
     <Nullable>disable</Nullable>
   </PropertyGroup>
   <PropertyGroup>
-    <PathMap>$([System.IO.Path]::GetFullPath('$(SolutionDir)'))=./</PathMap>
+    <PathMap></PathMap>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
@@ -77,12 +77,6 @@
     <Optimize>true</Optimize>
     <DebugType>embedded</DebugType>
     <DefineConstants>SINGLE;DEBUG</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup>
-    <ManifestCertificateThumbprint>B8F0A67800B779C5CEF49BEAB6E5247E373F9452</ManifestCertificateThumbprint>
-  </PropertyGroup>
-  <PropertyGroup>
-    <ManifestKeyFile>KTWirzade.CLI_TemporaryKey.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <GenerateManifests>false</GenerateManifests>
@@ -143,12 +137,12 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="JetBrains.Annotations" Version="2024.2.0-eap1" />
-    <PackageReference Include="System.Buffers" Version="4.5.1" />
+    <PackageReference Include="System.Buffers" Version="4.6.1" />
     <PackageReference Include="System.CodeDom" Version="6.0.0" />
-    <PackageReference Include="System.Numerics.Vectors" Version="4.5.0" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.0.0" />
-    <PackageReference Include="System.Security.Principal.Windows" Version="5.0.0" />
-    <PackageReference Include="System.Text.Json" Version="10.0.7" />
+<PackageReference Include="System.Numerics.Vectors" Version="4.6.1" />
+<PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+<PackageReference Include="System.Security.Principal.Windows" Version="5.0.0" />
+<PackageReference Include="System.Text.Json" Version="10.0.7" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Properties\resources\7za.dll" />

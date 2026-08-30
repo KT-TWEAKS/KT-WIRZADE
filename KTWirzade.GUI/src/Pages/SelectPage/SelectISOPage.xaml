@@ -35,7 +35,7 @@
                     </TransformGroup>
                 </UIElement.RenderTransform>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Name="BrowserTextBinbows" FontSize="13" Width="276" Height="35" Margin="0,21,0,0" Text="Please agree to the following before downloading Windows 11." TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Name="BrowserTextBinbows" FontSize="13" Width="276" Height="35" Margin="0,21,0,0" Text="Please agree to the following before downloading Windows." TextWrapping="Wrap" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <CheckBox Name="CheckBoxBinbows" IsChecked="False" Style="{DynamicResource Unchecked}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,15,0,0" Checked="BinbowsCheckBox_OnChecked">
                     <TextBlock Foreground="{DynamicResource TextPrimaryBrush}" FontSize="13">

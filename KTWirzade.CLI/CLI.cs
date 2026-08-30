@@ -41,6 +41,8 @@ namespace KTWirzade.CLI
                     throw new SecurityException("Process must be run as an administrator.");
                 
                 Directory.SetCurrentDirectory(Path.GetDirectoryName(Win32.ProcessEx.GetCurrentProcessFileLocation())!);
+                // Join the same IPC session (pipe namespace + DACL owner) as the root node.
+                InterLink.InitializeSession(interprocessData.Secret, interprocessData.OwnerSid);
                 await InterLink.InitializeConnection(interprocessData.Level, interprocessData.Mode, interprocessData.Host, interprocessData.Nodes?.Select(x => (Level: x.Level, ProcessID: x.ProcessID)).ToArray() ?? null);
                 Environment.Exit(376);
             }
@@ -54,6 +56,28 @@ namespace KTWirzade.CLI
             //Needed after defender removal's reboot, the "current directory" will be set to System32
             //After the auto start up.
             Directory.SetCurrentDirectory(Path.GetDirectoryName(Win32.ProcessEx.GetCurrentProcessFileLocation())!);
+
+            // Registered as "<exe>" --service True": match anywhere in args, otherwise the
+            // machine stays stuck in Safe Mode after Defender removal (the handler never fired).
+            if (args.Contains("--service"))
+            {
+                // Safe-boot recovery service handler. The KTWirzadePrepare service installed by
+                // Defender.InstallService points at this executable - without handling it the
+                // machine would sit in Safe Mode with a dead service after preparation.
+                // Full continuation of the GUI apply-package flow is handled by the GUI build;
+                // here we make sure the system always returns to normal boot.
+                Console.WriteLine("KTWirzadePrepare: restoring normal boot...");
+                try
+                {
+                    RunSystemCommand("bcdedit.exe", "/deletevalue {current} safeboot");
+                    RunSystemCommand("sc.exe", "delete KTWirzadePrepare");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("KTWirzadePrepare cleanup warning: " + e.Message);
+                }
+                return 0;
+            }
 
             if (!WinUtil.IsAdministrator())
             {
@@ -78,8 +102,39 @@ namespace KTWirzade.CLI
 
             AmeliorationUtil.Playbook = AmeliorationUtil.DeserializePlaybook(Path.GetFullPath(args[0]));
 
+            // Bypass somente quando solicitado explicitamente: flags do CLI ou o botao
+            // "aplicar mesmo assim" da GUI (que repassa --skip-build/--skip-requirements).
+            if (args.Any(a => a == "--skip-build" || a == "--bypass-all"))
+                AmeliorationUtil.SkipBuildCheck = true;
+
+            if (args.Any(a => a == "--skip-requirements" || a == "--bypass-all"))
+                AmeliorationUtil.SkipRequirementsCheck = true;
+
             var asm = Assembly.GetExecutingAssembly().GetName();
             Console.WriteLine($"KTWirzade CLI v{asm.Version} - Playbook: {AmeliorationUtil.Playbook.Name} ({AmeliorationUtil.Playbook.Version})");
+
+            if (AmeliorationUtil.SkipBuildCheck)
+                Console.WriteLine("\r\n[BYPASS] Windows build check DISABLED (--skip-build)\r\n");
+
+            if (AmeliorationUtil.SkipRequirementsCheck)
+                Console.WriteLine("\r\n[BYPASS] Requirements check DISABLED (--skip-requirements)\r\n");
+
+            // Supported-builds check with explicit bypass, mirroring the GUI warning.
+            var supportedBuilds = AmeliorationUtil.Playbook.SupportedBuilds;
+            if (!AmeliorationUtil.SkipBuildCheck && supportedBuilds != null && supportedBuilds.Length > 0 &&
+                !supportedBuilds.Contains(Environment.OSVersion.Version.Build.ToString()))
+            {
+                Console.WriteLine($"\r\nWARNING: This playbook supports Windows builds [{string.Join(", ", supportedBuilds)}]," +
+                    $" but this system is build {Environment.OSVersion.Version.Build}.");
+                Console.Write("Continue anyway at your own risk? (y/N): ");
+                var answer = Console.ReadLine();
+                if (!string.Equals(answer?.Trim(), "y", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("Aborted.");
+                    return -2;
+                }
+                Console.WriteLine();
+            }
 
             if (!Directory.Exists($"{AmeliorationUtil.Playbook.Path}\\Configuration") ||
                 Directory.GetFiles($"{AmeliorationUtil.Playbook.Path}\\Configuration").Length == 0)
@@ -91,13 +146,21 @@ namespace KTWirzade.CLI
 
             ExtractResourceFolder("resources", Directory.GetCurrentDirectory());
 
+            // Root of the IPC session: generate the per-run pipe secret before any node launch.
+            InterLink.InitializeSession();
             await InterLink.InitializeConnection(Level.Administrator, Mode.TwoWay);
             
 
             if (!WinUtil.IsTrustedInstaller())
             {
-                Console.WriteLine("Checking requirements...\r\n");
-                if (AmeliorationUtil.Playbook.Requirements.Contains(Requirements.Requirement.Internet) && !await (new Requirements.Internet()).IsMet())
+                if (AmeliorationUtil.SkipRequirementsCheck)
+                {
+                    Console.WriteLine("[BYPASS] Requirements check DISABLED (--skip-requirements)\r\n");
+                }
+                else
+                {
+                    Console.WriteLine("Checking requirements...\r\n");
+                    if (AmeliorationUtil.Playbook.Requirements.Contains(Requirements.Requirement.Internet) && !await (new Requirements.Internet()).IsMet())
                 {
                     Console.WriteLine("Internet must be connected to run this Playbook.");
                 }
@@ -155,6 +218,7 @@ namespace KTWirzade.CLI
                 if (AmeliorationUtil.Playbook.Requirements.Contains(Requirements.Requirement.Internet) && !await (new Requirements.Internet()).IsMet())
                 {
                     Console.WriteLine("Internet must be connected to run this Playbook.");
+                }
                 }
             }
 
@@ -244,17 +308,28 @@ namespace KTWirzade.CLI
                 Environment.Exit(1);
             }
 
-            List<string> options = null;
-            if (args.Length > 1)
-            {
-                options = args.Skip(1).ToList();
-            }
-
             var allOptions = AmeliorationUtil.Playbook.FeaturePages == null ? new string[] { } : AmeliorationUtil.Playbook.FeaturePages.SelectMany(x => x.Options.Select(o => o.Name)).Where(x => !string.IsNullOrEmpty(x)).ToArray();
+
+            // Merge CLI args into the Playbook.Options already set from FeaturePages.
+            // The original code built a fresh list from args (empty when none given) and
+            // passed it to RunPlaybook, which overwrote the correctly-set defaults.
+            var cliArgs = args.Length > 1 ? args.Skip(1).ToList() : new List<string>();
+            var options = AmeliorationUtil.Playbook.Options ?? new List<string>();
+            foreach (var arg in cliArgs)
+            {
+                if (arg == "--skip-build" || arg == "--skip-requirements" || arg == "--bypass-all")
+                    continue;
+                if (!options.Contains(arg, StringComparer.OrdinalIgnoreCase))
+                    options.Add(arg);
+            }
             var status = "Starting Playbook";
             bool errorsOccurred = false;
             try
             {
+                // Open a named rollback session so CLI runs are revertible and closed
+                // properly (otherwise entries land in an eternal "Manual" session).
+                KTWirzade.Shared.Rollback.RollbackManager.BeginSession(AmeliorationUtil.Playbook.Name);
+
                 using (var reporter = new InterLink.InterMessageReporter(statusText => { status = statusText.TrimEnd('.') + "..."; }))
                 {
                     using (var progress = new InterLink.InterProgress(async value => { Console.WriteLine(value + "% " + status + "..."); }))
@@ -267,6 +342,7 @@ namespace KTWirzade.CLI
             catch (Exception exception)
             {
                 InterLink.ShutdownNode(Level.TrustedInstaller);
+                KTWirzade.Shared.Rollback.RollbackManager.EndSession(false);
 
                 if (exception is SerializableException serializableException && serializableException.OriginalType.Type == typeof(SerializationException))
                 {
@@ -277,6 +353,8 @@ namespace KTWirzade.CLI
                 Console.WriteLine("\r\nFatal Playbook Error: " + exception.ToString());
                 Environment.Exit(1);
             }
+
+            KTWirzade.Shared.Rollback.RollbackManager.EndSession(!errorsOccurred);
 
             if (errorsOccurred)
                 Console.WriteLine("\r\nPlaybook completed with errors.");
@@ -320,6 +398,34 @@ namespace KTWirzade.CLI
                 Log.EnqueueSafe(LogType.Error, "Warning while running 7zip: " + errorOutput.ToString(), null, ("Command", command));
             if (proc.ExitCode > 1)
                 throw new ArgumentOutOfRangeException("Error running 7zip: " + errorOutput.ToString());
+        }
+
+        // Runs a real system executable (bcdedit, sc, ...). RunCommand above is the 7zip
+        // helper - feeding it "bcdedit.exe ..." used to execute 7za with bcdedit as its
+        // argument, so safe-boot recovery silently never happened.
+        private static void RunSystemCommand(string fileName, string arguments)
+        {
+            var psi = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            using (var proc = Process.Start(psi))
+            {
+                string output = proc.StandardOutput.ReadToEnd();
+                string error = proc.StandardError.ReadToEnd();
+                proc.WaitForExit();
+
+                if (proc.ExitCode != 0)
+                    Log.EnqueueSafe(LogType.Warning,
+                        $"{fileName} exited with code {proc.ExitCode}: {output} {error}".Trim(),
+                        null, ("Arguments", arguments));
+            }
         }
 
         public static void ExtractResourceFolder(string resource, string dir, bool overwrite = false)
@@ -396,8 +502,8 @@ namespace KTWirzade.CLI
 
             await Task.Run(() =>
             {
-                var defenderKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows Defender");
-                var policiesKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows Defender");
+                using var defenderKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows Defender");
+                using var policiesKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows Defender");
 
                 RegistryKey realtimePolicy = null;
                 RegistryKey realtimeKey = null;
@@ -405,19 +511,21 @@ namespace KTWirzade.CLI
                 {
                     try
                     {
-                        realtimePolicy = policiesKey.OpenSubKey("Real-Time Protection");
+                        realtimePolicy = policiesKey?.OpenSubKey("Real-Time Protection");
                     }
                     catch (Exception e)
                     {
+                        Log.WriteExceptionSafe(e, "Failed to open Real-Time Protection policy key");
                     }
 
                     if (realtimePolicy != null)
                         realtimeKey = realtimePolicy;
                     else
-                        realtimeKey = defenderKey.OpenSubKey("Real-Time Protection");
+                        realtimeKey = defenderKey?.OpenSubKey("Real-Time Protection");
                 }
-                catch
+                catch (Exception e)
                 {
+                    Log.WriteExceptionSafe(e, "Failed to access Real-Time Protection settings");
                     result.Add(false);
                 }
 
@@ -429,16 +537,25 @@ namespace KTWirzade.CLI
                     }
                     catch (Exception exception)
                     {
+                        Log.WriteExceptionSafe(exception, "Failed to read DisableRealtimeMonitoring from policy key");
                         try
                         {
-                            realtimeKey = defenderKey.OpenSubKey("Real-Time Protection");
-                            result.Add((int)realtimeKey.GetValue("DisableRealtimeMonitoring") != 1);
+                            realtimeKey = defenderKey?.OpenSubKey("Real-Time Protection");
+                            if (realtimeKey != null)
+                                result.Add((int)realtimeKey.GetValue("DisableRealtimeMonitoring") != 1);
+                            else
+                                result.Add(true);
                         }
                         catch (Exception e)
                         {
+                            Log.WriteExceptionSafe(e, "Failed to read DisableRealtimeMonitoring from defender key");
                             result.Add(true);
                         }
                     }
+                }
+                else
+                {
+                    result.Add(false);
                 }
 
                 try
@@ -448,59 +565,99 @@ namespace KTWirzade.CLI
 
                     try
                     {
-                        spynetPolicy = policiesKey.OpenSubKey("SpyNet");
+                        spynetPolicy = policiesKey?.OpenSubKey("SpyNet");
                     }
                     catch (Exception e)
                     {
+                        Log.WriteExceptionSafe(e, "Failed to open SpyNet policy key");
                     }
 
                     if (spynetPolicy != null)
                         spynetKey = spynetPolicy;
                     else
-                        spynetKey = defenderKey.OpenSubKey("SpyNet");
+                        spynetKey = defenderKey?.OpenSubKey("SpyNet");
 
                     int reporting = 0;
                     int consent = 0;
                     try
                     {
-                        reporting = (int)spynetKey.GetValue("SpyNetReporting");
+                        if (spynetKey != null)
+                            reporting = (int)spynetKey.GetValue("SpyNetReporting");
                     }
                     catch (Exception e)
                     {
-                        if (spynetPolicy != null)
+                        Log.WriteExceptionSafe(e, "Failed to read SpyNetReporting from policy key");
+                        if (spynetPolicy != null && defenderKey != null)
                         {
-                            reporting = (int)defenderKey.OpenSubKey("SpyNet").GetValue("SpyNetReporting");
+                            try
+                            {
+                                using var defenderSpyNet = defenderKey.OpenSubKey("SpyNet");
+                                if (defenderSpyNet != null)
+                                    reporting = (int)defenderSpyNet.GetValue("SpyNetReporting");
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.WriteExceptionSafe(ex, "Failed to read SpyNetReporting from defender key");
+                            }
                         }
                     }
 
                     try
                     {
-                        consent = (int)spynetKey.GetValue("SubmitSamplesConsent");
+                        if (spynetKey != null)
+                            consent = (int)spynetKey.GetValue("SubmitSamplesConsent");
                     }
                     catch (Exception e)
                     {
-                        if (spynetPolicy != null)
+                        Log.WriteExceptionSafe(e, "Failed to read SubmitSamplesConsent from policy key");
+                        if (spynetPolicy != null && defenderKey != null)
                         {
-                            consent = (int)defenderKey.OpenSubKey("SpyNet").GetValue("SubmitSamplesConsent");
+                            try
+                            {
+                                using var defenderSpyNet = defenderKey.OpenSubKey("SpyNet");
+                                if (defenderSpyNet != null)
+                                    consent = (int)defenderSpyNet.GetValue("SubmitSamplesConsent");
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.WriteExceptionSafe(ex, "Failed to read SubmitSamplesConsent from defender key");
+                            }
                         }
                     }
 
                     result.Add(reporting != 0);
                     result.Add(consent != 0 && consent != 2 && consent != 4);
                 }
-                catch
+                catch (Exception e)
                 {
+                    Log.WriteExceptionSafe(e, "Failed to read SpyNet settings");
                     result.Add(false);
                     result.Add(false);
                 }
 
                 try
                 {
-                    int tamper = (int)defenderKey.OpenSubKey("Features").GetValue("TamperProtection");
-                    result.Add(tamper != 4 && tamper != 0);
+                    if (defenderKey != null)
+                    {
+                        using var featuresKey = defenderKey.OpenSubKey("Features");
+                        if (featuresKey != null)
+                        {
+                            int tamper = (int)featuresKey.GetValue("TamperProtection");
+                            result.Add(tamper != 4 && tamper != 0);
+                        }
+                        else
+                        {
+                            result.Add(false);
+                        }
+                    }
+                    else
+                    {
+                        result.Add(false);
+                    }
                 }
-                catch
+                catch (Exception e)
                 {
+                    Log.WriteExceptionSafe(e, "Failed to read TamperProtection setting");
                     result.Add(false);
                 }
             });

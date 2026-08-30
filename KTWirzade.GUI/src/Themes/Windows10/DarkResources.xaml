@@ -2,8 +2,8 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     
     <SolidColorBrush x:Key="ButtonDockBorderBrush" Color="#2b2b2b" Opacity="1" />
-    <SolidColorBrush x:Key="WindowBorder" Color="#353536" Opacity="1" />
-    <SolidColorBrush x:Key="WindowBorderMinor" Color="#353536" Opacity="1" />
+    <SolidColorBrush x:Key="WindowBorder" Color="#8b5cf6" Opacity="1" />
+    <SolidColorBrush x:Key="WindowBorderMinor" Color="#8b5cf6" Opacity="1" />
     <Color x:Key="TextPrimaryColor">#d5d6dd</Color>
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#d5d6dd" />
     <SolidColorBrush x:Key="TextSoftBrush" Color="#d5d6dd" />
@@ -13,24 +13,24 @@
     <Color x:Key="TextPrimaryInverseColor">Black</Color>
     <SolidColorBrush x:Key="TextPrimaryInverseBrush" Color="Black" />
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#909090" />
-    <SolidColorBrush x:Key="PageBackground" Color="#1f1f20" />
-    <SolidColorBrush x:Key="PageBorderBrush" Color="#17171a" Opacity="0.95" />
+    <SolidColorBrush x:Key="PageBackground" Color="#191a1c" />
+    <SolidColorBrush x:Key="PageBorderBrush" Color="#141416" Opacity="0.95" />
     <SolidColorBrush x:Key="PageSubtextColor" Color="#c1c2c7" />
     <Color x:Key="PlaybookFadeColor">White</Color>
-    <SolidColorBrush x:Key="PlaybookRectColor" Color="#49a7d8" />
-    <Color x:Key="ProgressBarColor">#49a7d8</Color>
-    <SolidColorBrush x:Key="ProgressBarBrush" Color="#49a7d8" />
+    <SolidColorBrush x:Key="PlaybookRectColor" Color="#8b5cf6" />
+    <Color x:Key="ProgressBarColor">#8b5cf6</Color>
+    <SolidColorBrush x:Key="ProgressBarBrush" Color="#8b5cf6" />
     <SolidColorBrush x:Key="ContentBoxBorderBrush" Color="#1c1d1e" />
-    <SolidColorBrush x:Key="FakeBackgroundBrush" Color="#1c1c1d" />
-    <SolidColorBrush x:Key="PrimaryBrush" Color="#1a1a1b" Opacity="1" />
-    <SolidColorBrush x:Key="SecondaryBrush" Color="#282828" Opacity="1" />
+    <SolidColorBrush x:Key="FakeBackgroundBrush" Color="#161719" />
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#141517" Opacity="1" />
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#232427" Opacity="1" />
     <SolidColorBrush x:Key="VerificationPopupBackgroundBrush" Color="#2f2f30" />
     <SolidColorBrush x:Key="VerificationPopupBorderBrush" Color="#1b1b1e" Opacity="0.92" />
     <SolidColorBrush x:Key="VerificationPopupLineBrush" Color="#0f0f0f" Opacity="0.6" />
     <SolidColorBrush x:Key="VerificationVerifiedBrush" Color="#354d4c" Opacity="0.94" />
     <SolidColorBrush x:Key="VerificationMaliciousBrush" Color="#351d20" Opacity="0.93" />
     <SolidColorBrush x:Key="VerificationUnverifiedBrush" Color="#351d20" Opacity="0.93" />
-    <SolidColorBrush x:Key="ProgressBarBackground" Color="#5b5d5f" />
+    <SolidColorBrush x:Key="ProgressBarBackground" Color="#33363a" />
     <SolidColorBrush x:Key="NoticeBoxBrush" Color="#31353a" />
     <SolidColorBrush x:Key="WarningBoxBrush" Color="#433519" />
     <SolidColorBrush x:Key="SuccessBoxBrush" Color="#313a32" />
@@ -42,12 +42,22 @@
     <SolidColorBrush x:Key="TextDropDownBorderBrush" Color="#1c1d1e" />
     <SolidColorBrush x:Key="UpdatesUpToDateBrush" Color="#132b40" />
     <SolidColorBrush x:Key="UpdatesUpdateReadyBrush" Color="#475c45" />
-    <SolidColorBrush x:Key="BlueInfoCircleFill" Color="#71d4db" />
+    <SolidColorBrush x:Key="BlueInfoCircleFill" Color="#a78bfa" />
     <SolidColorBrush x:Key="BlueInfoCircleSymbol" Color="#000000" />
     <SolidColorBrush x:Key="YellowInfoCircleFill" Color="#fce100" />
     <SolidColorBrush x:Key="YellowInfoCircleSymbol" Color="#000000" />
     <SolidColorBrush x:Key="ErrorInfoCircleFill" Color="#d61f33" />
     <SolidColorBrush x:Key="ErrorInfoCircleSymbol" Color="White" />
+    <!-- Semantic status brushes (KT WIRZADE consistency pass) -->
+    <SolidColorBrush x:Key="StatusSuccessBrush" Color="#3DA35A" />
+    <SolidColorBrush x:Key="StatusSuccessSoftBrush" Color="#203DA35A" />
+    <SolidColorBrush x:Key="StatusWarningBrush" Color="#E6A917" />
+    <SolidColorBrush x:Key="StatusWarningSoftBrush" Color="#20E6A917" />
+    <SolidColorBrush x:Key="StatusErrorBrush" Color="#D61F33" />
+    <SolidColorBrush x:Key="StatusErrorSoftBrush" Color="#20D61F33" />
+    <SolidColorBrush x:Key="OverlayScrimBrush" Color="#44000000" />
+    <SolidColorBrush x:Key="StatusInfoBrush" Color="#8b5cf6" />
+    <SolidColorBrush x:Key="StatusInfoSoftBrush" Color="#208b5cf6" />
     <BitmapImage x:Key="SecurityToggleOnBitmap" CreateOptions="IgnoreColorProfile" UriSource="/Icons/Dark/security_toggle_on.png" />
     <BitmapImage x:Key="SecurityToggleOffBitmap" CreateOptions="IgnoreColorProfile" UriSource="/Icons/Dark/security_toggle_off.png" />
     <BitmapImage x:Key="WindowsSecurityBitmap" CreateOptions="IgnoreColorProfile" UriSource="/Icons/Dark/windows_security_screenshot.png" />
@@ -89,9 +99,9 @@
     <BitmapImage x:Key="VendorBox32" UriSource="/Icons/Dark/vendor_box_32.png" />
     <BitmapImage x:Key="Web32" UriSource="/Icons/Dark/web_32.png" />
     <BitmapImage x:Key="UsbDrive32" UriSource="/Icons/Dark/FluentUsbStick20Regular.png" />
-    <BitmapImage x:Key="AmelioratedLogo" UriSource="/Icons/Dark/ameliorated_logo_256.png" />
+    <BitmapImage x:Key="KTWirzadeLogo" UriSource="/Icons/Dark/kt_wirzade_logo_256.png" />
     <SolidColorBrush x:Key="AboutBrush" Color="#1a1a1b" Opacity="1" />
-    <SolidColorBrush x:Key="TransparentButtonTextForeground" Color="#99ebff" />
+    <SolidColorBrush x:Key="TransparentButtonTextForeground" Color="#c4b5fd" />
     <Rect x:Key="PageExcludeRect" X="197" Y="1" Height="1000" Width="1000" />
     <Thickness x:Key="UpdatesButtonTextMargin" Top="3" />
     <Thickness x:Key="VerifiedButtonTextMargin" Top="4" />

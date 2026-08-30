@@ -565,7 +565,7 @@ namespace KTWirzade.GUI.Views
                 bool? tpm = obj;
                 bool? internet = (GlobalsGUI.Current.ISO.WriteOptions.Contains("InternetCheck") ? (defaultOptions.Contains("InternetCheck") ? ((bool?)null) : new bool?(false)) : ((!defaultOptions.Contains("InternetCheck")) ? ((bool?)null) : new bool?(true)));
                 bool? obj2;
-                if (GlobalsGUI.Current.ISO.WriteOptions.Contains("CPURAMCheck"))
+                if (GlobalsGUI.Current.ISO.WriteOptions.Contains("RAMCPUCheck"))
                 {
                     Shared.ISO configuration3 = GlobalsGUI.Current.ISO.Configuration;
                     obj2 = ((configuration3 == null || !configuration3.HardwareRequirementsDisabled) ? ((bool?)null) : new bool?(false));

@@ -10,8 +10,13 @@
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <LangVersion>latest</LangVersion>
     <AppConfig>App.config</AppConfig>
-    <AutoGenerateBindingRedirects>false</AutoGenerateBindingRedirects>
-    <GenerateBindingRedirectsOutputType>false</GenerateBindingRedirectsOutputType>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <ApplicationIcon>Icons\ico.ico</ApplicationIcon>
+    <!-- Keep aligned with Globals.CurrentVersion and CHANGELOG/README. Frozen at 1.0.0 until launch. -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
 </PropertyGroup>
 
   <ItemGroup>
@@ -165,8 +170,10 @@
     <None Remove="Icons\oobewallpaper.jpg" />
     <None Remove="Icons\os\arch.png" />
     <None Remove="Icons\os\binbows11.png" />
+    <None Remove="Icons\os\localiso.png" />
     <None Remove="Icons\os\steamos.png" />
     <None Remove="Icons\os\ubuntu.png" />
+    <None Remove="Icons\os\win10.png" />
     <None Remove="Icons\pepper.png" />
     <None Remove="Icons\playbook_frame_128.png" />
     <None Remove="Icons\playbook_frame_256.png" />
@@ -260,6 +267,8 @@
     <None Remove="Resources\WUApiLib.Extensions.dll" />
     <None Remove="Resources\WUApiLib.Utility.dll" />
     <None Remove="Resources\YamlDotNet.dll" />
+    <None Remove="Resources\netstandard.dll" />
+    <None Remove="Resources\System.Runtime.InteropServices.RuntimeInformation.dll" />
   </ItemGroup>
 
   <ItemGroup>
@@ -416,14 +425,18 @@
     <Resource Include="Icons\oobewallpaper.jpg" />
     <Resource Include="Icons\os\arch.png" />
     <Resource Include="Icons\os\binbows11.png" />
+    <Resource Include="Icons\os\localiso.png" />
     <Resource Include="Icons\os\steamos.png" />
     <Resource Include="Icons\os\ubuntu.png" />
+    <Resource Include="Icons\os\win10.png" />
     <Resource Include="Icons\pepper.png" />
     <EmbeddedResource Include="Resources\7z.dll" />
     <EmbeddedResource Include="Resources\Ben.Demystifier.dll" />
     <EmbeddedResource Include="Resources\client-helper.dll" />
     <EmbeddedResource Include="Resources\CONVERT.bat" />
     <EmbeddedResource Include="Resources\DiscUtils.Core.dll" />
+    <EmbeddedResource Include="Resources\Z-AME-NoDefender-Package31bf3856ad364e35amd641.0.0.0.cab" />
+    <EmbeddedResource Include="Resources\Z-AME-NoDefender-Package31bf3856ad364e35arm641.0.0.0.cab" />
     <EmbeddedResource Include="Resources\DiscUtils.Iso9660.dll" />
     <EmbeddedResource Include="Resources\DiscUtils.Streams.dll" />
     <EmbeddedResource Include="Resources\DiscUtils.Udf.dll" />
@@ -437,7 +450,7 @@
     <EmbeddedResource Include="Resources\Microsoft.Bcl.Cryptography.dll" />
     <EmbeddedResource Include="Resources\Microsoft.Bcl.TimeProvider.dll" />
     <EmbeddedResource Include="Resources\Microsoft.Toolkit.Uwp.Notifications.dll" />
-    <EmbeddedResource Include="Resources\Microsoft.Toolkit.Uwp.Notifications.pdb" />
+    <!-- PDB not needed at runtime -->
     <EmbeddedResource Include="Resources\Microsoft.Wim.dll" />
     <EmbeddedResource Include="Resources\Microsoft.Win32.TaskScheduler.dll" />
     <EmbeddedResource Include="Resources\mkisofs.exe" />
@@ -446,7 +459,7 @@
     <EmbeddedResource Include="Resources\NSudoLC.exe" />
     <EmbeddedResource Include="Resources\Plane.dll" />
     <EmbeddedResource Include="Resources\Polly.Core.dll" />
-    <EmbeddedResource Include="Resources\Polly.Core.pdb" />
+    <!-- PDB not needed at runtime -->
     <EmbeddedResource Include="Resources\SharpSevenZip.dll" />
     <EmbeddedResource Include="Resources\System.Buffers.dll" />
     <EmbeddedResource Include="Resources\System.CodeDom.dll" />
@@ -491,6 +504,8 @@
     <EmbeddedResource Include="Resources\WUApiLib.Extensions.dll" />
     <EmbeddedResource Include="Resources\WUApiLib.Utility.dll" />
     <EmbeddedResource Include="Resources\YamlDotNet.dll" />
+    <EmbeddedResource Include="Resources\netstandard.dll" />
+    <EmbeddedResource Include="Resources\System.Runtime.InteropServices.RuntimeInformation.dll" />
     <Resource Include="Icons\playbook_frame_128.png" />
     <Resource Include="Icons\playbook_frame_256.png" />
     <Resource Include="Icons\restart_circle_yellow_gradient_128.png" />

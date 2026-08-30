@@ -55,7 +55,7 @@ namespace KTWirzade.GUI.Windows
         {
             set
             {
-                TBProgamName.Text = value;
+                TBProgramName.Text = value;
             }
         }
 

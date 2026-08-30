@@ -1,0 +1,57 @@
+name: KT WIRZADE Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+        with:
+          msbuild-version: '17.0'
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore NuGet
+        run: |
+          msbuild KT-Wirzade.sln /t:Restore /p:Configuration=Release /p:Platform=x64 /p:SolutionDir="$(pwd)\"
+
+      - name: Prepare client-helper.dll
+        run: |
+          if (Test-Path "Core\Helper\x64\Release\client-helper.dll") {
+            Write-Host "client-helper.dll already exists"
+          } else {
+            New-Item -ItemType Directory -Path "Core\Helper\x64\Release" -Force
+            if (Test-Path "KTWirzade.GUI\src\Resources\client-helper.dll") {
+              Copy-Item "KTWirzade.GUI\src\Resources\client-helper.dll" "Core\Helper\x64\Release\client-helper.dll"
+            } else {
+              Write-Host "::warning::client-helper.dll not found - build may fail"
+            }
+          }
+
+      - name: Build Shared + CLI
+        run: |
+          msbuild KT-Wirzade.sln /t:Build /p:Configuration=Release /p:Platform=x64 /p:SolutionDir="$(pwd)\"
+
+      - name: Sync fresh Shared deps and CLI.exe into GUI Resources
+        shell: pwsh
+        run: |
+          $SHARED = "KTWirzade.Shared\bin\x64\Release"
+          $RES = "KTWirzade.GUI\src\Resources"
+          Get-ChildItem $SHARED -Filter "*.dll" | ForEach-Object { Copy-Item -Force $_.FullName $RES }
+          Copy-Item -Force "KTWirzade.CLI\bin\x64\Release\KTWirzade.CLI.exe" "$RES\KTWirzade.CLI.exe"
+
+      - name: Build GUI
+        run: |
+          dotnet build KTWirzade.GUI/src/KTWirzade.GUI.csproj -c Release -p:Platform=x64 -p:SolutionDir="$(pwd)\"

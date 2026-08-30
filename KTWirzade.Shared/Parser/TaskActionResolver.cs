@@ -25,27 +25,30 @@ namespace KTWirzade.Shared.Parser
                 case "!service:":
                     currentType = typeof(ServiceAction);
                     return true;
-                //case "!user:":
-                //    currentType = typeof(UserAction);
-                //    return true;
+                case "!user:":
+                    currentType = typeof(UserAction);
+                    return true;
                 case "!run:":
                     currentType = typeof(RunAction);
                     return true;
                 case "!powerShell:":
                     currentType = typeof(PowerShellAction);
                     return true;
-                //case "!shortcut:":
-                //    currentType = typeof(ShortcutAction);
-                //    return true;
+                case "!shortcut:":
+                    currentType = typeof(ShortcutAction);
+                    return true;
                 case "!cmd:":
                     currentType = typeof(CmdAction);
                     return true;
                 case "!scheduledTask:":
                     currentType = typeof(ScheduledTaskAction);
                     return true;
-                //case "!lineInFile:":
-                //    currentType = typeof(LineInFileAction);
-                //    return true;
+                case "!lineInFile:":
+                    currentType = typeof(LineInFileAction);
+                    return true;
+                case "!regexFile:":
+                    currentType = typeof(RegexFileAction);
+                    return true;
                 case "!registryKey:":
                     currentType = typeof(RegistryKeyAction);
                     return true;
@@ -67,9 +70,9 @@ namespace KTWirzade.Shared.Parser
                 case "!download:":
                     currentType = typeof(DownloadAction);
                     return true;
-                //case "!update:":
-                //    currentType = typeof(UpdateAction);
-                //    return true;
+                case "!update:":
+                    currentType = typeof(UpdateAction);
+                    return true;
                 case "!writeStatus:":
                     currentType = typeof(WriteStatusAction);
                     return true;
@@ -78,6 +81,9 @@ namespace KTWirzade.Shared.Parser
                     return true;
                 case "!task:":
                     currentType = typeof(TaskAction);
+                    return true;
+                case "!language:":
+                    currentType = typeof(LanguageAction);
                     return true;
                 default:
                     return false;

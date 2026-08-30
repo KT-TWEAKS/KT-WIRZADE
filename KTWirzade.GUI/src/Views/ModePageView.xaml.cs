@@ -315,11 +315,18 @@ namespace KTWirzade.GUI.Views
                 LoadContainer.Children.Remove(spinner);
             }
             List<Page> pages = GetPages();
-            if (pages[pages.Count - 2] == page)
+            // Guard: with a single-page flow (e.g. admin password only) pages.Count is 1
+            // and pages[count - 2] previously threw ArgumentOutOfRangeException.
+            if (pages.Count >= 2 && pages[pages.Count - 2] == page)
             {
                 NextText.Text = "OK";
             }
-            Page newPage = pages[pages.IndexOf(page) + 1];
+            int pageIndex = pages.IndexOf(page);
+            if (pageIndex < 0 || pageIndex + 1 >= pages.Count)
+            {
+                return;
+            }
+            Page newPage = pages[pageIndex + 1];
             Storyboard storyboard = new Storyboard();
             ThicknessAnimationUsingKeyFrames transitionAnim = new ThicknessAnimationUsingKeyFrames
             {

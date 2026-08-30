@@ -85,13 +85,13 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(int), Alias = "timeout")]
         public int? Timeout { get; set; }
 
-        [YamlMember(typeof(string), Alias = "wait")]
+        [YamlMember(typeof(bool), Alias = "wait")]
         public bool Wait { get; set; } = true;
 
         [YamlMember(typeof(Dictionary<string, ExitCodeAction>), Alias = "handleExitCodes")]
         [CanBeNull] public Dictionary<string, ExitCodeAction> HandleExitCodes { get; set; } = null;
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 5;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Notify;

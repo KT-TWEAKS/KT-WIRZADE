@@ -13,6 +13,8 @@ using System.Threading;
 using System;
 using System.Collections.Generic;
 
+using KTWirzade.Shared.Customization;
+
 namespace KTWirzade.GUI
 {
     public static class GlobalsGUI
@@ -31,9 +33,9 @@ namespace KTWirzade.GUI
             {
                 Name = "KT WIRZADE",
                 Version = "1.0",
-                Details = "KT WIRZADE - Sistema de otimizacao e personalizacao do Windows.",
-                Username = "KT Wirzade",
-                Website = "https://ktwirzade.com"
+                Details = "KT WIRZADE v1.0 - Sistema de otimizacao e personalizacao do Windows. Modificado por kelvenapk (github.com/kelvenapk).",
+                Username = "kelvenapk",
+                Website = "https://github.com/kelvenapk"
             })
             {
                 VerificationStatus = PlaybookGUI.VerificationLevel.Verified,
@@ -54,7 +56,46 @@ namespace KTWirzade.GUI
                     {
                         ISO = null;
                     }
+                    ApplyPlaybookAccent(value);
                     OnPropertyChanged("Playbook");
+                }
+            }
+
+            /// <summary>
+            /// Tints the app accent resources (sidebar bar, progress bar) with the
+            /// selected playbook's dominant color; falls back to the theme default
+            /// when no playbook is selected or the playbook has no accent.
+            /// </summary>
+            private static void ApplyPlaybookAccent(PlaybookGUI playbook)
+            {
+                try
+                {
+                    System.Windows.Application app = System.Windows.Application.Current;
+                    if (app == null)
+                        return;
+
+                    app.Dispatcher.Invoke(delegate
+                    {
+                        System.Windows.Media.Color? accent = playbook?.AccentColor;
+                        if (accent.HasValue)
+                        {
+                            System.Windows.Media.SolidColorBrush brush = new System.Windows.Media.SolidColorBrush(accent.Value);
+                            brush.Freeze();
+                            app.Resources["PlaybookRectColor"] = brush;
+                            app.Resources["ProgressBarBrush"] = brush;
+                            app.Resources["ProgressBarColor"] = accent.Value;
+                        }
+                        else
+                        {
+                            // Drop the override so DynamicResource falls back to the theme dictionary.
+                            app.Resources.Remove("PlaybookRectColor");
+                            app.Resources.Remove("ProgressBarBrush");
+                            app.Resources.Remove("ProgressBarColor");
+                        }
+                    });
+                }
+                catch (Exception)
+                {
                 }
             }
 
@@ -174,11 +215,28 @@ namespace KTWirzade.GUI
 
         public static bool AutoLogon = false;
 
+        public static CustomizationProfile ActiveCustomizationProfile = null;
+
+        public static UserCustomizationChoices ActiveCustomizationChoices = null;
+
         public static bool WUAStopperEngaged = false;
 
-        public static readonly int WinVer = int.Parse(Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion").GetValue("CurrentBuildNumber").ToString());
+        public static readonly int WinVer;
+        public static readonly string MachineGuid;
 
-        public static readonly string MachineGuid = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Cryptography").GetValue("MachineGuid").ToString();
+        static GlobalsGUI()
+        {
+            try
+            {
+                WinVer = int.Parse(Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion")?.GetValue("CurrentBuildNumber")?.ToString() ?? "0");
+            }
+            catch { WinVer = 0; }
+            try
+            {
+                MachineGuid = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Cryptography")?.GetValue("MachineGuid")?.ToString() ?? string.Empty;
+            }
+            catch { MachineGuid = string.Empty; }
+        }
 
         public static GUIGlobals Current
         {
@@ -192,6 +250,29 @@ namespace KTWirzade.GUI
             }
         }
 
+        public static string CurrentVersion => KTWirzade.Shared.Globals.CurrentVersion;
+
+        private static MainWindow _mainWindow;
+        public static void SetMainWindow(MainWindow window)
+        {
+            _mainWindow = window;
+        }
+
+        public static void MainWindowDragBoxClick()
+        {
+            _mainWindow?.DragBox_OnClick(_mainWindow, null);
+        }
+
+        public static void RefreshLanguage()
+        {
+            _mainWindow?.UpdateLanguageDisplay();
+        }
+
         public static string AppTitle => "KT WIRZADE";
+
+        // false = valida build/requisitos como o AME original; o bypass so acontece
+        // quando o usuario escolhe "aplicar mesmo assim" na pagina de requisitos.
+        public static bool SkipBuildCheck = false;
+        public static bool SkipRequirementsCheck = false;
     }
 }

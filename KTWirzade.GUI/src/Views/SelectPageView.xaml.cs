@@ -128,34 +128,26 @@ namespace KTWirzade.GUI.Views
                     },
                     new Playbook.RadioImagePage.RadioImageOption
                     {
-                        FileName = "ubuntu.png",
-                        Text = "Ubuntu",
-                        Name = "ubuntu",
-                        GradientTopColor = "#FFAB8C",
-                        GradientBottomColor = "#FFECE5"
+                        FileName = "win10.png",
+                        Text = "Win 10",
+                        Name = "windows10",
+                        GradientTopColor = "#BCE9FE",
+                        GradientBottomColor = "#ECF9FF"
                     },
                     new Playbook.RadioImagePage.RadioImageOption
                     {
-                        FileName = "arch.png",
-                        Text = "Archlinux",
-                        Name = "arch",
-                        GradientTopColor = "#73D0FF",
-                        GradientBottomColor = "#E9F9FF"
-                    },
-                    new Playbook.RadioImagePage.RadioImageOption
-                    {
-                        FileName = "steamos.png",
-                        Text = "SteamOS 3",
-                        Name = "steamos",
-                        GradientTopColor = "#7B70FF",
-                        GradientBottomColor = "#E9E8FF"
+                        FileName = "localiso.png",
+                        Text = "ISO Local",
+                        Name = "localiso",
+                        GradientTopColor = "#9FD8FF",
+                        GradientBottomColor = "#E9F6FF"
                     }
                 };
                 featurePage.Options = options;
                 radioImagePage.BottomLine = new Playbook.FeaturePage.Line
                 {
                     Text = "Learn more",
-                    Link = "https://en.wikipedia.org/wiki/Comparison_of_operating_systems"
+                    Link = "https://learn.microsoft.com/windows/"
                 };
                 array[num] = radioImagePage;
                 Playbook.FeaturePage[] pages = array;
@@ -168,6 +160,23 @@ namespace KTWirzade.GUI.Views
             try
             {
                 string choice = choices.First();
+                if (choice == "localiso")
+                {
+                    OptionsPopup.IsOpen = false;
+                    Microsoft.Win32.OpenFileDialog dialog = new Microsoft.Win32.OpenFileDialog
+                    {
+                        DefaultExt = ".iso",
+                        Filter = "Imagens ISO|*.iso;*.img|Todos os arquivos|*",
+                        Multiselect = false
+                    };
+                    if (dialog.ShowDialog() != true)
+                    {
+                        return;
+                    }
+                    MainWindow localMainWindow = System.Windows.Application.Current.Windows.OfType<MainWindow>().First();
+                    await localMainWindow.LoadISO(dialog.FileName);
+                    return;
+                }
                 OptionsPane.LoadContainer.Visibility = Visibility.Visible;
                 Spinner spinner = new Spinner
                 {
@@ -184,8 +193,29 @@ namespace KTWirzade.GUI.Views
                     "ubuntu" => 1,
                     "arch" => 2,
                     "steamos" => 3,
+                    "windows10" => 4,
                     _ => throw new Exception("Invalid choice: " + choice),
                 });
+
+                // Windows 10 download is discontinued by Microsoft - open browser instead
+                if (os == OS.Windows10)
+                {
+                    try
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "https://www.microsoft.com/software-download/windows10ISO",
+                            UseShellExecute = true
+                        });
+                    }
+                    catch (Exception)
+                    {
+                        MessageBox.Show(this, "Não foi possível abrir o navegador.", "Erro", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
+                    OptionsPopup.IsOpen = false;
+                    return;
+                }
+
                 (string Link, string Version, string Hash) downloadInfo;
                 try
                 {
@@ -232,6 +262,7 @@ namespace KTWirzade.GUI.Views
                     1 => "Ubuntu",
                     2 => "Arch Linux",
                     3 => "SteamOS",
+                    4 => "Windows 10",
                     _ => throw new Exception("Invalid choice: " + choice),
                 };
                 ISO iSO3 = iSO;
@@ -241,6 +272,7 @@ namespace KTWirzade.GUI.Views
                     1 => "Ubuntu" + ((downloadInfo.Version == null) ? "" : (" " + downloadInfo.Version)) + " ISO",
                     2 => "Arch Linux" + ((downloadInfo.Version == null) ? "" : (" " + downloadInfo.Version)) + " ISO",
                     3 => "SteamOS" + ((downloadInfo.Version == null) ? "" : (" " + downloadInfo.Version)) + " ISO",
+                    4 => "Windows 10" + ((downloadInfo.Version == null) ? "" : (" " + downloadInfo.Version)) + " ISO",
                     _ => throw new Exception("Invalid choice: " + choice),
                 };
                 ISO iSO4 = iSO;
@@ -250,6 +282,7 @@ namespace KTWirzade.GUI.Views
                     1 => "Standard Ubuntu ISO file",
                     2 => "Arch Linux ISO file",
                     3 => "SteamOS repair image",
+                    4 => "Standard Windows 10 ISO file",
                     _ => throw new Exception("Invalid choice: " + choice),
                 };
                 ISO iSO5 = iSO;
@@ -259,6 +292,7 @@ namespace KTWirzade.GUI.Views
                     1 => "Canonical",
                     2 => "Arch",
                     3 => "Valve",
+                    4 => "Microsoft",
                     _ => throw new Exception("Invalid choice: " + choice),
                 };
                 ISO item = iSO;
@@ -403,7 +437,7 @@ namespace KTWirzade.GUI.Views
         {
             try
             {
-                Process.Start("https://ktwirzade.com/playbooks");
+                Process.Start("https://github.com/kelvenapk");
             }
             catch (Exception)
             {

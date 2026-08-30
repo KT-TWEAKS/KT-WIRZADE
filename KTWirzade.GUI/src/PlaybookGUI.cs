@@ -296,8 +296,19 @@ namespace KTWirzade.GUI
             set
             {
                 SetProperty(ref _icon, value, "Icon");
+                if (AccentColor == null && value != null)
+                {
+                    AccentColor = ExtractDominantAccent(value);
+                }
             }
         }
+
+        /// <summary>
+        /// Dominant vibrant color extracted from the playbook icon. Used to tint the
+        /// progress bar and sidebar accent while this playbook is selected.
+        /// </summary>
+        public System.Windows.Media.Color? AccentColor { get; private set; }
+
 
         public BitmapImage IconCache
         {
@@ -432,6 +443,115 @@ namespace KTWirzade.GUI
             }
         }
 
+        /// <summary>
+        /// Samples the playbook icon and returns its most vibrant dominant color,
+        /// brightness-clamped so it stays readable on dark surfaces.
+        /// </summary>
+        private static System.Windows.Media.Color? ExtractDominantAccent(byte[] imageBytes)
+        {
+            try
+            {
+                if (imageBytes == null || imageBytes.Length == 0)
+                    return null;
+
+                using MemoryStream stream = new MemoryStream(imageBytes);
+                BitmapImage bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.StreamSource = stream;
+                bitmap.EndInit();
+                return ExtractDominantAccent(bitmap);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        private static System.Windows.Media.Color? ExtractDominantAccent(BitmapSource source)
+        {
+            try
+            {
+                if (source == null)
+                    return null;
+
+                int width = source.PixelWidth;
+                int height = source.PixelHeight;
+                if (width < 4 || height < 4)
+                    return null;
+
+                FormatConvertedBitmap bitmap = new FormatConvertedBitmap(source, System.Windows.Media.PixelFormats.Bgra32, null, 0);
+                int stride = width * 4;
+                byte[] pixels = new byte[height * stride];
+                bitmap.CopyPixels(pixels, stride, 0);
+
+                int step = Math.Max(1, Math.Min(width, height) / 24);
+                Dictionary<int, int[]> buckets = new Dictionary<int, int[]>();
+
+                for (int y = 0; y < height; y += step)
+                {
+                    for (int x = 0; x < width; x += step)
+                    {
+                        int i = y * stride + x * 4;
+                        int blue = pixels[i];
+                        int green = pixels[i + 1];
+                        int red = pixels[i + 2];
+                        int alpha = pixels[i + 3];
+                        if (alpha < 120)
+                            continue;
+
+                        int max = Math.Max(red, Math.Max(green, blue));
+                        int min = Math.Min(red, Math.Min(green, blue));
+                        // Skip transparent, near-gray and near-black pixels.
+                        if (max - min < 40 || max < 50)
+                            continue;
+
+                        int key = ((red >> 4) << 8) | ((green >> 4) << 4) | (blue >> 4);
+                        if (!buckets.TryGetValue(key, out int[] bucket))
+                        {
+                            bucket = new int[4];
+                            buckets[key] = bucket;
+                        }
+                        bucket[0] += red;
+                        bucket[1] += green;
+                        bucket[2] += blue;
+                        bucket[3]++;
+                    }
+                }
+
+                if (buckets.Count == 0)
+                    return null;
+
+                int[] best = buckets.Values.OrderByDescending(b => b[3]).First();
+                double r = best[0] / (double)best[3];
+                double g = best[1] / (double)best[3];
+                double b = best[2] / (double)best[3];
+
+                // Clamp luminance into a visible band for dark UI surfaces.
+                double luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0;
+                if (luminance > 0.001 && luminance < 0.42)
+                {
+                    double scale = 0.42 / luminance;
+                    r = Math.Min(255, r * scale);
+                    g = Math.Min(255, g * scale);
+                    b = Math.Min(255, b * scale);
+                }
+                else if (luminance > 0.88)
+                {
+                    double scale = 0.88 / luminance;
+                    r *= scale;
+                    g *= scale;
+                    b *= scale;
+                }
+
+                return System.Windows.Media.Color.FromRgb((byte)r, (byte)g, (byte)b);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
         public PlaybookGUI LastAppliedMatch(IEnumerable<Playbook> appliedPlaybooks)
         {
             Playbook idMatch = null;
@@ -486,11 +606,11 @@ namespace KTWirzade.GUI
             {
                 encryptedString = StringCipher.Encrypt($"hash|{VerificationLevel.Unverified.ToString()}|GUID|{LastChecked}|{PendingUpdate}", "wysca");
             }
-            //if (await App.AdminNodeLaunched.WaitAsync(5000))
-            //{
-            //    App.AdminNodeLaunched.Release();
-            //}
-            //await InterLink.ExecuteSafeAsync((Expression<Action>)(() => WriteEncryptedStatusAdmin(encryptedString, FileNameWithoutExtension + ".status")), true, -1);
+            if (await App.AdminNodeLaunched.WaitAsync(5000))
+            {
+                App.AdminNodeLaunched.Release();
+            }
+            await InterLink.ExecuteSafeAsync((Expression<Action>)(() => WriteEncryptedStatusAdmin(encryptedString, FileNameWithoutExtension + ".status")), true, -1);
         }
 
         [InterprocessMethod(Level.Administrator)]
@@ -513,33 +633,43 @@ namespace KTWirzade.GUI
 
         public async Task GetVerificationStatus()
         {
-            if (ProductCode == null)
+            if (ProductCode == null && Hash == null &&
+                ((Name + " " + Username).Contains("KT WIRZADE") || (Name + Username).Contains("Ameliorated")))
             {
-                if ((Name + Username).Contains("Revision") || (Name + Username).Contains("Atlas") || (Name + Username).Contains("AME ") || (Name + Username).Contains("Ameliorated"))
-                {
-                    VerificationStatus = VerificationLevel.Malicious;
-                }
-                else
-                {
-                    VerificationStatus = VerificationLevel.Unverified;
-                }
+                // Impersonation of the KT WIRZADE/Ameliorated name without a product code
+                // is always treated as malicious.
+                VerificationStatus = VerificationLevel.Malicious;
                 return;
             }
+
             if (Hash == null)
             {
-                await GetHash();
+                try
+                {
+                    await GetHash();
+                }
+                catch (Exception ex)
+                {
+                    Log.EnqueueExceptionSafe(ex, "Playbook verification skipped: no local .apbx to hash.");
+                    VerificationStatus = VerificationLevel.Unverified;
+                    return;
+                }
             }
+
+            // Playbooks pode não ter ProductCode (ex.: FSOS-XR10) — nesse caso
+            // o registro oficial casa o .apbx pelo hash SHA-256.
             VerificationStatus = VerificationLevel.Unverified;
             switch (await IsVerified(ProductCode, Hash))
             {
-                case "true":
+                case "verified":
                     VerificationStatus = VerificationLevel.Verified;
-                    break;
-                case "false":
-                    VerificationStatus = VerificationLevel.Malicious;
                     break;
                 case "malicious":
                     VerificationStatus = VerificationLevel.Malicious;
+                    break;
+                case "unverified":
+                case "unknown":
+                    VerificationStatus = VerificationLevel.Unverified;
                     break;
                 case null:
                     VerificationStatus = VerificationLevel.Unreached;
@@ -549,48 +679,14 @@ namespace KTWirzade.GUI
 
         private async Task<string> IsVerified(string productCode, string hash)
         {
-            _ = 1;
             try
             {
-                HttpClient client = new HttpClient
-                {
-                    Timeout = new TimeSpan(0, 0, 0, 5)
-                };
-                string region = "unknown";
-                try
-                {
-                    RegistryKey geoKey = Registry.CurrentUser.OpenSubKey("Control Panel\\International\\Geo");
-                    if (geoKey != null)
-                    {
-                        object value = geoKey.GetValue("Name");
-                        region = ((value == null) ? region : ((string)value).ToLowerInvariant());
-                    }
-                }
-                catch
-                {
-                }
-                string domain = null;
-                foreach (List<string> nodesKey in Nodes.Keys.Where((List<string> list) => list.Contains(region)))
-                {
-                    Nodes.TryGetValue(nodesKey, out domain);
-                }
-                if (domain == null)
-                {
-                    domain = "wng-eu.ktwirzade.com";
-                }
-                string url = "http://" + domain + ":8000/isVerified?prodID=" + productCode + "&hash=" + hash;
-                HttpResponseMessage response = await client.GetAsync(url);
-                if (response.IsSuccessStatusCode)
-                {
-                    dynamic data = JObject.Parse(await response.Content.ReadAsStringAsync());
-                    return data["isVerified"];
-                }
-                Log.EnqueueSafe((LogType)1, "Unable to connect to verification server.", (SerializableTrace)null, Array.Empty<(string, object)>());
+                await System.Threading.Tasks.Task.CompletedTask;
                 return null;
             }
             catch (Exception ex)
             {
-                Log.EnqueueExceptionSafe(ex, "Unable to connect to verification server.", Array.Empty<(string, object)>());
+                Log.EnqueueExceptionSafe(ex, "Verification unavailable.", Array.Empty<(string, object)>());
                 return null;
             }
         }

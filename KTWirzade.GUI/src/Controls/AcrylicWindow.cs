@@ -21,27 +21,36 @@ namespace KTWirzade.GUI.Controls
     public class AcrylicWindow : Window
     {
         private const int GWL_STYLE = -16;
-
         private const int WS_SYSMENU = 524288;
 
         public MaterialManager.CornerPreference CornerType { get; set; } = MaterialManager.CornerPreference.Round;
 
         public bool IsMainWindow { get; set; }
 
+        /// <summary>
+        /// Opt-in window resizing. The custom chrome windows ship with a zero resize
+        /// border by default (fixed-size dialogs); set this to true on windows whose
+        /// layout is responsive and want user resizing.
+        /// </summary>
+        public bool Resizable { get; set; }
+
         public AcrylicWindow()
         {
             base.Loaded += delegate
             {
-                if (IsMainWindow || !MaterialManager.IsVMwareVM)
-                {
-                    MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.Acrylic, CornerType);
-                }
-                else
-                {
-                    MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.None, CornerType);
-                }
+                ApplyBackdrop();
                 IntPtr handle = new WindowInteropHelper(this).Handle;
                 SetWindowLong(handle, -16, GetWindowLong(handle, -16) & -524289);
+            };
+            // Windows 10 rounds via a GDI window region; the region does not track
+            // geometry changes, so reapply after resize and minimize/restore.
+            base.SizeChanged += delegate
+            {
+                MaterialManager.ApplyRoundedCornerRegion(this);
+            };
+            base.StateChanged += delegate
+            {
+                Dispatcher.BeginInvoke(new Action(() => MaterialManager.ApplyRoundedCornerRegion(this)));
             };
         }
 
@@ -53,27 +62,21 @@ namespace KTWirzade.GUI.Controls
 
         protected override void OnActivated(EventArgs e)
         {
-            if (IsMainWindow || !MaterialManager.IsVMwareVM)
-            {
-                MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.Acrylic, CornerType);
-            }
-            else
-            {
-                MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.None, CornerType);
-            }
+            ApplyBackdrop();
             base.OnActivated(e);
         }
 
         public override void EndInit()
         {
+            var resizeBorder = Resizable ? 7.0 : 0.0;
             if (!MaterialManager.IsVMwareVM)
             {
                 WindowChrome.SetWindowChrome(this, new WindowChrome
                 {
                     CaptionHeight = 0.0,
-                    CornerRadius = new CornerRadius(8.0),
+                    CornerRadius = new CornerRadius(0.0),
                     GlassFrameThickness = new Thickness(-1.0),
-                    ResizeBorderThickness = new Thickness(0.0)
+                    ResizeBorderThickness = new Thickness(resizeBorder)
                 });
             }
             else
@@ -81,9 +84,9 @@ namespace KTWirzade.GUI.Controls
                 WindowChrome.SetWindowChrome(this, new WindowChrome
                 {
                     CaptionHeight = 0.0,
-                    CornerRadius = ((GlobalsGUI.WinVer >= 22000) ? new CornerRadius(8.0) : new CornerRadius(0.0)),
+                    CornerRadius = new CornerRadius(0.0),
                     GlassFrameThickness = new Thickness(0.0),
-                    ResizeBorderThickness = new Thickness(0.0)
+                    ResizeBorderThickness = new Thickness(resizeBorder)
                 });
             }
             base.EndInit();
@@ -118,6 +121,24 @@ namespace KTWirzade.GUI.Controls
             else
             {
                 SystemCommands.CloseWindow(this);
+            }
+        }
+
+        private void ApplyBackdrop()
+        {
+            if (MaterialManager.IsVMwareVM && !IsMainWindow)
+            {
+                MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.None, CornerType);
+                return;
+            }
+
+            if (GlobalsGUI.WinVer >= 22000)
+            {
+                MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.Acrylic, CornerType);
+            }
+            else
+            {
+                MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.None, CornerType);
             }
         }
     }

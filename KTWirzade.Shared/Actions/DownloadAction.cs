@@ -76,7 +76,7 @@ namespace KTWirzade.Shared.Actions
             if (AmeliorationUtil.ISO && Path.IsPathRooted(realDestination))
                 realDestination = realDestination.Replace(Path.GetPathRoot(realDestination), Path.GetPathRoot(AmeliorationUtil.WimPath));
             
-            if (File.Exists(Path.Combine(realDestination)))
+            if (File.Exists(realDestination))
             {
                 if (Overwrite)
                     File.Delete(realDestination);
@@ -103,7 +103,7 @@ namespace KTWirzade.Shared.Actions
         {
             output.WriteLineSafe("Info", $"Downloading file from '{url}'...");
 
-            var httpClient = new HttpProgressClient();
+            using var httpClient = new HttpProgressClient();
             httpClient.Client.DefaultRequestHeaders.UserAgent.ParseAdd("curl/7.55.1");
 
             await httpClient.StartDownload(url, destination, 300000);

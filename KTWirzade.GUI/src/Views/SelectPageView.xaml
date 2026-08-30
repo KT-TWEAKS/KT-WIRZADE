@@ -24,40 +24,40 @@
         <StackPanel VerticalAlignment="Top" Grid.Column="1" Grid.Row="1">
             <TextBlock TextWrapping="Wrap">
                 <TextBlock.Inlines>
-                    <Run FontSize="14" FontWeight="Bold" Text="Get a Playbook." />
-                    <Run FontSize="14" Text="Curated scripts to modify the OS." />
-                </TextBlock.Inlines>
-            </TextBlock>
+                    <Run FontSize="14" FontWeight="Bold" Text="Obtenha um Playbook." />
+                    <Run FontSize="14" Text="Scripts selecionados para modificar o sistema." />
+              </TextBlock.Inlines>
+          </TextBlock>
             <StackPanel Margin="0,14,0,0" Orientation="Horizontal">
                 <Button HorizontalAlignment="Right" Style="{DynamicResource ContentBoxButton}" Margin="0,0,1,0" Click="BrowseButton_OnClick">
                     <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
                         <Image Height="14" Style="{StaticResource QualityImage}" Source="{DynamicResource ExternalLink32}" Margin="0,0,9,0" />
-                        <TextBlock VerticalAlignment="Center" Text="Browse Playbooks" FontSize="14" Margin="0,0,0,1" />
-                    </StackPanel>
-                </Button>
+                        <TextBlock VerticalAlignment="Center" Text="Procurar Playbooks" FontSize="14" Margin="0,0,0,1" />
+                  </StackPanel>
+              </Button>
                 <Button Name="UseExistingButton" Height="32" Margin="4,0,0,-6" Padding="8,4,8,4" Style="{DynamicResource TransparentButton}" Click="UseExistingButton_OnClick">
-                    <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Use Existing" Foreground="{DynamicResource TransparentButtonTextForeground}" />
-                </Button>
-            </StackPanel>
-        </StackPanel>
+                    <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Usar existente" Foreground="{DynamicResource TransparentButtonTextForeground}" />
+              </Button>
+          </StackPanel>
+      </StackPanel>
         <TextBlock VerticalAlignment="Top" Grid.Column="0" Grid.Row="2" Text="2." FontSize="14" />
         <StackPanel VerticalAlignment="Top" Grid.Column="1" Grid.Row="2">
             <TextBlock TextWrapping="Wrap">
                 <TextBlock.Inlines>
-                    <Run FontSize="14" FontWeight="Bold" Text="Drag and drop it into the sidebar" />
-                    <Run FontSize="14" Text="on the left and follow the prompts to apply your selected playbook." />
-                </TextBlock.Inlines>
-            </TextBlock>
-        </StackPanel>
+                    <Run FontSize="14" FontWeight="Bold" Text="Arraste e solte na barra lateral" />
+                    <Run FontSize="14" Text="a esquerda e siga as instruções para aplicar o playbook selecionado." />
+              </TextBlock.Inlines>
+          </TextBlock>
+      </StackPanel>
         <StackPanel Grid.Row="3" Grid.Column="1" VerticalAlignment="Top">
-            <TextBlock FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" Text="Did you know AME Beta can inject playbooks into ISOs? It can also write any ISO — up to 5 drives at once." TextWrapping="Wrap" />
+            <TextBlock FontSize="14" Foreground="{DynamicResource TextSecondaryBrush}" Text="Você sabia? O KT WIRZADE pode injetar playbooks em ISOs. Também grava qualquer ISO em até 5 unidades simultaneamente." TextWrapping="Wrap" />
             <Button HorizontalAlignment="Left" Style="{DynamicResource ContentBoxButton}" Padding="7,0,11,0" Margin="0,15,1,0" Click="DownloadISOButton_OnClick">
                 <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center" Orientation="Horizontal">
                     <wpf:SymbolIcon Symbol="DocumentArrowDown" Foreground="{DynamicResource TextPrimaryBrush}" FontSize="21" Margin="0,0,6,0" />
-                    <TextBlock VerticalAlignment="Center" Text="Download ISO" FontSize="14" Margin="0,0,0,1" />
-                </StackPanel>
-            </Button>
-        </StackPanel>
+                    <TextBlock VerticalAlignment="Center" Text="Baixar ISO" FontSize="14" Margin="0,0,0,1" />
+              </StackPanel>
+          </Button>
+      </StackPanel>
         <Popup Name="OptionsPopup" Grid.RowSpan="4" Grid.Row="0" Grid.ColumnSpan="2" Grid.Column="0" UseLayoutRounding="True" Width="700" Height="490" VerticalOffset="-490" IsOpen="False" StaysOpen="True" PopupAnimation="Fade" AllowsTransparency="True" PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}" MouseLeftButtonDown="FocusWindow">
             <Border UseLayoutRounding="True" Padding="132,42,133,44" CornerRadius="{DynamicResource PopupCornerRadius}" Background="#44000000">
                 <Border UseLayoutRounding="True" Width="365" Height="323" CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource LicensePopupBorder}" Background="{DynamicResource LicensePopupBackground}">

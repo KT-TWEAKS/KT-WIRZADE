@@ -52,22 +52,22 @@
         </Setter>
     </Style>
     <Style x:Key="BlueButton" TargetType="{x:Type Button}">
-        <Setter Property="Height" Value="22" />
-        <Setter Property="MinWidth" Value="78" />
-        <Setter Property="Width" Value="78" />
-        <Setter Property="Padding" Value="19,2" />
+        <Setter Property="Height" Value="24" />
+        <Setter Property="MinWidth" Value="80" />
+        <Setter Property="Width" Value="80" />
+        <Setter Property="Padding" Value="19,3" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type Button}">
-                    <Border Name="Container" UseLayoutRounding="True" Height="{TemplateBinding FrameworkElement.Height}" CornerRadius="3" BorderThickness="1" Background="#0067c0">
+                    <Border Name="Container" UseLayoutRounding="True" Height="{TemplateBinding FrameworkElement.Height}" CornerRadius="4" BorderThickness="1" Background="#0096c7">
                         <Border.BorderBrush>
                             <LinearGradientBrush StartPoint="1,0">
-                                <GradientStop Offset="0.885" Color="#fa0067c0" />
-                                <GradientStop Offset="0.99" x:Name="BottomStop" Color="#044984" />
+                                <GradientStop Offset="0.885" Color="#0096c7" />
+                                <GradientStop Offset="0.99" x:Name="BottomStop" Color="#006a9e" />
                             </LinearGradientBrush>
                         </Border.BorderBrush>
                         <Grid>
-                            <Rectangle Name="Rect" UseLayoutRounding="True" Margin="0,0,0,0" Fill="#1673c5" RadiusX="2" RadiusY="2" />
+                            <Rectangle Name="Rect" UseLayoutRounding="True" Margin="0,0,0,0" Fill="#00a8e0" RadiusX="3" RadiusY="3" />
                             <Grid Name="ContentContainer">
                                 <ContentPresenter Name="Content" HorizontalAlignment="Center" Margin="{TemplateBinding Control.Padding}" />
                             </Grid>
@@ -78,8 +78,8 @@
                             <EventTrigger.Actions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="Container" Storyboard.TargetProperty="Background.Color" To="#ff227ad2" Duration="0:0:0.05" />
-                                        <ColorAnimation Storyboard.TargetName="Rect" Storyboard.TargetProperty="Fill.Color" To="#ff227ad2" Duration="0:0:0.05" />
+                                        <ColorAnimation Storyboard.TargetName="Container" Storyboard.TargetProperty="Background.Color" To="#1abded" Duration="0:0:0.08" />
+                                        <ColorAnimation Storyboard.TargetName="Rect" Storyboard.TargetProperty="Fill.Color" To="#2cc5f0" Duration="0:0:0.08" />
                                     </Storyboard>
                                 </BeginStoryboard>
                             </EventTrigger.Actions>
@@ -88,8 +88,8 @@
                             <EventTrigger.Actions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <ColorAnimation Storyboard.TargetName="Container" Storyboard.TargetProperty="Background.Color" To="#0067c0" Duration="0:0:0.05" />
-                                        <ColorAnimation Storyboard.TargetName="Rect" Storyboard.TargetProperty="Fill.Color" To="#0067c0" Duration="0:0:0.05" />
+                                        <ColorAnimation Storyboard.TargetName="Container" Storyboard.TargetProperty="Background.Color" To="#0096c7" Duration="0:0:0.12" />
+                                        <ColorAnimation Storyboard.TargetName="Rect" Storyboard.TargetProperty="Fill.Color" To="#00a8e0" Duration="0:0:0.12" />
                                     </Storyboard>
                                 </BeginStoryboard>
                             </EventTrigger.Actions>
@@ -98,15 +98,15 @@
                             <EventTrigger.Actions>
                                 <BeginStoryboard>
                                     <Storyboard>
-                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Content" Duration="0:0:0.07" Storyboard.TargetProperty="Opacity">
-                                            <LinearDoubleKeyFrame Value="0.7" KeyTime="0:0:0" />
-                                            <LinearDoubleKeyFrame Value="0.7" KeyTime="0:0:0.07" />
-                                            <LinearDoubleKeyFrame Value="1" KeyTime="0:0:0.07" />
+                                        <DoubleAnimationUsingKeyFrames Storyboard.TargetName="Content" Duration="0:0:0.1" Storyboard.TargetProperty="Opacity">
+                                            <LinearDoubleKeyFrame Value="0.75" KeyTime="0:0:0" />
+                                            <LinearDoubleKeyFrame Value="0.75" KeyTime="0:0:0.1" />
+                                            <LinearDoubleKeyFrame Value="1" KeyTime="0:0:0.1" />
                                         </DoubleAnimationUsingKeyFrames>
-                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="BottomStop" Duration="0:0:0.07" Storyboard.TargetProperty="Color">
-                                            <LinearColorKeyFrame Value="#fa0067c0" KeyTime="0:0:0" />
-                                            <LinearColorKeyFrame Value="#fa0067c0" KeyTime="0:0:0.07" />
-                                            <LinearColorKeyFrame Value="#044984" KeyTime="0:0:0.07" />
+                                        <ColorAnimationUsingKeyFrames Storyboard.TargetName="BottomStop" Duration="0:0:0.1" Storyboard.TargetProperty="Color">
+                                            <LinearColorKeyFrame Value="#006a9e" KeyTime="0:0:0" />
+                                            <LinearColorKeyFrame Value="#006a9e" KeyTime="0:0:0.1" />
+                                            <LinearColorKeyFrame Value="#006a9e" KeyTime="0:0:0.1" />
                                         </ColorAnimationUsingKeyFrames>
                                     </Storyboard>
                                 </BeginStoryboard>

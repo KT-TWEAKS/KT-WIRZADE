@@ -96,6 +96,8 @@ namespace KTWirzade.GUI.Views
 
         private static bool? _buildRequirementMet = null;
 
+        private bool _buildBypassed;
+
         private string WindowsProductName = "Windows";
 
         private int TickCount;
@@ -158,7 +160,7 @@ namespace KTWirzade.GUI.Views
             {
                 throw new Exception("AreRequirementsMet was called before requirements were checked.");
             }
-            if (!ViewModel.IsBuildSupported.Value)
+            if (!ViewModel.IsBuildSupported.Value && !_buildBypassed)
             {
                 return false;
             }
@@ -198,8 +200,8 @@ namespace KTWirzade.GUI.Views
                     if (ViewModel.MetRequirements != null && ViewModel.IsBuildSupported.HasValue)
                     {
                         SystemCheckContainer.Opacity = 1.0;
-                        UpdateActivationDisplay().Wait();
-                        UpdateSystemCheckDisplay().Wait();
+                        UpdateActivationDisplay().GetAwaiter().GetResult();
+                        UpdateSystemCheckDisplay().GetAwaiter().GetResult();
                         ActivationBar.Visibility = Visibility.Collapsed;
                         SystemBar.Visibility = Visibility.Collapsed;
                     }
@@ -340,7 +342,7 @@ namespace KTWirzade.GUI.Views
                         list.Remove((Requirement)12);
                     }
                     _uninstallUpdatesIsMet = UninstallUpdatesIsMet();
-                    return Requirements.MetRequirements(list.Where((Requirement x) => (int)x != 3).ToArray(), !GlobalsGUI.WUAStopperEngaged && !list.Contains((Requirement)10) && _activationRequirementMet.Value && _buildRequirementMet.Value);
+                    return Requirements.MetRequirements(list.Where((Requirement x) => (int)x != 3).ToArray(), !GlobalsGUI.WUAStopperEngaged && !list.Contains((Requirement)10) && _activationRequirementMet.Value && (_buildRequirementMet.Value || _buildBypassed));
                 })));
                 viewModel.MetRequirements = metRequirements;
             }
@@ -493,10 +495,25 @@ namespace KTWirzade.GUI.Views
             bool systemCheckLocked = false;
             if (!ViewModel.IsBuildSupported.Value)
             {
-                systemCheckIcon = IconType.Warning;
-                systemCheckStatusText = "Requirements not met";
-                systemCheckResultText = "This Windows build is not supported by this Playbook.";
-                systemCheckLocked = true;
+                if (_buildBypassed)
+                {
+                    BuildMismatchBox.Visibility = Visibility.Collapsed;
+                    systemCheckIcon = IconType.Warning;
+                    systemCheckStatusText = "Versao do Windows ignorada";
+                    systemCheckResultText = "Aplicando por sua conta e risco";
+                }
+                else
+                {
+                    BuildMismatchBox.Visibility = Visibility.Visible;
+                    systemCheckIcon = IconType.Warning;
+                    systemCheckStatusText = "Requirements not met";
+                    systemCheckResultText = "This Windows build is not supported by this Playbook.";
+                    systemCheckLocked = true;
+                }
+            }
+            else
+            {
+                BuildMismatchBox.Visibility = Visibility.Collapsed;
             }
             if (!ViewModel.MetRequirements.Contains((Requirement)12) && !systemCheckLocked)
             {
@@ -822,7 +839,7 @@ namespace KTWirzade.GUI.Views
                     list.Remove((Requirement)12);
                 }
                 _uninstallUpdatesIsMet = UninstallUpdatesIsMet();
-                return Requirements.MetRequirements(list.Where((Requirement x) => (int)x != 3).ToArray(), !GlobalsGUI.WUAStopperEngaged && !list.Contains((Requirement)10) && _activationRequirementMet.Value && _buildRequirementMet.Value);
+                return Requirements.MetRequirements(list.Where((Requirement x) => (int)x != 3).ToArray(), !GlobalsGUI.WUAStopperEngaged && !list.Contains((Requirement)10) && _activationRequirementMet.Value && (_buildRequirementMet.Value || _buildBypassed));
             })));
             viewModel.MetRequirements = metRequirements;
         }
@@ -981,6 +998,28 @@ namespace KTWirzade.GUI.Views
             ((Playbook)GlobalsGUI.Current.Playbook).Requirements = ((Playbook)GlobalsGUI.Current.Playbook).Requirements.Where((Requirement x) => (int)x != 12).ToArray();
             FreshInstallBox.Visibility = Visibility.Collapsed;
             CheckInternetButton_OnClick(new System.Windows.Controls.Button(), new RoutedEventArgs());
+        }
+
+        private async void BypassBuildButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            string currentBuild = SystemInfoEx.WindowsVersion.BuildNumber.ToString();
+            string supportedBuilds = ((Playbook)GlobalsGUI.Current.Playbook).SupportedBuilds != null
+                ? string.Join(", ", ((Playbook)GlobalsGUI.Current.Playbook).SupportedBuilds)
+                : "(qualquer)";
+            var result = KTWirzade.GUI.MessageBox.Show(
+                typeof(MainWindow),
+                $"Este playbook não foi feito para a sua versão do Windows.\n\nSua build: {currentBuild}\nBuilds suportadas: {supportedBuilds}\n\nAplicar mesmo assim pode causar instabilidade ou erros. Deseja continuar por sua conta e risco?",
+                "Versão não suportada",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+            _buildBypassed = true;
+            GlobalsGUI.SkipBuildCheck = true;
+            BuildMismatchBox.Visibility = Visibility.Collapsed;
+            await UpdateSystemCheckDisplay();
         }
 
         private void ViewInstallGuideButton_OnClick(object sender, RoutedEventArgs e)

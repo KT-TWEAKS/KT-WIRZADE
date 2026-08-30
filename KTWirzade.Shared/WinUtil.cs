@@ -732,8 +732,8 @@ namespace KTWirzade.Shared
                 var parentKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
                 string name;
 
-                if (path.Contains("Users\\Default\\")) name = classHive ? "KTWirzade_UserHive_Default_Classes" : "KTWirzade_UserHive_Default";
-                else name = classHive ? "KTWirzade_UserHive_" + (HivesLoaded) + "_Classes" : "KTWirzade_UserHive_" + (HivesLoaded + 1);
+                if (path.Contains("Users\\Default\\")) name = classHive ? "AME_UserHive_Default_Classes" : "AME_UserHive_Default";
+                else name = classHive ? "AME_UserHive_" + (HivesLoaded) + "_Classes" : "AME_UserHive_" + (HivesLoaded + 1);
 
                 IntPtr parentHandle = parentKey.Handle.DangerousGetHandle();
                 RegLoadKey(parentHandle, name, path);
@@ -808,7 +808,7 @@ namespace KTWirzade.Shared
             {
                 try
                 {
-                    if (HivesHooked || WinUtil.IsTrustedInstaller() || RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default).GetSubKeyNames().Any(x => x.StartsWith("KTWirzade_UserHive_"))) return;
+                    if (HivesHooked || WinUtil.IsTrustedInstaller() || RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default).GetSubKeyNames().Any(x => x.StartsWith("AME_UserHive_"))) return;
                     HivesHooked = true;
 
                     var usersDir = Environment.GetEnvironmentVariable("SYSTEMDRIVE") + "\\Users";
@@ -881,7 +881,7 @@ namespace KTWirzade.Shared
                 try
                 {
                     var usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
-                    var userHives = usersKey.GetSubKeyNames().Where(x => x.StartsWith("KTWirzade_UserHive_")).ToList();
+                    var userHives = usersKey.GetSubKeyNames().Where(x => x.StartsWith("AME_UserHive_")).ToList();
 
                     if (userHives.Any()) AcquirePrivileges();
                     foreach (var userHive in userHives)

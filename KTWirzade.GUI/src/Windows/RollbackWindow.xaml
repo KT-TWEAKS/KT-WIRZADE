@@ -1,0 +1,178 @@
+<controls:AcrylicWindow x:Class="KTWirzade.GUI.Windows.RollbackWindow"
+                        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+                        xmlns:local="clr-namespace:KTWirzade.GUI.Windows"
+                        xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
+                        xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
+                        mc:Ignorable="d" Title="Rollback - KT WIRZADE" Height="560" Width="620" MinHeight="480" MinWidth="520" Style="{DynamicResource Window}"
+                        Resizable="True" ResizeMode="CanResize"
+                        WindowStartupLocation="CenterOwner" RenderTransformOrigin="0.5,0.5"
+                        d:DesignHeight="560" d:DesignWidth="620">
+
+    <UIElement.RenderTransform>
+        <TransformGroup>
+            <ScaleTransform CenterX="0" x:Name="rollbackscale" />
+      </TransformGroup>
+  </UIElement.RenderTransform>
+    <DockPanel Name="RootWindow" Background="{DynamicResource AboutBrush}">
+        <DockPanel Name="TitleBar" Dock="Top" MaxHeight="36">
+            <Image Style="{StaticResource QualityImage}" Margin="7,7,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="16" Height="16" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,36" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
+            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,9.5,0,5" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Text="Rollback" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
+      </DockPanel>
+        <Grid Margin="20,0,20,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" FontSize="16" FontWeight="Bold" Text="Sessões de Rollback" HorizontalAlignment="Left" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,4,0,0" />
+
+            <Border Grid.Row="1" Margin="0,10,0,0" CornerRadius="6" Padding="12,8" Background="{DynamicResource NoticeBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <wpf:SymbolIcon Symbol="Info" TextBlock.FontSize="13" Margin="0,0,8,0" TextBlock.Foreground="{DynamicResource ProgressBarBrush}" />
+                        <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center">
+                            Reverte: tweaks de registro (valores e chaves), serviços (restaurados do backup) e arquivos de playbook (restaurados do backup).
+                       </TextBlock>
+                   </StackPanel>
+                    <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="21,4,0,0">
+                        Não reverte: apps removidos (Appx/SystemPackage), limpeza de arquivos temporários e saídas de comandos.
+                    </TextBlock>
+                    <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="21,4,0,0">
+                        Selecione uma sessão abaixo e clique em "Reverter" para desfazer as alterações.
+                    </TextBlock>
+                </StackPanel>
+           </Border>
+
+            <Grid Grid.Row="2" Margin="0,12,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+                <Grid Grid.Row="0" Margin="12,0,10,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="120" />
+                        <ColumnDefinition Width="55" />
+                        <ColumnDefinition Width="70" />
+                        <ColumnDefinition Width="34" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Playbook" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Grid.Column="1" Text="Data" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Grid.Column="2" Text="Ações" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                    <TextBlock Grid.Column="3" Text="Status" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" />
+                </Grid>
+            <ListBox Name="SessionsList" Grid.Row="1" Background="Transparent" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Foreground="{DynamicResource TextPrimaryBrush}" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="0" />
+                        <Setter Property="Margin" Value="0,0,0,6" />
+                        <Setter Property="Cursor" Value="Hand" />
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="ListBoxItem">
+                                    <Border x:Name="ItemBorder" CornerRadius="6" Padding="10,8" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
+                                        <ContentPresenter />
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsSelected" Value="True">
+                                            <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource NoticeBoxBrush}" />
+                                            <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="120" />
+                                <ColumnDefinition Width="55" />
+                                <ColumnDefinition Width="70" />
+                                <ColumnDefinition Width="34" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{Binding PlaybookName}" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip="{Binding SessionId}" />
+                            <TextBlock Grid.Column="1" Text="{Binding DateDisplay}" VerticalAlignment="Center" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" ToolTip="{Binding RelativeDateDisplay}" />
+                            <TextBlock Grid.Column="2" Text="{Binding ActionCount}" VerticalAlignment="Center" FontSize="11" HorizontalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <Border Grid.Column="3" VerticalAlignment="Center" HorizontalAlignment="Center" CornerRadius="8" Padding="8,2">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{DynamicResource StatusInfoSoftBrush}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsReverted}" Value="True">
+                                                <Setter Property="Background" Value="{DynamicResource StatusSuccessSoftBrush}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+                                <TextBlock Text="{Binding StatusDisplay}" FontSize="10.5" HorizontalAlignment="Center">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="{DynamicResource ProgressBarBrush}" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsReverted}" Value="True">
+                                                    <Setter Property="Foreground" Value="{DynamicResource StatusSuccessBrush}" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                            <Button Grid.Column="4" Width="24" Height="24" Padding="0" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                    Style="{DynamicResource BasicButton}" Click="DeleteSession_Click" Cursor="Hand"
+                                    ToolTip="Excluir esta sessão (não reverte nada, apenas apaga o registro)">
+                                <wpf:SymbolIcon Symbol="Dismiss" FontSize="10" />
+                            </Button>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            </Grid>
+
+            <DockPanel Grid.Row="3" Margin="0,12,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <Button Name="RefreshButton" Padding="14,6" MinWidth="90" Style="{DynamicResource BasicButton}" Click="RefreshButton_Click" Cursor="Hand">
+                        <StackPanel Orientation="Horizontal">
+                            <wpf:SymbolIcon Symbol="ArrowSync" FontSize="11" Margin="0,0,6,0" />
+                            <TextBlock Text="Atualizar" FontSize="11" />
+                       </StackPanel>
+                   </Button>
+                    <Button Name="ClearOldButton" Margin="8,0,0,0" Padding="14,6" MinWidth="110" Style="{DynamicResource BasicButton}" Click="ClearOldButton_Click" Cursor="Hand">
+                        <StackPanel Orientation="Horizontal">
+                            <wpf:SymbolIcon Symbol="Delete" FontSize="11" Margin="0,0,6,0" />
+                            <TextBlock Text="Limpar antigas" FontSize="11" />
+                       </StackPanel>
+                   </Button>
+                    <Button Name="ClearAllButton" Margin="8,0,0,0" Padding="14,6" MinWidth="100" Style="{DynamicResource BasicButton}" Click="ClearAllButton_Click" Cursor="Hand">
+                        <StackPanel Orientation="Horizontal">
+                            <wpf:SymbolIcon Symbol="Dismiss" FontSize="11" Margin="0,0,6,0" />
+                            <TextBlock Text="Limpar tudo" FontSize="11" />
+                       </StackPanel>
+                   </Button>
+               </StackPanel>
+                <TextBlock Name="StatusText" VerticalAlignment="Center" HorizontalAlignment="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Text="0 sessões encontradas" />
+           </DockPanel>
+
+            <Button Grid.Row="4" Name="RollbackActionButton" Margin="0,12,0,0" Padding="14,8" MinWidth="180" Height="34" Style="{DynamicResource BlueButton}" Click="RollbackActionButton_Click" Cursor="Hand" HorizontalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <wpf:SymbolIcon Symbol="ArrowUndo" FontSize="13" Foreground="White" Margin="0,0,8,0" />
+                    <TextBlock Text="Reverter Selecionado" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+               </StackPanel>
+           </Button>
+       </Grid>
+   </DockPanel>
+</controls:AcrylicWindow>

@@ -1,4 +1,4 @@
-using Core;
+﻿using Core;
 using DiscUtils.Iso9660;
 using DiscUtils.Streams;
 using DiscUtils.Udf;
@@ -104,7 +104,6 @@ namespace KTWirzade.GUI
                             return result;
                         }
                         string majorVersionFromBuildNumber2 = GetMajorVersionFromBuildNumber(result.WinVer.Value);
-                        result.WinMajorVer = majorVersionFromBuildNumber2;
                         if (result.Name != null)
                         {
                             result.Title = result.Name + " " + ((result.Version == null) ? "" : (" " + result.Version)) + ((!result.Architecture.HasValue) ? "" : (" " + result.Architecture.Value)) + " ISO";
@@ -189,7 +188,7 @@ namespace KTWirzade.GUI
                         WimFileSystem wimFs = val.GetImage(val.BootImage);
                         try
                         {
-                            string hivePath = Path.Combine(Path.GetTempPath(), "KTWirzade_ISO_Hive-" + Guid.NewGuid().ToString());
+                            string hivePath = Path.Combine(Path.GetTempPath(), "AME_ISO_Hive-" + Guid.NewGuid().ToString());
                             SparseStream hiveStream = (wimFs).OpenFile("Windows\\System32\\config\\SOFTWARE", FileMode.Open);
                             try
                             {

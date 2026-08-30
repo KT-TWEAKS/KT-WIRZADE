@@ -5,12 +5,15 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Core;
 using KTWirzade.Shared.Tasks;
+using YamlDotNet.Serialization;
 
 namespace KTWirzade.Shared.Actions
 {
-    class LanguageAction : Tasks.TaskAction, ITaskAction
+    public class LanguageAction : Tasks.TaskAction, ITaskAction
     {
         public void RunTaskOnMainThread(Output.OutputWriter output) { throw new NotImplementedException(); }
+        
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 1;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Notify;
@@ -19,8 +22,11 @@ namespace KTWirzade.Shared.Actions
         private bool InProgress { get; set; }
         public void ResetProgress() => InProgress = false;
         
+        [YamlMember(typeof(string), Alias = "tag")]
         public string Tag { get; set; } = "";
         public string Primary() => "for language " + Tag;
+        
+        [YamlMember(typeof(bool), Alias = "display")]
         public bool Display { get; set; } = false;
         
         public string ErrorString() => $"LanguageAction failed to install language {Tag}.";

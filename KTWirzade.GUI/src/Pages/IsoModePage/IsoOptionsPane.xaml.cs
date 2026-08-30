@@ -599,6 +599,15 @@ namespace KTWirzade.GUI.Pages.IsoModePage
             do
             {
                 Index++;
+                if (Index >= MainContainerGrid.Children.Count)
+                {
+                    // Every remaining page was filtered out (DependsOn): previously this
+                    // incremented Index past the end of Children and threw
+                    // ArgumentOutOfRangeException on the cast below. Finish instead.
+                    animating = false;
+                    FinishAction(Choices);
+                    return;
+                }
                 nextPage = (IsoOptionPage)MainContainerGrid.Children[Index];
             }
             while (nextPage.DependsOn != null && !Choices.Contains(nextPage.DependsOn));

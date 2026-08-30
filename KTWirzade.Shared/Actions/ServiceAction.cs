@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Configuration.Install;
 using System.Diagnostics;
@@ -45,10 +46,10 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(bool), Alias = "deleteUsingRegistry")]
         public bool RegistryDelete { get; set; } = false;
         
-        [YamlMember(typeof(string), Alias = "device")]
+        [YamlMember(typeof(bool), Alias = "device")]
         public bool Device { get; set; } = false;
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 4;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => (Operation == ServiceOperation.Stop || Operation == ServiceOperation.Start) ? Tasks.ErrorAction.Log : Tasks.ErrorAction.Notify;
@@ -146,6 +147,8 @@ namespace KTWirzade.Shared.Actions
                 ServiceOperation.Delete =>
                     serviceController == null || Win32.ServiceEx.IsPendingDeleteOrDeleted(serviceController.ServiceName) ?
                         UninstallTaskStatus.Completed : UninstallTaskStatus.ToDo,
+                ServiceOperation.Change =>
+                    serviceController == null ? UninstallTaskStatus.Completed : UninstallTaskStatus.ToDo,
                 _ => throw new ArgumentOutOfRangeException("Argument out of Range", new ArgumentOutOfRangeException())
             };
         }
@@ -157,11 +160,12 @@ namespace KTWirzade.Shared.Actions
         {
             if (InProgress) throw new TaskInProgressException("Another Service action was called while one was in progress.");
             if (Operation == ServiceOperation.Change && !Startup.HasValue) throw new ArgumentException("Startup property must be specified with the change operation.");
-            if (Operation == ServiceOperation.Change && (Startup.Value > 4  || Startup.Value < 0)) throw new ArgumentException("Startup property must be between 1 and 4.");
+            if (Operation == ServiceOperation.Change && (Startup.Value > 4  || Startup.Value < 0)) throw new ArgumentException("Startup property must be between 0 and 4.");
 
             // This is a little cursed but it works and is concise lol
             output.WriteLineSafe("Info", $"{Operation.ToString().Replace("Stop", "Stopp").TrimEnd('e')}ing services matching '{ServiceName}'...");
             
+            InProgress = true;
             if (Operation == ServiceOperation.Change)
             {
                 var action = new RegistryValueAction()
@@ -194,19 +198,46 @@ namespace KTWirzade.Shared.Actions
             if (Device) service = GetDevice();
             else service = GetService();
 
-            if (service == null)
+            try
             {
-                output.WriteLineSafe("Info", $"No services found matching '{ServiceName}'.");
-                //Log.WriteSafe(LogType.Warning, $"The service matching '{ServiceName}' does not exist.", new SerializableTrace(), output.LogOptions);
-                if (Operation == ServiceOperation.Start)
-                    throw new ArgumentException("Service " + ServiceName + " not found.");
-                
-                return false;
-            }
+                if (service == null)
+                {
+                    output.WriteLineSafe("Info", $"No services found matching '{ServiceName}'.");
+                    //Log.WriteSafe(LogType.Warning, $"The service matching '{ServiceName}' does not exist.", new SerializableTrace(), output.LogOptions);
+                    if (Operation == ServiceOperation.Start)
+                        throw new ArgumentException("Service " + ServiceName + " not found.");
+                    
+                    return false;
+                }
 
-            InProgress = true;
+                // Capture the pre-mutation state for Stop so rollback can restore the
+                // run state (Change is covered by the RegistryValueAction rollback entry,
+                // Delete is captured below).
+                if (!AmeliorationUtil.ISO && Operation == ServiceOperation.Stop)
+                {
+                try
+                {
+                    Rollback.RollbackManager.LogEntry(new Rollback.RollbackEntry
+                    {
+                        TaskName = "ServiceAction",
+                        ActionType = Rollback.RollbackActionType.Service,
+                        Operation = Rollback.RollbackOperation.Modify,
+                        Target = service.ServiceName,
+                        PreviousValue = service.StartType.ToString(),
+                        ExtraData =
+                        {
+                            { "startType", service.StartType.ToString() },
+                            { "wasRunning", (service.Status == ServiceControllerStatus.Running).ToString() }
+                        }
+                    });
+                }
+                catch (Exception rollbackCaptureError)
+                {
+                    Log.WriteExceptionSafe(LogType.Warning, rollbackCaptureError, output.LogOptions);
+                }
+                }
 
-            var cmdAction = new CmdAction();
+                var cmdAction = new CmdAction();
 
             if ((Operation == ServiceOperation.Delete && DeleteStop) || Operation == ServiceOperation.Stop)
             {
@@ -249,7 +280,7 @@ namespace KTWirzade.Shared.Actions
                         catch (Exception e)
                         {
                             dependentService.Refresh();
-                            if (service.Status != ServiceControllerStatus.Stopped)
+                            if (dependentService.Status != ServiceControllerStatus.Stopped)
                                 Log.WriteSafe(LogType.Warning, $"Dependent service stop timeout exceeded.", new SerializableTrace(), output.LogOptions);
                         }
                         
@@ -277,6 +308,22 @@ namespace KTWirzade.Shared.Actions
 
             if (Operation == ServiceOperation.Delete)
             {
+                var regBackup = Rollback.RollbackManager.BackupRegistryKeyForRollback($@"HKLM\SYSTEM\CurrentControlSet\Services\{service.ServiceName}");
+                var extra = new Dictionary<string, string>
+                {
+                    { "wasRunning", (service.Status == ServiceControllerStatus.Running).ToString() }
+                };
+                if (regBackup != null)
+                    extra["regBackup"] = regBackup;
+
+                Rollback.RollbackManager.LogEntry(new Rollback.RollbackEntry
+                {
+                    TaskName = "ServiceAction",
+                    ActionType = Rollback.RollbackActionType.Service,
+                    Operation = Rollback.RollbackOperation.Delete,
+                    Target = service.ServiceName,
+                    ExtraData = extra
+                });
 
                 if (DeleteStop && service.Status != ServiceControllerStatus.StopPending && service.Status != ServiceControllerStatus.Stopped)
                 {
@@ -469,7 +516,7 @@ namespace KTWirzade.Shared.Actions
             {
                 try
                 {
-                    service.Pause();
+                    service.Continue();
                 }
                 catch (Exception e)
                 {
@@ -494,8 +541,12 @@ namespace KTWirzade.Shared.Actions
                         Log.WriteSafe(LogType.Warning, $"Service continue timeout exceeded.", new SerializableTrace(), output.LogOptions);
                 }
             }
+            }
+            finally
+            {
+                service?.Dispose();
+            }
 
-            service?.Dispose();
             await Task.Delay(100);
 
             InProgress = false;

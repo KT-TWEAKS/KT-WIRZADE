@@ -66,7 +66,7 @@ namespace KTWirzade.GUI.Utils
             {
                 pb.DisplayUsername = "Malicious";
             }
-            if (pb.Username == "Ameliorated")
+            if (pb.Username == "KTWirzade")
             {
                 pb.DonateLink = null;
             }
@@ -207,7 +207,7 @@ namespace KTWirzade.GUI.Utils
             }
             Directory.Delete(tmpPath, true);
             result.Path = null;
-            if (result.Username == "Ameliorated")
+            if (result.Username == "KTWirzade")
             {
                 result.DonateLink = null;
             }
@@ -215,3 +215,4 @@ namespace KTWirzade.GUI.Utils
         }
     }
 }
+

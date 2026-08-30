@@ -74,6 +74,14 @@ namespace Core.Actions
                 return UninstallTaskStatus.InProgress;
             }
 
+            // O winlogon recria o explorer ~1-2s apos o kill; sem este guarda o GetStatus
+            // nunca retorna Completed e o kill do explorer vira um loop de restart do shell.
+            if (HasRunOnce && !ProcessID.HasValue && string.IsNullOrEmpty(PathContains) &&
+                "explorer".Equals(ProcessName, StringComparison.OrdinalIgnoreCase))
+            {
+                return UninstallTaskStatus.Completed;
+            }
+
             List<Process> processToTerminate = new List<Process>();
             if (ProcessID.HasValue)
             {
@@ -127,9 +135,12 @@ namespace Core.Actions
         // These processes give access denied errors when getting their handle for IsProcessCritical.
         // TODO: Investigate how to properly acquire permissions.
         private readonly string[] RegexNotCritical = { "SecurityHealthService", "wscsvc", "MsMpEng", "SgrmBroker" };
+        private bool HasRunOnce { get; set; }
+
         public void RunTask(bool logExceptions = true)
         {
             InProgress = true;
+            HasRunOnce = true;
             
             if (string.IsNullOrEmpty(ProcessName) && ProcessID.HasValue)
             {

@@ -22,11 +22,11 @@
            TextTrimming="CharacterEllipsis" Width="390" TextWrapping="Wrap" 
            Foreground="{DynamicResource PageSubtextColor}" MaxHeight="130"
            DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}">
-    <Run Text="All requirements met to modify ISO image"/>
+    <Run Text="Todos os requisitos foram atendidos para modificar a imagem ISO"/>
     <LineBreak/><LineBreak/>
-    <Run Text="The length of this process can vary based on your system's performance and internet access, but should not take any longer than "/>
+    <Run Text="A duração deste processo varia conforme o desempenho do sistema e a conexão, mas não deve levar mais que "/>
     <Run Text="{Binding ISO.SelectedPlaybook.EstimatedMinutes}"/>
-    <Run Text=" minutes in most cases."/>
+    <Run Text=" minutos na maioria dos casos."/>
             </TextBlock>
             
         </StackPanel>
@@ -44,7 +44,7 @@
                                 <Rectangle RadiusX="14" RadiusY="14" Width="11" Height="12" Fill="#FFFFFFFF" HorizontalAlignment="Left" Margin="4,4,0,0" VerticalAlignment="Top" />
                                 <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Info" TextBlock.FontSize="19" IconVariant="Filled" TextBlock.Foreground="#256eca" />
                             </Grid>
-                            <TextBlock Name="DefaultText" FontSize="14" Margin="15,-3,0,-2" Text="Default configuration will be applied" />
+                            <TextBlock Name="DefaultText" FontSize="14" Margin="15,-3,0,-2" Text="A configuração padrão será aplicada" />
                         </StackPanel>
                         <Button Name="ResetButton" Margin="0,-7,0,-8" Padding="13,0,13,0" Height="29" Style="{DynamicResource TransparentButton}" HorizontalAlignment="Right" Click="ResetButton_OnClick">
                             <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Reset" Foreground="{DynamicResource TransparentButtonTextForeground}" />
@@ -55,7 +55,7 @@
                     <Grid>
                         <StackPanel Orientation="Horizontal" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}">
                             <Image Style="{StaticResource QualityImage}" Margin="3,-3,2,-2" Source="/Icons/checkmark_green_solid_32.png" Height="15" />
-                            <TextBlock FontSize="14" Margin="15,-3,0,-2" Text="All required configuration completed" TextTrimming="CharacterEllipsis" />
+                            <TextBlock FontSize="14" Margin="15,-3,0,-2" Text="Toda a configuração necessária foi concluída" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <Button Name="RequiredResetButton" HorizontalAlignment="Right" Margin="0,-7,0,-8" Padding="13,0,13,0" Height="29" Style="{DynamicResource TransparentButton}" Click="ResetButton_OnClick">
                             <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Reset" Foreground="{DynamicResource TransparentButtonTextForeground}" />
@@ -69,18 +69,18 @@
                         <StackPanel Name="FeaturesStack" HorizontalAlignment="Left" Orientation="Horizontal" Opacity="1">
                             <Image Style="{StaticResource QualityImage}" Margin="10,0,0,0" Source="{DynamicResource Checklist32}" Width="15" VerticalAlignment="Center" HorizontalAlignment="Left" />
                             <StackPanel Margin="20,-3,0,-4">
-                                <TextBlock Name="CustomFeaturesHeader" FontSize="15" Text="Customize Features" />
-                                <TextBlock Name="CustomFeaturesDescriptor" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Text="Modify Playbook functionality" Margin="0,-1,0,0" />
+                                <TextBlock Name="CustomFeaturesHeader" FontSize="15" Text="Personalizar funções" />
+                                <TextBlock Name="CustomFeaturesDescriptor" FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" Text="Modificar funcionalidades do playbook" Margin="0,-1,0,0" />
                             </StackPanel>
                         </StackPanel>
                         <Button Name="FeaturesButton" Margin="0,-2,0,-2" Padding="15,0,15,0" Style="{DynamicResource ContentBoxButton}" HorizontalAlignment="Right" Click="FeaturesButton_OnClick">
-                            <TextBlock Name="FeaturesButtonText" VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Select features" />
+                            <TextBlock Name="FeaturesButtonText" VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Selecionar funções" />
                         </Button>
                     </Grid>
                 </Border>
             </StackPanel>
         </Grid>
-        <TextBlock Grid.Row="2" VerticalAlignment="Bottom" FontSize="14" Foreground="{DynamicResource PageSubtextColor}">Click the <Bold>Next</Bold> button below to continue.</TextBlock>
+        <TextBlock Grid.Row="2" VerticalAlignment="Bottom" FontSize="14" Foreground="{DynamicResource PageSubtextColor}">Clique no botão <Bold>Próximo</Bold> abaixo para continuar.</TextBlock>
         <Popup Name="PasswordPopup" Grid.RowSpan="2" Grid.Row="0" UseLayoutRounding="True" Width="700" Height="490" VerticalOffset="-490" IsOpen="False" StaysOpen="True" PopupAnimation="Fade" AllowsTransparency="True" PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}" MouseLeftButtonDown="FocusWindow">
             <Border UseLayoutRounding="True" Padding="132,42,133,44" CornerRadius="{DynamicResource PopupCornerRadius}" Background="#44000000">
                 <Border UseLayoutRounding="True" Width="365" Height="323" CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource LicensePopupBorder}" Background="{DynamicResource LicensePopupBackground}">
@@ -98,10 +98,10 @@
                                 <ColumnDefinition Width="363" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Margin="27,18,26,0" Height="252">
-                                <TextBlock FontSize="16" FontWeight="Bold" Text="ISO Credentials" />
-                                <TextBlock FontSize="13" HorizontalAlignment="Left" Width="268" Margin="0,21,0,0" Text="This Playbook requires pre-set ISO credentials. Please choose a username." TextWrapping="Wrap" />
+                                <TextBlock FontSize="16" FontWeight="Bold" Text="Credenciais da ISO" />
+                                <TextBlock FontSize="13" HorizontalAlignment="Left" Width="268" Margin="0,21,0,0" Text="Este playbook exige credenciais pré-definidas na ISO. Escolha um nome de usuário." TextWrapping="Wrap" />
                                 <StackPanel Name="UsernameContent">
-                                    <TextBlock Name="TopLineBlock" Margin="0,10,0,0" Visibility="Visible" Text="This will be applied to the ISO." FontSize="13" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                    <TextBlock Name="TopLineBlock" Margin="0,10,0,0" Visibility="Visible" Text="Isso será aplicado à ISO." FontSize="13" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextSecondaryBrush}" />
                                     <Grid Margin="0,18,0,0" VerticalAlignment="Top" UseLayoutRounding="True">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="63" />
@@ -119,15 +119,15 @@
                                                 <TextBlock Name="UsernameTextUsername" FontSize="14" Text="" VerticalAlignment="Top" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                             <TextBox Name="UsernameBox" OverridesDefaultStyle="True" UseLayoutRounding="True" FontSize="15" HorizontalAlignment="Left" CaretBrush="{DynamicResource TextPrimaryBrush}" MaxLines="1" Foreground="{DynamicResource TextPrimaryBrush}" MaxLength="64" Margin="0,14,0,0" Tag="Username" Opacity="1" Template="{DynamicResource InputBox}" KeyDown="InputBox_OnKeyDown" PreviewMouseLeftButtonDown="FocusWindow" TextChanged="UsernameBox_OnTextChanged" />
-                                            <TextBlock Name="InvalidUsername" Visibility="Hidden" Margin="0,2,0,0" Foreground="#FFFF0000" FontSize="11" Opacity="0.7" Text="Username is not valid." />
+                                            <TextBlock Name="InvalidUsername" Visibility="Hidden" Margin="0,2,0,0" Foreground="#FFFF0000" FontSize="11" Opacity="0.7" Text="Nome de usuário inválido." />
                                         </StackPanel>
                                     </Grid>
-                                    <TextBlock Name="BottomLineBlock" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,12,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" TextTrimming="CharacterEllipsis" Text="Your data is not affected. Use this name to login." />
+                                    <TextBlock Name="BottomLineBlock" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,12,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" TextTrimming="CharacterEllipsis" Text="Seus dados não são afetados. Use este nome para entrar." />
                                 </StackPanel>
                             </StackPanel>
                             <StackPanel Grid.Column="1" Margin="27,18,26,0" Height="252">
-                                <TextBlock FontSize="16" FontWeight="Bold" Text="Set user account password." />
-                                <TextBlock FontSize="13" HorizontalAlignment="Left" Width="268" Margin="0,21,0,0" Text="Please set the password for the default user. This will be the user you login with." TextWrapping="Wrap" />
+                                <TextBlock FontSize="16" FontWeight="Bold" Text="Definir senha do usuario." />
+                                <TextBlock FontSize="13" HorizontalAlignment="Left" Width="268" Margin="0,21,0,0" Text="Defina a senha do usuário padrão. Este será o usuário usado para entrar." TextWrapping="Wrap" />
                                 <Grid Margin="0,33,0,0" VerticalAlignment="Top" UseLayoutRounding="True">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="63" />
@@ -140,20 +140,20 @@
                                         </wpf:SymbolIcon>
                                     </Grid>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Top" UseLayoutRounding="True" Margin="0,0,0,0">
-                                        <TextBlock Name="UserText" FontSize="14" Text="Unknown" VerticalAlignment="Top" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Name="UserText" FontSize="14" Text="Desconhecido" VerticalAlignment="Top" TextTrimming="CharacterEllipsis" />
                                         <PasswordBox Name="PasswordBox" OverridesDefaultStyle="True" UseLayoutRounding="True" FontSize="15" FontWeight="Bold" HorizontalAlignment="Left" CaretBrush="{DynamicResource TextPrimaryBrush}" PasswordChar="●" Foreground="{DynamicResource TextPrimaryBrush}" MaxLength="255" Margin="0,16,0,0" Opacity="1" Template="{DynamicResource PasswordBox}" KeyDown="InputBox_OnKeyDown" PreviewMouseLeftButtonDown="FocusWindow" PasswordChanged="PasswordBox_OnPasswordChanged" />
-                                        <TextBlock Name="BlankPassword" Visibility="Hidden" Margin="0,2,0,0" Foreground="#FFFF0000" FontSize="11" Opacity="0.7" Text="Password cannot be blank." />
+                                        <TextBlock Name="BlankPassword" Visibility="Hidden" Margin="0,2,0,0" Foreground="#FFFF0000" FontSize="11" Opacity="0.7" Text="A senha não pode estar vazia." />
                                     </StackPanel>
                                 </Grid>
                                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                                     <CheckBox Name="CheckBox" IsChecked="False" Style="{DynamicResource Unchecked}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,0,1,0">
-                                        <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Text="Automatically login this user on startup" />
+                                         <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Text="Entrar automaticamente com este usuário ao iniciar" />
                                     </CheckBox>
                                 </StackPanel>
                             </StackPanel>
                             <StackPanel Grid.Column="2" Margin="27,18,26,0" Height="252">
-                                <TextBlock FontSize="16" FontWeight="Bold" Text="Set admin account password." />
-                                <TextBlock FontSize="13" HorizontalAlignment="Left" Width="268" Margin="0,21,0,0" Text="Please set the password for the admin user. This user will be used for authentication." TextWrapping="Wrap" />
+                                <TextBlock FontSize="16" FontWeight="Bold" Text="Definir senha do administrador." />
+                                <TextBlock FontSize="13" HorizontalAlignment="Left" Width="268" Margin="0,21,0,0" Text="Defina a senha do administrador. Este usuário será usado para autenticação." TextWrapping="Wrap" />
                                 <Grid Margin="0,33,0,0" VerticalAlignment="Top" UseLayoutRounding="True">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="63" />
@@ -164,9 +164,9 @@
                                         <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Person" IconVariant="Filled" TextBlock.Foreground="#FFFFFFFF" FrameworkElement.HorizontalAlignment="Center" FrameworkElement.VerticalAlignment="Center" TextBlock.FontSize="44" />
                                     </Grid>
                                     <StackPanel Grid.Column="1" VerticalAlignment="Top" UseLayoutRounding="True" Margin="0,0,0,0">
-                                        <TextBlock Name="AdminUserText" FontSize="14" Text="Administrator" TextTrimming="CharacterEllipsis" VerticalAlignment="Top" />
+                                        <TextBlock Name="AdminUserText" FontSize="14" Text="Administrador" TextTrimming="CharacterEllipsis" VerticalAlignment="Top" />
                                         <PasswordBox Name="AdminPasswordBox" OverridesDefaultStyle="True" UseLayoutRounding="True" FontSize="15" FontWeight="Bold" HorizontalAlignment="Left" CaretBrush="{DynamicResource TextPrimaryBrush}" PasswordChar="●" Foreground="{DynamicResource TextPrimaryBrush}" MaxLength="255" Margin="0,16,0,0" Opacity="1" Template="{DynamicResource PasswordBox}" PreviewMouseLeftButtonDown="FocusWindow" PasswordChanged="PasswordBox_OnPasswordChanged" />
-                                        <TextBlock Name="AdminBlankPassword" Visibility="Hidden" Margin="0,2,0,0" Foreground="#FFFF0000" FontSize="11" Opacity="0.7" Text="Password cannot be blank." />
+                                        <TextBlock Name="AdminBlankPassword" Visibility="Hidden" Margin="0,2,0,0" Foreground="#FFFF0000" FontSize="11" Opacity="0.7" Text="A senha não pode estar vazia." />
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>

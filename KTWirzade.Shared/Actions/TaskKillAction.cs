@@ -38,7 +38,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(string), Alias = "pathContains")]
         public string? PathContains { get; set; }
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 2;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Log;
@@ -75,6 +75,15 @@ namespace KTWirzade.Shared.Actions
             if (InProgress)
             {
                 return UninstallTaskStatus.InProgress;
+            }
+
+            // O winlogon recria o explorer ~1-2s apos o kill; sem este guarda o GetStatus
+            // nunca retorna Completed e o motor repete o kill ate 10 vezes, causando o
+            // loop de restart do shell durante a aplicacao do playbook.
+            if (HasRunOnce && !ProcessID.HasValue && string.IsNullOrEmpty(PathContains) &&
+                "explorer".Equals(ProcessName, StringComparison.OrdinalIgnoreCase))
+            {
+                return UninstallTaskStatus.Completed;
             }
 
             List<Process> processToTerminate = new List<Process>();
@@ -132,9 +141,12 @@ namespace KTWirzade.Shared.Actions
         private readonly string[] RegexNotCritical = { "SecurityHealthService", "wscsvc", "MsMpEng", "SgrmBroker" };
         
         public override string? IsISOCompatible() => "TaskKillAction does not support iso.";
+        private bool HasRunOnce { get; set; }
+
         public async Task<bool> RunTask(Output.OutputWriter output)
         {
             InProgress = true;
+            HasRunOnce = true;
             
             if (string.IsNullOrEmpty(ProcessName) && ProcessID.HasValue)
             {

@@ -9,7 +9,7 @@
         xmlns:gui="clr-namespace:KTWirzade.GUI" 
         xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf" 
         WindowStartupLocation="CenterOwner"
-        RenderTransformOrigin="0.5,0.5" Title="Wallpaper" Background="#96b0cc" 
+        RenderTransformOrigin="0.5,0.5" Title="Pacote" Background="#96b0cc" 
         Topmost="True" ResizeMode="NoResize" WindowStyle="None" WindowState="Maximized" 
         AllowsTransparency="False" Cursor="None" xmlns:windows="clr-namespace:KTWirzade.GUI.Windows">
     <Grid>
@@ -108,16 +108,16 @@
                         <Grid Margin="29,31,29,0">
                             <Grid>
                                 <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
-                                    <TextBlock FontSize="16" FontWeight="Bold" Text="Prepare System" />
-                                    <TextBlock Name="EnsureText" Text="This ensures that your installation is in the proper condition to use this Playbook. It includes a potential downgrade to Windows release requirements and disables certain services." FontSize="13" Width="350" HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,14,0,0" />
+                                    <TextBlock FontSize="16" FontWeight="Bold" Text="Preparar sistema" />
+                                    <TextBlock Name="EnsureText" Text="Garante que a instalacao esteja em condicoes adequadas para usar este playbook. Pode incluir um downgrade dos requisitos de versao do Windows e desativa alguns servicos." FontSize="13" Width="350" HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,14,0,0" />
                                     <StackPanel Margin="0,108,0,0" Grid.Column="1" HorizontalAlignment="Left">
-                                        <TextBlock Name="StatusText" FontWeight="Bold" Margin="0,2,0,3" FontSize="15" Text="Extracting service package..." />
+                                        <TextBlock Name="StatusText" FontWeight="Bold" Margin="0,2,0,3" FontSize="15" Text="Extraindo pacote de servico..." />
                                         <controls:ProgressBarDeterminate x:Name="ProgressBar" Width="362" HorizontalAlignment="Left" />
-                                        <TextBlock Name="FinishText" Visibility="Collapsed" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,-2,0,0" Text="Restart at the soonest possible time" />
+                                        <TextBlock Name="FinishText" Visibility="Collapsed" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,-2,0,0" Text="Reiniciar assim que possivel" />
                                     </StackPanel>
                                 </StackPanel>
                                 <Grid Name="RestartGrid">
-                                    <TextBlock Name="RestartTextCheck" VerticalAlignment="Bottom" Opacity="1" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Width="240" TextWrapping="Wrap" Margin="-1,0,15,20" Text="The system will automatically be restarted once the process completes." />
+                                    <TextBlock Name="RestartTextCheck" VerticalAlignment="Bottom" Opacity="1" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Width="240" TextWrapping="Wrap" Margin="-1,0,15,20" Text="O sistema sera reiniciado automaticamente apos a conclusao do processo." />
                                 </Grid>
                             </Grid>
                         </Grid>

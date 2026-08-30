@@ -11,7 +11,7 @@
              xmlns:usbWriteDialog="clr-namespace:KTWirzade.GUI.UsbWriteDialog"
              xmlns:plane="clr-namespace:Plane;assembly=Plane" Height="584" Width="855" 
              Style="{DynamicResource Window}" WindowStartupLocation="CenterOwner" 
-             RenderTransformOrigin="0.5,0.5" Title="ISO Writer" CornerType="Round" 
+             RenderTransformOrigin="0.5,0.5" Title="Gravador de ISO" CornerType="Round" 
              MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}" 
              MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}">
     <UIElement.RenderTransform>
@@ -90,7 +90,7 @@
         <DockPanel Name="TitleBar" Dock="Top" Height="40" VerticalAlignment="Top">
             <Image Style="{StaticResource QualityImage}" Margin="8, 6,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="21" Height="21" />
             <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" IsEnabled="False" DockPanel.Dock="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
-            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Width="770" Text="ISO Writer" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
+            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Width="770" Text="Gravador de ISO" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
         </DockPanel>
         <Grid Row="1">
             <Grid.ColumnDefinitions>
@@ -138,12 +138,12 @@
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
                         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
-                            <TextBlock FontSize="16" FontWeight="Bold" Text="Writing ISO" />
-                            <TextBlock Name="MainText" Text="Creating a bootable flash drive from the specified ISO file." FontSize="13" Width="350" HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,14,0,0" />
+                            <TextBlock FontSize="16" FontWeight="Bold" Text="Gravando ISO" />
+                            <TextBlock Name="MainText" Text="Criando um pen drive inicializavel a partir da ISO especificada." FontSize="13" Width="350" HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,14,0,0" />
                         </StackPanel>
                         <StackPanel Name="UsbWriteStack" Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center" Width="289" />
                         <Grid Name="RestartGrid" Row="2">
-                            <TextBlock Name="RestartTextCheck" VerticalAlignment="Bottom" Opacity="1" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Width="240" TextWrapping="Wrap" Margin="-1,0,15,20" Text="Did you know? AME Beta can write up to 5 drives simultaneously." />
+                            <TextBlock Name="RestartTextCheck" VerticalAlignment="Bottom" Opacity="1" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Width="240" TextWrapping="Wrap" Margin="-1,0,15,20" Text="Você sabia? O KT WIRZADE pode gravar em até 5 unidades simultaneamente." />
                         </Grid>
                     </Grid>
                 </Border>

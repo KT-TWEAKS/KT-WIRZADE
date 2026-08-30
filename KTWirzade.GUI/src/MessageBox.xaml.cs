@@ -56,14 +56,17 @@ namespace KTWirzade.GUI
 
         protected override void OnClosing(CancelEventArgs e)
         {
-            if (_result == MessageBoxResult.Unset && Parent != null)
+            // Decompiled-source bug (inherited from the reference codebase): the else-branch
+            // called OnClosing(e) AGAIN (infinite recursion on the UI thread - looked like
+            // "app stops responding" the moment a confirmation dialog was closed) and the
+            // guard read Parent (always null for a top-level Window, so it never held).
+            // Intent preserved: if the window closes without a button click, record a
+            // neutral result and let it close normally.
+            if (_result == MessageBoxResult.Unset)
             {
-                e.Cancel = true;
+                _result = MessageBoxResult.Default;
             }
-            else
-            {
-                OnClosing(e);
-            }
+            base.OnClosing(e);
         }
 
         public static MessageBoxResult Show(DependencyObject caller, string message, string title = null, 
@@ -114,12 +117,12 @@ namespace KTWirzade.GUI
             double contentHeight = box.ContentStack.DesiredSize.Height;
             if (contentHeight > SystemParameters.WorkArea.Height - 450.0)
             {
-                box.ContentStack.Height = SystemParameters.WorkArea.Height - 450.0;
-                box.MonoBox.Height = box.ContentStack.Height - (descHeight + 44.0) + 2.0;
+                box.ContentStack.Height = Math.Max(SystemParameters.WorkArea.Height - 450.0, 100.0);
+                box.MonoBox.Height = Math.Max(box.ContentStack.Height - (descHeight + 44.0) + 2.0, 0.0);
             }
             else
             {
-                box.MonoBox.Height = contentHeight - (descHeight + 44.0) + 2.0;
+                box.MonoBox.Height = Math.Max(contentHeight - (descHeight + 44.0) + 2.0, 0.0);
             }
             box.MainStack.Measure(new System.Windows.Size((monoText != null) ? 348.0 : descWidth, double.MaxValue));
             box.Height = box.MainStack.DesiredSize.Height + 2.0;
@@ -191,7 +194,7 @@ namespace KTWirzade.GUI
             double contentHeight = box.ContentStack.DesiredSize.Height;
             if (contentHeight > SystemParameters.WorkArea.Height - 450.0)
             {
-                box.ContentStack.Height = SystemParameters.WorkArea.Height - 450.0;
+                box.ContentStack.Height = Math.Max(SystemParameters.WorkArea.Height - 450.0, 100.0);
                 box.MonoBox.Height = Math.Max(box.ContentStack.Height - (descHeight + 44.0) + 2.0, 0.0);
             }
             else
@@ -307,7 +310,7 @@ namespace KTWirzade.GUI
             double contentHeight = box.ContentStack.DesiredSize.Height;
             if (contentHeight > SystemParameters.WorkArea.Height - 450.0)
             {
-                box.ContentStack.Height = SystemParameters.WorkArea.Height - 450.0;
+                box.ContentStack.Height = Math.Max(SystemParameters.WorkArea.Height - 450.0, 100.0);
                 box.MonoBox.Height = Math.Max(box.ContentStack.Height - (descHeight + 44.0) + 2.0, 0.0);
             }
             else

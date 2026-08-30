@@ -143,6 +143,16 @@ namespace KTWirzade.GUI.Pages.ModePage
                     SwitchRadioImage(panel, new RoutedEventArgs());
                 }
             }
+            int imageOptionCount = template.OptionsContainer.Children.Count;
+            double naturalWidth = 78.0 * imageOptionCount + 8.0 * (imageOptionCount - 1);
+            if (naturalWidth > 350.0)
+            {
+                double scale = 350.0 / naturalWidth;
+                foreach (System.Windows.Controls.Control child in template.OptionsContainer.Children)
+                {
+                    child.LayoutTransform = new System.Windows.Media.ScaleTransform(scale, scale);
+                }
+            }
             Grid.SetColumn(template, MainContainerGrid.ColumnDefinitions.Count - 1);
             MainContainerGrid.Children.Add(template);
         }
@@ -176,7 +186,7 @@ namespace KTWirzade.GUI.Pages.ModePage
                 System.Windows.Controls.RadioButton panel = RadioOption(option, option.Name == page.DefaultOption, page.DependsOn, page.WindowsVersion);
                 if (template.OptionsContainer.Children.Count > 0)
                 {
-                    panel.Margin = new Thickness(0.0, 9.0, 0.0, 0.0);
+                    panel.Margin = new Thickness(0.0, (page.Options.Length > 4) ? 4.0 : 9.0, 0.0, 0.0);
                 }
                 template.OptionsContainer.Children.Add(panel);
             }
@@ -209,7 +219,7 @@ namespace KTWirzade.GUI.Pages.ModePage
                 System.Windows.Controls.CheckBox panel = CheckOption(option, page.DependsOn, page.WindowsVersion);
                 if (template.OptionsContainer.Children.Count > 0)
                 {
-                    panel.Margin = new Thickness(0.0, 9.0, 0.0, 0.0);
+                    panel.Margin = new Thickness(0.0, (page.Options.Length > 4) ? 4.0 : 9.0, 0.0, 0.0);
                 }
                 template.OptionsContainer.Children.Add(panel);
             }
@@ -632,6 +642,15 @@ namespace KTWirzade.GUI.Pages.ModePage
             do
             {
                 Index++;
+                if (Index >= MainContainerGrid.Children.Count)
+                {
+                    // Every remaining page was filtered out (DependsOn/WindowsVersion):
+                    // previously this incremented Index past the end of Children and threw
+                    // ArgumentOutOfRangeException on the cast below. Finish instead.
+                    animating = false;
+                    FinishAction(Choices);
+                    return;
+                }
                 nextPage = (FeaturePage)MainContainerGrid.Children[Index];
             }
             while ((nextPage.DependsOn != null && !Choices.Contains(nextPage.DependsOn)) || (nextPage.WindowsVersion != null && !AmeliorationUtil.IsApplicableWindowsVersion(nextPage.WindowsVersion, false, (string)null, (string)null)));

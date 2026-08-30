@@ -30,7 +30,7 @@ namespace Interprocess
         private static Thread receiverThread = null;
         private static Thread sendResultThread = null;
 
-        private static Exception receiverException = null;
+        private static volatile Exception receiverException = null;
         private static readonly CancellationTokenSource receiverCancel = new CancellationTokenSource();
 
         private static readonly BlockingCollection<MessageResult> ResultWriteQueue = new BlockingCollection<MessageResult>();
@@ -54,7 +54,7 @@ namespace Interprocess
         {
             var exception = Wrap.ExecuteSafe(() =>
             {
-                var serverPipe = new NamedPipeServerStream($"{PipePrefix}-{ApplicationLevel}-Receiver", PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
+                var serverPipe = new NamedPipeServerStream(ReceiverPipeName(ApplicationLevel), PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
                 try
                 {
                     while (!receiverCancel.IsCancellationRequested)
@@ -66,7 +66,7 @@ namespace Interprocess
                         catch (IOException)
                         {
                             serverPipe.Dispose();
-                            serverPipe = new NamedPipeServerStream($"{PipePrefix}-{ApplicationLevel}-Receiver", PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
+                            serverPipe = new NamedPipeServerStream(ReceiverPipeName(ApplicationLevel), PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
                             continue;
                         }
 
@@ -151,7 +151,14 @@ namespace Interprocess
                                             var currentExe = Win32.ProcessEx.GetCurrentProcessFileLocation();
                                             if (Win32.ProcessEx.GetProcessFileLocation(registrationMessage.ProcessID) != currentExe)
                                                 throw new SecurityException("Process path mismatch.");
-                                            
+
+                                            // The claimed Level is self-asserted on the wire; require the
+                                            // peer's actual mandatory integrity level to back it up. A
+                                            // medium-integrity process can no longer register itself as an
+                                            // Administrator/TrustedInstaller node even with a matching exe path.
+                                            var clientIntegrityRid = GetClientIntegrityRid(serverPipe);
+                                            ThrowIfInsufficientPeerIntegrity(clientIntegrityRid, registrationMessage.Level);
+
                                             LevelController.Register(registrationMessage.Level, registrationMessage.ProcessID);
                                             LevelController.Open(registrationMessage.Level);
 
@@ -304,7 +311,7 @@ namespace Interprocess
                         using (MD5 md5 = new MD5CryptoServiceProvider())
                             jsonHash = md5.ComputeHash(json);
 
-                        var clientPipe = new NamedPipeClientStream(".", $"{PipePrefix}-{result.MessageCallerLevel}-ResultReceiver", PipeDirection.Out, PipeOptions.None);
+                        var clientPipe = new NamedPipeClientStream(".", ResultReceiverPipeName(result.MessageCallerLevel), PipeDirection.Out, PipeOptions.None);
                         try
                         {
                             bool retried = false;
@@ -326,7 +333,7 @@ namespace Interprocess
 
                                     clientPipe.Dispose();
                                     Thread.Sleep(100);
-                                    clientPipe = new NamedPipeClientStream(".", $"{PipePrefix}-{result.MessageCallerLevel}-ResultReceiver", PipeDirection.Out, PipeOptions.None);
+                                    clientPipe = new NamedPipeClientStream(".", ResultReceiverPipeName(result.MessageCallerLevel), PipeDirection.Out, PipeOptions.None);
                                 }
                             }
                             
@@ -366,7 +373,7 @@ namespace Interprocess
         private static Thread senderThread = null;
         private static Thread receiveResultThread = null;
 
-        private static Exception senderException = null;
+        private static volatile Exception senderException = null;
         private static readonly CancellationTokenSource senderCancel = new CancellationTokenSource();
         private static readonly BlockingCollection<InterMessage> MessageWriteQueue = new BlockingCollection<InterMessage>();
 
@@ -409,7 +416,7 @@ namespace Interprocess
                             using (MD5 md5 = new MD5CryptoServiceProvider())
                                 message.JsonHash = md5.ComputeHash(json);
 
-                            var clientPipe = new NamedPipeClientStream(".", $"{PipePrefix}-{message.TargetLevel}-Receiver", PipeDirection.Out, PipeOptions.None);
+                            var clientPipe = new NamedPipeClientStream(".", ReceiverPipeName(message.TargetLevel), PipeDirection.Out, PipeOptions.None);
                             try
                             {
                                 bool retried = false;
@@ -448,7 +455,7 @@ namespace Interprocess
                                         retried = true;
 
                                         Thread.Sleep(100);
-                                        clientPipe = new NamedPipeClientStream(".", $"{PipePrefix}-{message.TargetLevel}-Receiver", PipeDirection.Out, PipeOptions.None);
+                                        clientPipe = new NamedPipeClientStream(".", ReceiverPipeName(message.TargetLevel), PipeDirection.Out, PipeOptions.None);
                                     }
                                 }
                                 ThrowIfMismatchedServerExePath(clientPipe);
@@ -507,7 +514,7 @@ namespace Interprocess
         {
             var exception = Wrap.ExecuteSafe(() =>
             {
-                var serverPipe = new NamedPipeServerStream($"{PipePrefix}-{ApplicationLevel}-ResultReceiver", PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
+                var serverPipe = new NamedPipeServerStream(ResultReceiverPipeName(ApplicationLevel), PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
                 try
                 {
                     while (!senderCancel.IsCancellationRequested)
@@ -519,7 +526,7 @@ namespace Interprocess
                         catch (IOException)
                         {
                             serverPipe.Dispose();
-                            serverPipe = new NamedPipeServerStream($"{PipePrefix}-{ApplicationLevel}-ResultReceiver", PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
+                            serverPipe = new NamedPipeServerStream(ResultReceiverPipeName(ApplicationLevel), PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
                             continue;
                         }
 
@@ -594,7 +601,7 @@ namespace Interprocess
 
         private static void VerificationThread(PipeSecurity security)
         {
-            var serverPipe = Wrap.ExecuteSafe(() => new NamedPipeServerStream($"{PipePrefix}-{ApplicationLevel}-VerificationReceiver", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security), true).Value;
+            var serverPipe = Wrap.ExecuteSafe(() => new NamedPipeServerStream(VerificationPipeName(ApplicationLevel), PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security), true).Value;
             try
             {
                 var exception = Wrap.ExecuteSafe(() =>
@@ -613,7 +620,7 @@ namespace Interprocess
                         catch (IOException)
                         {
                             serverPipe.Dispose();
-                            serverPipe = new NamedPipeServerStream($"{PipePrefix}-{ApplicationLevel}-VerificationReceiver", PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
+                            serverPipe = new NamedPipeServerStream(VerificationPipeName(ApplicationLevel), PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, security);
                             continue;
                         }
 
@@ -654,7 +661,14 @@ namespace Interprocess
                             try
                             {
                                 using (_ = new SynchronousIoCanceler(5000))
+                                {
                                     serverPipe.Write(verified, 0, verified.Length);
+                                    // Supporting MAC so the caller can authenticate that this
+                                    // response really came from a session member (see
+                                    // InterLink.ComputeVerificationMac).
+                                    byte[] mac = ComputeVerificationMac(request.IdToVerify, verified[0]);
+                                    serverPipe.Write(mac, 0, mac.Length);
+                                }
                             }
                             catch (OperationCanceledException)
                             {

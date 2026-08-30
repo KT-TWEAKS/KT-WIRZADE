@@ -59,7 +59,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(RegistryValueOperation), Alias = "operation")]
         public RegistryValueOperation Operation { get; set; } = RegistryValueOperation.Add;
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 1;
         public int GetProgressWeight()
         {
@@ -85,6 +85,13 @@ namespace KTWirzade.Shared.Actions
         public void ResetProgress() => InProgress = false;
         
         public string ErrorString() => $"RegistryValueAction failed to {Operation.ToString().ToLower()} value '{Value}' in key '{KeyName}'";
+
+        /// <summary>Checks for a child subkey while disposing the probe handle (previous code leaked one handle per user SID).</summary>
+        private static bool HasSubKey(RegistryKey parent, string childName, string expectedChild)
+        {
+            using var child = parent.OpenSubKey(childName);
+            return child != null && child.GetSubKeyNames().Any(y => y.Equals(expectedChild));
+        }
         
         private List<RegistryKey> GetRoots(ref string subKey)
         {
@@ -112,9 +119,9 @@ namespace KTWirzade.Shared.Actions
                         usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
                         userKeys = usersKey.GetSubKeyNames().
                             Where(x => x.StartsWith("S-") && 
-                                usersKey.OpenSubKey(x).GetSubKeyNames().Any(y => y.Equals("Volatile Environment"))).ToList();
+                                HasSubKey(usersKey, x, "Volatile Environment")).ToList();
                     
-                        userKeys.AddRange(usersKey.GetSubKeyNames().Where(x => x.StartsWith("KTWirzade_UserHive_") && !x.EndsWith("_Classes")).ToList());
+                        userKeys.AddRange(usersKey.GetSubKeyNames().Where(x => x.StartsWith("AME_UserHive_") && !x.EndsWith("_Classes")).ToList());
                     
                         userKeys.ForEach(x => list.Add(usersKey.OpenSubKey(x, true)));
                         return list;
@@ -122,13 +129,13 @@ namespace KTWirzade.Shared.Actions
                         usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
                         userKeys = usersKey.GetSubKeyNames().
                             Where(x => x.StartsWith("S-") && 
-                                usersKey.OpenSubKey(x).GetSubKeyNames().Any(y => y.Equals("Volatile Environment"))).ToList();
+                                HasSubKey(usersKey, x, "Volatile Environment")).ToList();
 
                         userKeys.ForEach(x => list.Add(usersKey.OpenSubKey(x, true)));
                         return list;
                     case Scope.DefaultUser:
                         usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
-                        userKeys = usersKey.GetSubKeyNames().Where(x => x.Equals("KTWirzade_UserHive_Default") && !x.EndsWith("_Classes")).ToList();
+                        userKeys = usersKey.GetSubKeyNames().Where(x => x.Equals("AME_UserHive_Default") && !x.EndsWith("_Classes")).ToList();
                         
                         userKeys.ForEach(x => list.Add(usersKey.OpenSubKey(x, true)));
                         return list;
@@ -217,7 +224,7 @@ namespace KTWirzade.Shared.Actions
                     var root = _root;
                     try
                     {
-                        if (root.Name.Contains("KTWirzade_UserHive_") && subKey.StartsWith("SOFTWARE\\Classes", StringComparison.CurrentCultureIgnoreCase))
+                        if (root.Name.Contains("AME_UserHive_") && subKey.StartsWith("SOFTWARE\\Classes", StringComparison.CurrentCultureIgnoreCase))
                         {
                             var usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
 
@@ -314,11 +321,11 @@ namespace KTWirzade.Shared.Actions
                 {
                     try
                     {
-                        if (root.Name.Contains("KTWirzade_UserHive_") && subKey.StartsWith("SOFTWARE\\Classes", StringComparison.CurrentCultureIgnoreCase))
+                        if (root.Name.Contains("AME_UserHive_") && subKey.StartsWith("SOFTWARE\\Classes", StringComparison.CurrentCultureIgnoreCase))
                         {
                             var usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
 
-                            var name = (root.Name.Contains("KTWirzade_UserHive_Default") ? "KTWirzade_UserHive_Default" : root.Name.Substring(11)) + "_Classes";
+                            var name = (root.Name.Contains("AME_UserHive_Default") ? "AME_UserHive_Default" : root.Name.Substring(11)) + "_Classes";
                             root.Dispose();
                             root = usersKey.OpenSubKey(name, true);
                             subKey = Regex.Replace(subKey, @"^SOFTWARE\\*Classes\\*", "", RegexOptions.IgnoreCase);
@@ -340,7 +347,7 @@ namespace KTWirzade.Shared.Actions
                                 using var _ = root.CreateSubKey(subKey);
                             }
                         }
-                        
+
                         if (Operation == RegistryValueOperation.Delete)
                         {
                             using var key = root.OpenSubKey(subKey, true);
@@ -391,7 +398,7 @@ namespace KTWirzade.Shared.Actions
                         {
                             try
                             {
-                                var tempPath = Environment.ExpandEnvironmentVariables(@"%TEMP%\KTWirzade");
+                                var tempPath = Environment.ExpandEnvironmentVariables(@"%TEMP%\AME");
                                 var regPath = Environment.ExpandEnvironmentVariables(@"%SYSTEMROOT%\System32\reg.exe");
                                 var ameRegPath = Path.Combine(tempPath, "amereg.exe");
                                 if (File.Exists(regPath))
@@ -427,7 +434,9 @@ namespace KTWirzade.Shared.Actions
 
         private void RegAddValue(Output.OutputWriter output, string exePath, string key, string value, RegistryValueType type, string? data)
         {
-            var arguments = @$"add ""{key}"" /v ""{value}"" /t ""{type.ToString()}"" /d ""{data.ToString()}"" /f";
+            // data can legitimately be null (e.g. DELETE_VALUE flows and null YAML data);
+            // previously data.ToString() threw a guaranteed NullReferenceException here.
+            var arguments = @$"add ""{key}"" /v ""{value}"" /t ""{type.ToString()}"" /d ""{data ?? ""}"" /f";
             
             var startInfo = new ProcessStartInfo
             {

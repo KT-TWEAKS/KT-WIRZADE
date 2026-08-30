@@ -177,6 +177,16 @@ namespace KTWirzade.GUI.Pages.IsoModePage
                     IsoFeaturesPane.SwitchRadioImage(panel, new RoutedEventArgs());
                 }
             }
+            int imageOptionCount = template.OptionsContainer.Children.Count;
+            double naturalWidth = 78.0 * imageOptionCount + 8.0 * (imageOptionCount - 1);
+            if (naturalWidth > 350.0)
+            {
+                double scale = 350.0 / naturalWidth;
+                foreach (System.Windows.Controls.Control child in template.OptionsContainer.Children)
+                {
+                    child.LayoutTransform = new System.Windows.Media.ScaleTransform(scale, scale);
+                }
+            }
             Grid.SetColumn(template, MainContainerGrid.ColumnDefinitions.Count - 1);
             MainContainerGrid.Children.Add(template);
         }
@@ -210,7 +220,7 @@ namespace KTWirzade.GUI.Pages.IsoModePage
                 System.Windows.Controls.RadioButton panel = RadioOption(option, option.Name == page.DefaultOption, page.DependsOn, page.WindowsVersion);
                 if (template.OptionsContainer.Children.Count > 0)
                 {
-                    panel.Margin = new Thickness(0.0, 9.0, 0.0, 0.0);
+                    panel.Margin = new Thickness(0.0, (page.Options.Length > 4) ? 4.0 : 9.0, 0.0, 0.0);
                 }
                 template.OptionsContainer.Children.Add(panel);
             }
@@ -244,7 +254,7 @@ namespace KTWirzade.GUI.Pages.IsoModePage
                 System.Windows.Controls.CheckBox panel = CheckOption(option, page.DependsOn, page.WindowsVersion);
                 if (template.OptionsContainer.Children.Count > 0)
                 {
-                    panel.Margin = new Thickness(0.0, 9.0, 0.0, 0.0);
+                    panel.Margin = new Thickness(0.0, (page.Options.Length > 4) ? 4.0 : 9.0, 0.0, 0.0);
                 }
                 template.OptionsContainer.Children.Add(panel);
             }
@@ -633,6 +643,10 @@ namespace KTWirzade.GUI.Pages.IsoModePage
             {
                 return;
             }
+            if (Index >= MainContainerGrid.Children.Count)
+            {
+                return;
+            }
             foreach (object option in ((IsoFeaturePage)MainContainerGrid.Children[Index]).OptionsContainer.Children)
             {
                 if (option.GetType() == typeof(System.Windows.Controls.CheckBox))
@@ -661,13 +675,18 @@ namespace KTWirzade.GUI.Pages.IsoModePage
             }
             animating = true;
             int activeIndex = Index;
-            IsoFeaturePage nextPage;
+            IsoFeaturePage nextPage = null;
             do
             {
                 Index++;
+                if (Index >= MainContainerGrid.Children.Count)
+                {
+                    Index = MainContainerGrid.Children.Count - 1;
+                    break;
+                }
                 nextPage = (IsoFeaturePage)MainContainerGrid.Children[Index];
             }
-            while ((nextPage.DependsOn != null && !Choices.Contains(nextPage.DependsOn)) || (nextPage.WindowsVersion != null && !AmeliorationUtil.IsApplicableWindowsVersion(nextPage.WindowsVersion, true, GlobalsGUI.Current.ISO.WinVer?.ToString() ?? "26100", GlobalsGUI.Current.ISO.WinUpdateVer?.ToString() ?? "0")));
+            while (nextPage != null && ((nextPage.DependsOn != null && !Choices.Contains(nextPage.DependsOn)) || (nextPage.WindowsVersion != null && !AmeliorationUtil.IsApplicableWindowsVersion(nextPage.WindowsVersion, true, GlobalsGUI.Current.ISO.WinVer?.ToString() ?? "26100", GlobalsGUI.Current.ISO.WinUpdateVer?.ToString() ?? "0"))));
             if (MainContainerGrid.Children.Count - 1 == Index)
             {
                 NextText.Text = "OK";

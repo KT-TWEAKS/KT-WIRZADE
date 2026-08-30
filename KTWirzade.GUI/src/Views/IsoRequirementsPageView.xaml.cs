@@ -28,11 +28,9 @@ namespace KTWirzade.GUI.Views
             Warning
         }
 
-        private string WindowsProductName = "Windows ISO";
-
         private int TickCount;
 
-        private static int _pendingUpdatesCheckCount;
+        private bool _buildBypassed;
 
         private IsoRequirementsPageViewModel ViewModel => (IsoRequirementsPageViewModel)base.DataContext;
 
@@ -80,7 +78,7 @@ namespace KTWirzade.GUI.Views
             {
                 throw new Exception("AreRequirementsMet was called before requirements were checked.");
             }
-            if (!ViewModel.IsBuildSupported.Value)
+            if (!ViewModel.IsBuildSupported.Value && !_buildBypassed)
             {
                 return false;
             }
@@ -104,7 +102,6 @@ namespace KTWirzade.GUI.Views
                     ActivationContainer.Visibility = ((!flag) ? Visibility.Collapsed : Visibility.Visible);
                     SystemCheckContainer.Opacity = (flag ? 0.6 : 1.0);
                     PendingUpdatesActionText.Text = "Run action";
-                    _pendingUpdatesCheckCount = 0;
                     if (ViewModel.MetRequirements != null && ViewModel.IsBuildSupported.HasValue)
                     {
                         SystemCheckContainer.Opacity = 1.0;
@@ -214,10 +211,25 @@ namespace KTWirzade.GUI.Views
                 bool systemCheckLocked = false;
                 if (!ViewModel.IsBuildSupported.Value)
                 {
-                    systemCheckIcon = IconType.Warning;
-                    systemCheckStatusText = "Requirements not met";
-                    systemCheckResultText = "This Windows image is not supported by this Playbook.";
-                    systemCheckLocked = true;
+                    if (_buildBypassed)
+                    {
+                        BuildMismatchBox.Visibility = Visibility.Collapsed;
+                        systemCheckIcon = IconType.Warning;
+                        systemCheckStatusText = "Versao da imagem ignorada";
+                        systemCheckResultText = "Aplicando por sua conta e risco";
+                    }
+                    else
+                    {
+                        BuildMismatchBox.Visibility = Visibility.Visible;
+                        systemCheckIcon = IconType.Warning;
+                        systemCheckStatusText = "Requirements not met";
+                        systemCheckResultText = "This Windows image is not supported by this Playbook.";
+                        systemCheckLocked = true;
+                    }
+                }
+                else
+                {
+                    BuildMismatchBox.Visibility = Visibility.Collapsed;
                 }
                 if (!ViewModel.MetRequirements.Contains((Requirement)9) && !systemCheckLocked)
                 {
@@ -379,6 +391,32 @@ namespace KTWirzade.GUI.Views
 
         private void BypassButton_OnClick(object sender, RoutedEventArgs e)
         {
+            var playbook = (Playbook)GlobalsGUI.Current.ISO.SelectedPlaybook;
+            if (playbook.Requirements != null)
+            {
+                playbook.Requirements = playbook.Requirements.Where((Requirement x) => (int)x != 12).ToArray();
+            }
+            FreshInstallBox.Visibility = Visibility.Collapsed;
+        }
+
+        private async void BypassBuildButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            var playbook = (Playbook)GlobalsGUI.Current.ISO.SelectedPlaybook;
+            string imageBuild = GlobalsGUI.Current.ISO.WinVer.HasValue ? GlobalsGUI.Current.ISO.WinVer.Value.ToString() : "(desconhecida)";
+            string supportedBuilds = playbook.SupportedBuilds != null ? string.Join(", ", playbook.SupportedBuilds) : "(qualquer)";
+            var result = MessageBox.Show(
+                typeof(MainWindow),
+                $"Este playbook não foi feito para a versão do Windows desta imagem.\n\nBuild da imagem: {imageBuild}\nBuilds suportadas: {supportedBuilds}\n\nAplicar mesmo assim pode causar instabilidade ou erros. Deseja continuar por sua conta e risco?",
+                "Versão não suportada",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+            _buildBypassed = true;
+            BuildMismatchBox.Visibility = Visibility.Collapsed;
+            await UpdateSystemCheckDisplay();
         }
 
         private void ViewInstallGuideButton_OnClick(object sender, RoutedEventArgs e)

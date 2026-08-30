@@ -36,7 +36,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(RegistryKeyOperation), Alias = "operation")]
         public RegistryKeyOperation Operation { get; set; } = RegistryKeyOperation.Delete;
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 1;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Notify;
@@ -85,6 +85,13 @@ namespace KTWirzade.Shared.Actions
         public void ResetProgress() => InProgress = false;
         
         public string ErrorString() => $"RegistryKeyAction failed to {Operation.ToString().ToLower()} key '{KeyName}'.";
+
+        /// <summary>Checks for a child subkey while disposing the probe handle (previous code leaked one handle per user SID).</summary>
+        private static bool HasSubKey(RegistryKey parent, string childName, string expectedChild)
+        {
+            using var child = parent.OpenSubKey(childName);
+            return child != null && child.GetSubKeyNames().Any(y => y.Equals(expectedChild));
+        }
         
         private List<RegistryKey> GetRoots(ref string subKey)
         {
@@ -113,9 +120,9 @@ namespace KTWirzade.Shared.Actions
                         usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
                         userKeys = usersKey.GetSubKeyNames().
                             Where(x => x.StartsWith("S-") && 
-                                usersKey.OpenSubKey(x).GetSubKeyNames().Any(y => y.Equals("Volatile Environment"))).ToList();
+                                HasSubKey(usersKey, x, "Volatile Environment")).ToList();
                     
-                        userKeys.AddRange(usersKey.GetSubKeyNames().Where(x => x.StartsWith("KTWirzade_UserHive_") && !x.EndsWith("_Classes")).ToList());
+                        userKeys.AddRange(usersKey.GetSubKeyNames().Where(x => x.StartsWith("AME_UserHive_") && !x.EndsWith("_Classes")).ToList());
                     
                         userKeys.ForEach(x => list.Add(usersKey.OpenSubKey(x, true)));
                         return list;
@@ -123,13 +130,13 @@ namespace KTWirzade.Shared.Actions
                         usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
                         userKeys = usersKey.GetSubKeyNames().
                             Where(x => x.StartsWith("S-") && 
-                                usersKey.OpenSubKey(x).GetSubKeyNames().Any(y => y.Equals("Volatile Environment"))).ToList();
+                                HasSubKey(usersKey, x, "Volatile Environment")).ToList();
 
                         userKeys.ForEach(x => list.Add(usersKey.OpenSubKey(x, true)));
                         return list;
                     case Scope.DefaultUser:
                         usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
-                        userKeys = usersKey.GetSubKeyNames().Where(x => x.Equals("KTWirzade_UserHive_Default") && !x.EndsWith("_Classes")).ToList();
+                        userKeys = usersKey.GetSubKeyNames().Where(x => x.Equals("AME_UserHive_Default") && !x.EndsWith("_Classes")).ToList();
                         
                         userKeys.ForEach(x => list.Add(usersKey.OpenSubKey(x, true)));
                         return list;
@@ -206,11 +213,11 @@ namespace KTWirzade.Shared.Actions
                     var root = _root;
                     try
                     {
-                        if (root.Name.Contains("KTWirzade_UserHive_") && subKey.StartsWith("SOFTWARE\\Classes", StringComparison.CurrentCultureIgnoreCase))
+                        if (root.Name.Contains("AME_UserHive_") && subKey.StartsWith("SOFTWARE\\Classes", StringComparison.CurrentCultureIgnoreCase))
                         {
                             var usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
 
-                            var name = (root.Name.Contains("KTWirzade_UserHive_Default") ? "KTWirzade_UserHive_Default" : root.Name.Substring(11)) + "_Classes";
+                            var name = (root.Name.Contains("AME_UserHive_Default") ? "AME_UserHive_Default" : root.Name.Substring(11)) + "_Classes";
                             root.Dispose();
                             root = usersKey.OpenSubKey(name, true);
                             subKey = Regex.Replace(subKey, @"^SOFTWARE\\*Classes\\*", "", RegexOptions.IgnoreCase);
@@ -260,7 +267,7 @@ namespace KTWirzade.Shared.Actions
                 {
                     try
                     {
-                        if (root.Name.Contains("KTWirzade_UserHive_") && subKey.StartsWith("SOFTWARE\\Classes", StringComparison.CurrentCultureIgnoreCase))
+                        if (root.Name.Contains("AME_UserHive_") && subKey.StartsWith("SOFTWARE\\Classes", StringComparison.CurrentCultureIgnoreCase))
                         {
                             var usersKey = RegistryKey.OpenBaseKey(RegistryHive.Users, RegistryView.Default);
 
@@ -276,12 +283,48 @@ namespace KTWirzade.Shared.Actions
                             }
                         }
 
+                        // Only log a rollback entry when the operation will actually change state:
+                        // logging Add for a pre-existing key makes rollback delete the pre-existing tree;
+                        // logging Delete for a missing key makes rollback restore data that was never removed.
+                        bool keyExistedBefore;
+                        using (var probe = root.OpenSubKey(subKey))
+                            keyExistedBefore = probe != null;
+
                         if (Operation == RegistryKeyOperation.Add)
                         {
                             using var _ = root.CreateSubKey(subKey);
+
+                            if (!AmeliorationUtil.ISO && !keyExistedBefore)
+                            {
+                                Rollback.RollbackManager.LogEntry(new Rollback.RollbackEntry
+                                {
+                                    TaskName = "RegistryKeyAction",
+                                    ActionType = Rollback.RollbackActionType.RegistryKey,
+                                    Operation = Rollback.RollbackOperation.Add,
+                                    Target = root.Name + "\\" + subKey
+                                });
+                            }
                         }
                         if (Operation == RegistryKeyOperation.Delete)
                         {
+                            if (!AmeliorationUtil.ISO && keyExistedBefore)
+                            {
+                                // Export the full key tree before deleting so rollback can restore
+                                // the values, not just re-create an empty key.
+                                var regBackup = Rollback.RollbackManager.BackupRegistryKeyForRollback(root.Name + "\\" + subKey);
+
+                                var entry = new Rollback.RollbackEntry
+                                {
+                                    TaskName = "RegistryKeyAction",
+                                    ActionType = Rollback.RollbackActionType.RegistryKey,
+                                    Operation = Rollback.RollbackOperation.Delete,
+                                    Target = root.Name + "\\" + subKey
+                                };
+                                if (regBackup != null)
+                                    entry.ExtraData["regBackup"] = regBackup;
+
+                                Rollback.RollbackManager.LogEntry(entry);
+                            }
                             try
                             {
                                 root.DeleteSubKeyTree(subKey, false);
@@ -314,7 +357,7 @@ namespace KTWirzade.Shared.Actions
                         {
                             try
                             {
-                                var tempPath = Environment.ExpandEnvironmentVariables(@"%TEMP%\KTWirzade");
+                                var tempPath = Environment.ExpandEnvironmentVariables(@"%TEMP%\AME");
                                 var regPath = Environment.ExpandEnvironmentVariables(@"%SYSTEMROOT%\System32\reg.exe");
                                 var ameRegPath = Path.Combine(tempPath, "amereg.exe");
                                 if (File.Exists(regPath))

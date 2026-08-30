@@ -269,7 +269,9 @@ namespace Interprocess
                     }
                     else
                     {
-                        foreach (var target in _targets.Where(target => target != cancelSource))
+                        InternalLevel[] targetsCopy;
+                        lock (_cancellationLock) { targetsCopy = _targets.Where(target => target != cancelSource).ToArray(); }
+                        foreach (var target in targetsCopy)
                         {
                             MessageWriteQueue.Add(new TokenCancellationMessage(target, ApplicationLevel)
                             {
@@ -287,10 +289,10 @@ namespace Interprocess
             {
                 if (targetLevel == SourceLevel)
                     throw new InvalidOperationException($"Target level ({targetLevel.ToString()}) for an InterCancellationTokenSource must not be the same as the source level ({SourceLevel}).");
-                _targets.Add(targetLevel);
+                lock (_cancellationLock) { _targets.Add(targetLevel); }
             }
 
-            public void OnCompleted(InternalLevel targetLevel) => _targets.Remove(targetLevel);
+            public void OnCompleted(InternalLevel targetLevel) { lock (_cancellationLock) { _targets.Remove(targetLevel); } }
 
             private bool _wasDeserialized = false;
             public void OnDeserialized()

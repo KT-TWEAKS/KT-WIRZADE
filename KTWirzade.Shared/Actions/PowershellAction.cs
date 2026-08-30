@@ -20,6 +20,7 @@ namespace KTWirzade.Shared.Actions
         public override string? IsISOCompatible() => "For safety reasons, PowerShellAction does not support iso.";
         public void RunTaskOnMainThread(Output.OutputWriter output)
         {
+            ExitCode = null;
             if (InProgress) throw new TaskInProgressException("Another Powershell action was called while one was in progress.");
             InProgress = true;
             
@@ -45,10 +46,10 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(string), Alias = "command")]
         public string Command { get; set; }
         
-        [YamlMember(typeof(string), Alias = "timeout")]
+        [YamlMember(typeof(int), Alias = "timeout")]
         public int? Timeout { get; set; }
         
-        [YamlMember(typeof(string), Alias = "wait")]
+        [YamlMember(typeof(bool), Alias = "wait")]
         public bool Wait { get; set; } = true;
         
         [YamlMember(typeof(bool), Alias = "exeDir")]
@@ -57,7 +58,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(Dictionary<string, ExitCodeAction>), Alias = "handleExitCodes")]
         [CanBeNull] public Dictionary<string, ExitCodeAction> HandleExitCodes { get; set; } = null;
 
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 1;
         
         private int? ExitCode { get; set; }
@@ -85,6 +86,17 @@ namespace KTWirzade.Shared.Actions
             return null;
         }
         
+        private static string EncodeCommand(string command)
+        {
+            var cleaned = command.Replace("\"\"\"", "\"");
+            return Convert.ToBase64String(Encoding.Unicode.GetBytes(cleaned));
+        }
+        
+        private static string GetEncodedArguments(string command)
+        {
+            return $"-NoProfile -ExecutionPolicy Bypass -NonInteractive -EncodedCommand {EncodeCommand(command)}";
+        }
+        
         private void RunAsProcess(Output.OutputWriter output)
         {            
             using var process = new Process();
@@ -92,7 +104,7 @@ namespace KTWirzade.Shared.Actions
             {
                 WindowStyle = ProcessWindowStyle.Normal,
                 FileName = "PowerShell.exe",
-                Arguments = $@"-NoP -ExecutionPolicy Bypass -NonInteractive -C ""{Command}""",
+                Arguments = GetEncodedArguments(Command),
                 UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
@@ -131,7 +143,6 @@ namespace KTWirzade.Shared.Actions
                 {
                     bool exited = process.WaitForExit(30000);
 
-                    // WaitForExit alone seems to not be entirely reliable
                     while (!exited && PowerShellRunning(process.Id))
                     {
                         exited = process.WaitForExit(30000);
@@ -174,7 +185,7 @@ namespace KTWirzade.Shared.Actions
             {
                 WindowStyle = ProcessWindowStyle.Normal,
                 FileName = "PowerShell.exe",
-                Arguments = $@"-NoP -ExecutionPolicy Bypass -NonInteractive -C ""{Command}""",
+                Arguments = GetEncodedArguments(Command),
                 UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,
@@ -210,7 +221,12 @@ namespace KTWirzade.Shared.Actions
                         throw new TimeoutException($"Executable run timeout exceeded.");
                     }
                 }
-                else process.WaitForExit();
+                else
+                {
+                    while (!process.WaitForExit(30000))
+                    {
+                    }
+                }
             }
 
             ExitCode = Wrap.ExecuteSafe(() => process.ExitCode, true, output.LogOptions).Value;

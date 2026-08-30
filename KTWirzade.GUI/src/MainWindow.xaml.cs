@@ -23,6 +23,10 @@ using System.Windows.Threading;
 using KTWirzade.GUI.Controls;
 using KTWirzade.GUI.Utils;
 using KTWirzade.GUI.ViewModels;
+using KTWirzade.GUI.Windows;
+using KTWirzade.Shared.I18n;
+using KTWirzade.Shared.Rollback;
+using KTWirzade.GUI.Windows;
 using KTWirzade.Shared;
 using static Core.Log;
 using static Core.Win32;
@@ -55,7 +59,7 @@ namespace KTWirzade.GUI
 
         public static Dispatcher CurrentDispatcher;
 
-        public static bool HasLoaded;
+        public static volatile bool HasLoaded;
 
         private static BitmapImage scaledISOImage;
 
@@ -228,8 +232,10 @@ namespace KTWirzade.GUI
                 };
                 iso.Watcher.Deleted += delegate (object sender, FileSystemEventArgs args)
                 {
+                    var watcher = (FileSystemWatcher)sender;
+                    watcher.EnableRaisingEvents = false;
                     CurrentDispatcher.Invoke(() => GlobalsGUI.Current.Items.Remove(iso));
-                    ((FileSystemWatcher)sender).Dispose();
+                    watcher.Dispose();
                 };
                 iso.Checked = true;
                 AddItem(iso);
@@ -309,8 +315,11 @@ namespace KTWirzade.GUI
                     }
                     i++;
                 }
-                GlobalsGUI.Current.Items[ActiveItemIndex].Selected = false;
-                GlobalsGUI.Current.Items[ActiveItemIndex].SidebarInitialHeight = 37;
+                if (ActiveItemIndex >= 0 && ActiveItemIndex < GlobalsGUI.Current.Items.Count)
+                {
+                    GlobalsGUI.Current.Items[ActiveItemIndex].Selected = false;
+                    GlobalsGUI.Current.Items[ActiveItemIndex].SidebarInitialHeight = 37;
+                }
             }
             item.SidebarInitialHeight = 37;
             item.Selected = true;
@@ -323,24 +332,31 @@ namespace KTWirzade.GUI
 
         private async void RemoveItemButton_OnClick(object sender, RoutedEventArgs e)
         {
-            if ((IDragItem)((FrameworkElement)sender).DataContext is ISO iso)
+            try
             {
-                iso.Watcher?.Dispose();
-                if (iso.ProgressVisibility == Visibility.Visible)
+                if ((IDragItem)((FrameworkElement)sender).DataContext is ISO iso)
                 {
-                    if (MessageBox.Show(this, "Cancel ISO download?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    iso.Watcher?.Dispose();
+                    if (iso.ProgressVisibility == Visibility.Visible)
                     {
-                        GlobalsGUI.Current.Items.Remove(iso);
+                        if (MessageBox.Show(this, "Cancel ISO download?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                        {
+                            GlobalsGUI.Current.Items.Remove(iso);
+                        }
+                        return;
                     }
-                    return;
+                    if (iso.FilePath != null && iso.FilePath.StartsWith(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Images"), StringComparison.OrdinalIgnoreCase))
+                    {
+                        string fileName = System.IO.Path.GetFileName(iso.FilePath);
+                        await InterLink.ExecuteSafeAsync((Expression<System.Action>)(() => RemoveISOFile(fileName)), true, -1);
+                    }
                 }
-                if (iso.FilePath != null && iso.FilePath.StartsWith(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Images"), StringComparison.OrdinalIgnoreCase))
-                {
-                    string fileName = System.IO.Path.GetFileName(iso.FilePath);
-                    await InterLink.ExecuteSafeAsync((Expression<System.Action>)(() => RemoveISOFile(fileName)), true, -1);
-                }
+                GlobalsGUI.Current.Items.Remove((IDragItem)((FrameworkElement)sender).DataContext);
             }
-            GlobalsGUI.Current.Items.Remove((IDragItem)((FrameworkElement)sender).DataContext);
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Erro ao remover item: " + ex.Message, "Aviso");
+            }
         }
 
         [InterprocessMethod(Level.Administrator)]
@@ -355,6 +371,19 @@ namespace KTWirzade.GUI
             {
                 return;
             }
+            try
+            {
+                await HandleItemRemoved(e);
+            }
+            catch (Exception ex)
+            {
+                Core.Log.WriteExceptionSafe(ex, "Error handling item removal from collection.");
+            }
+        }
+
+        private async System.Threading.Tasks.Task HandleItemRemoved(NotifyCollectionChangedEventArgs e)
+        {
+            if (e.OldItems == null || e.OldItems.Count == 0) return;
             IDragItem item = (IDragItem)e.OldItems[0];
             if (item is PlaybookGUI pb)
             {
@@ -464,6 +493,13 @@ namespace KTWirzade.GUI
 
         private static async System.Threading.Tasks.Task RemoveISO(ISO iso)
         {
+            if (iso.Watcher != null)
+            {
+                iso.Watcher.EnableRaisingEvents = false;
+                iso.Watcher.Dispose();
+                iso.Watcher = null;
+            }
+            await System.Threading.Tasks.Task.CompletedTask;
         }
 
         private async void SelectItem(object sender, RoutedEventArgs e)
@@ -491,7 +527,10 @@ namespace KTWirzade.GUI
             {
                 GlobalsGUI.Current.ISO = (ISO)selectedItem;
             }
-            WizardConfig.Current.LastSelectedItem.Set(GlobalsGUI.Current.Items[newIndex].FileNameWithoutExtension);
+            if (newIndex >= 0 && newIndex < GlobalsGUI.Current.Items.Count)
+            {
+                WizardConfig.Current.LastSelectedItem.Set(GlobalsGUI.Current.Items[newIndex].FileNameWithoutExtension);
+            }
             int i = 0;
             foreach (Border childPB in from x in FindVisualChildren<Border>(PlaybookSidebarItems)
                                        where x.Name == "PlaybookContainer"
@@ -515,10 +554,16 @@ namespace KTWirzade.GUI
                 i++;
             }
             System.Windows.Shapes.Rectangle ActivePB = new();
-            System.Windows.Shapes.Rectangle SelectedPB = FindVisualChildren<System.Windows.Shapes.Rectangle>(PlaybookSidebarItems).ElementAt(newIndex);
-            if (ActiveItemIndex != -1)
+            var sidebarRectangles = FindVisualChildren<System.Windows.Shapes.Rectangle>(PlaybookSidebarItems).ToList();
+            if (newIndex < 0 || newIndex >= sidebarRectangles.Count)
             {
-                ActivePB = FindVisualChildren<System.Windows.Shapes.Rectangle>(PlaybookSidebarItems).ElementAt(ActiveItemIndex);
+                ActiveItemIndex = newIndex;
+                return;
+            }
+            System.Windows.Shapes.Rectangle SelectedPB = sidebarRectangles.ElementAt(newIndex);
+            if (ActiveItemIndex != -1 && ActiveItemIndex < sidebarRectangles.Count)
+            {
+                ActivePB = sidebarRectangles.ElementAt(ActiveItemIndex);
             }
             Storyboard board = new Storyboard();
             Thickness origMargin = new Thickness(0.0, 25.0, 0.0, 0.0);
@@ -681,14 +726,14 @@ namespace KTWirzade.GUI
                 board.Begin();
                 ActivePB.Margin = new Thickness(0.0, 25.0, 0.0, 0.0);
             }
-            if (ActiveItemIndex != -1)
+            if (ActiveItemIndex != -1 && ActiveItemIndex < GlobalsGUI.Current.Items.Count)
             {
                 GlobalsGUI.Current.Items[ActiveItemIndex].Selected = false;
             }
             ActiveItemIndex = newIndex;
         }
 
-        private async void DragBox_OnClick(object sender, RoutedEventArgs e)
+        public async void DragBox_OnClick(object sender, RoutedEventArgs e)
         {
             if (loadingItem)
             {
@@ -696,8 +741,13 @@ namespace KTWirzade.GUI
             }
             if (ActiveItemIndex != -1)
             {
+                var sidebarRects = FindVisualChildren<System.Windows.Shapes.Rectangle>(PlaybookSidebarItems).ToList();
+                if (ActiveItemIndex >= sidebarRects.Count)
+                {
+                    return;
+                }
                 GlobalsGUI.Current.Items[ActiveItemIndex].Selected = false;
-                System.Windows.Shapes.Rectangle activePB = FindVisualChildren<System.Windows.Shapes.Rectangle>(PlaybookSidebarItems).ElementAt(ActiveItemIndex);
+                System.Windows.Shapes.Rectangle activePB = sidebarRects.ElementAt(ActiveItemIndex);
                 Storyboard board1 = new Storyboard();
                 foreach (Border childPB in from x in FindVisualChildren<Border>(PlaybookSidebarItems)
                                            where x.Name == "PlaybookContainer"
@@ -912,6 +962,9 @@ namespace KTWirzade.GUI
             }
             base.DataContext = new MainWindowViewModel();
             InitializeComponent();
+            GlobalsGUI.SetMainWindow(this);
+            KTWirzade.Shared.I18n.LanguageManager.Initialize();
+            UpdateLanguageDisplay();
             CurrentViewModel.MainNextButtonCommand = new GlobalsGUI.CommandHandler(() => NextButton_OnClick(), () => true);
             CurrentViewModel.MainPreviousButtonCommand = new GlobalsGUI.CommandHandler(() => PreviousButton_OnClick(), () => true);
             CurrentViewModel.MainPulseNextButtonCommand = new GlobalsGUI.CommandHandler(() => NextButton_OnClick(), () => true);
@@ -981,7 +1034,8 @@ namespace KTWirzade.GUI
                     DeCrippleLoadContainer.Visibility = Visibility.Visible;
                     Spinner spinner = new Spinner
                     {
-                        Foreground = System.Windows.Media.Brushes.White
+                        // Theme-aware: pure white was invisible on the Light theme.
+                        Foreground = (System.Windows.Media.Brush)FindResource("ButtonTextPrimaryBrush")
                     };
                     DeCrippleLoadContainer.Children.Add(spinner);
                     System.Threading.Tasks.Task wait = System.Threading.Tasks.Task.Delay(3000);
@@ -1010,24 +1064,6 @@ namespace KTWirzade.GUI
                     //new UpdatesDialog().ShowDialog(this);
                 }
             };
-            PatreonPopup.Opened += async delegate (object sender, EventArgs args)
-            {
-                IntPtr hwnd = ((HwndSource)PresentationSource.FromVisual(PatreonPopup.Child)).Handle;
-                if (GetWindowRect(hwnd, out var rect))
-                {
-                    SetWindowPos(hwnd, -2, rect.Left, rect.Top, (int)base.Width, (int)base.Height, 0);
-                }
-                try
-                {
-                    SetForegroundWindow(new WindowInteropHelper(this).Handle);
-                }
-                catch
-                {
-                }
-                PatreonControl.OnOpened(this, args);
-            };
-
-            System.Windows.MessageBox.Show(Assembly.GetExecutingAssembly().GetName().Name);
         }
 
         [DllImport("user32.dll")]
@@ -1060,7 +1096,59 @@ namespace KTWirzade.GUI
 
         private void AboutButton_OnClick(object sender, RoutedEventArgs e)
         {
-            PatreonPopup.IsOpen = true;
+            var about = new AboutWindow();
+            about.Show(this);
+        }
+
+        public void RollbackButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            var rollback = new RollbackWindow();
+            rollback.Show(this);
+        }
+
+        private void DashboardButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            ((MainWindowViewModel)DataContext).CurrentViewModel = new ViewModels.DashboardViewModel();
+        }
+
+        private async void NetworkIndicator_Click(object sender, RoutedEventArgs e)
+        {
+            var dotNetStatusText = (TextBlock)FindName("NetworkText");
+            if (dotNetStatusText != null)
+                dotNetStatusText.Text = "Verificando...";
+
+            try
+            {
+                var isOnline = await System.Threading.Tasks.Task.Run(() => KTWirzade.Shared.Cache.PlaybookCacheManager.CheckOnlineStatus());
+                ((MainWindowViewModel)DataContext).IsOnline = isOnline;
+            }
+            catch (Exception)
+            {
+                ((MainWindowViewModel)DataContext).IsOnline = false;
+            }
+        }
+
+        private void LanguageSelector_Click(object sender, RoutedEventArgs e)
+        {
+            var current = KTWirzade.Shared.I18n.LanguageManager.CurrentLanguage;
+            var next = current == KTWirzade.Shared.I18n.Language.PortugueseBR
+                ? KTWirzade.Shared.I18n.Language.English
+                : KTWirzade.Shared.I18n.Language.PortugueseBR;
+
+            KTWirzade.Shared.I18n.LanguageManager.SetLanguage(next);
+            UpdateLanguageDisplay();
+            KTWirzade.GUI.MessageBox.Show(this,
+                next == KTWirzade.Shared.I18n.Language.English ? "Language changed to English.\n\nRestart the application for full effect." : "Idioma alterado para Portugues (BR).\n\nReinicie o aplicativo para efeito completo.",
+                next == KTWirzade.Shared.I18n.Language.English ? "Language" : "Idioma",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
+        public void UpdateLanguageDisplay()
+        {
+            var text = (TextBlock)FindName("LanguageText");
+            if (text != null)
+                text.Text = KTWirzade.Shared.I18n.LanguageManager.CurrentLanguage.ToCode().ToUpper();
         }
 
         public void NextButton_OnClick()
@@ -1099,7 +1187,8 @@ namespace KTWirzade.GUI
 
         private void UpdatesButton_OnClick(object sender, RoutedEventArgs e)
         {
-            //new UpdatesDialog().ShowDialog(this);
+            var updateDialog = new UpdateCheckDialog();
+            updateDialog.Show(this);
         }
 
         private void ItemImage_OnLoaded(object sender, RoutedEventArgs e)

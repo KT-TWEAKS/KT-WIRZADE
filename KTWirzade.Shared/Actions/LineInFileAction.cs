@@ -10,12 +10,12 @@ using YamlDotNet.Serialization;
 
 namespace KTWirzade.Shared.Actions
 {
-    internal enum LineInFileOperation
+    public enum LineInFileOperation
     {
         Delete = 0,
         Add = 1
     }
-    internal class LineInFileAction : Tasks.TaskAction, ITaskAction
+    public class LineInFileAction : Tasks.TaskAction, ITaskAction
     {
         public void RunTaskOnMainThread(Output.OutputWriter output) { throw new NotImplementedException(); }
         [YamlMember(Alias = "path")]
@@ -27,7 +27,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(Alias = "operation")]
         public LineInFileOperation Operation { get; set; } = LineInFileOperation.Delete;
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 1;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Notify;
@@ -83,16 +83,39 @@ namespace KTWirzade.Shared.Actions
             if (InProgress) throw new TaskInProgressException("Another LineInFile action was called while one was in progress.");
             InProgress = true;
             
-            //Wording should be improved here
             output.WriteLineSafe("Info", $"{Operation.ToString().TrimEnd('e')}ing text lines in file '{RawPath}'...");
 
             var realPath = this.GetRealPath();
-            var missingLines = GetMissingLines();
-            
-            using var sw = File.AppendText(realPath);
-            foreach (var missingLine in missingLines)
+
+            if (Operation == LineInFileOperation.Delete)
             {
-                await sw.WriteLineAsync(missingLine);
+                if (!File.Exists(realPath))
+                {
+                    InProgress = false;
+                    return true;
+                }
+
+                var targetLines = GetLines().ToList();
+                var allLines = File.ReadAllLines(realPath).ToList();
+                var remaining = allLines.Where(line => !targetLines.Contains(line)).ToList();
+                File.WriteAllLines(realPath, remaining);
+            }
+            else
+            {
+                if (!File.Exists(realPath))
+                {
+                    var dir = Path.GetDirectoryName(realPath);
+                    if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                        Directory.CreateDirectory(dir);
+                    File.WriteAllText(realPath, string.Empty);
+                }
+
+                var missingLines = GetMissingLines();
+                using var sw = File.AppendText(realPath);
+                foreach (var missingLine in missingLines)
+                {
+                    await sw.WriteLineAsync(missingLine);
+                }
             }
 
             InProgress = false;

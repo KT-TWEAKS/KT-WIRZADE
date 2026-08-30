@@ -120,7 +120,7 @@ namespace KTWirzade.Shared
             {
                 for (int i = 1; i <= ImageCount; i++)
                 {
-                    var hiveFolder = Path.Combine(Path.GetTempPath(), $"KTWirzade-WIM-{guid}-{i}");
+                    var hiveFolder = Path.Combine(Path.GetTempPath(), $"AME-WIM-{guid}-{i}");
                     Directory.CreateDirectory(hiveFolder);
                 
                     ExtractFileOrFolder(i, @"Users\Default\NTUSER.DAT", hiveFolder);
@@ -177,7 +177,7 @@ namespace KTWirzade.Shared
 
             for (int i = 1; i <= ImageCount; i++)
             {
-                var hiveFolder = Path.Combine(Path.GetTempPath(), $"KTWirzade-WIM-{guid}-{i}");
+                var hiveFolder = Path.Combine(Path.GetTempPath(), $"AME-WIM-{guid}-{i}");
                 if (!Directory.Exists(hiveFolder))
                 {
                     Log.EnqueueSafe(LogType.Warning, $"Hive image folder '{hiveFolder}' not found.", null);
@@ -226,7 +226,7 @@ namespace KTWirzade.Shared
                 WriteChanges();
             for (int i = 1; i <= ImageCount; i++)
             {
-                var hiveFolder = Path.Combine(Path.GetTempPath(), $"KTWirzade-WIM-{guid}-{i}");
+                var hiveFolder = Path.Combine(Path.GetTempPath(), $"AME-WIM-{guid}-{i}");
                 if (Directory.Exists(hiveFolder))
                     Wrap.ExecuteSafe(() => Directory.Delete(hiveFolder, true), true);
             }

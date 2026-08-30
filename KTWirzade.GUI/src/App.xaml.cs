@@ -1,4 +1,4 @@
-using Core;
+﻿using Core;
 using DiscUtils.Iso9660;
 using Interprocess;
 using Microsoft.Win32;
@@ -30,7 +30,7 @@ namespace KTWirzade.GUI
     public partial class App : System.Windows.Application
     {
 
-        internal static string ActivePath = Environment.ExpandEnvironmentVariables("%TEMP%\\KTWirzade");
+        internal static string ActivePath = Environment.ExpandEnvironmentVariables("%TEMP%\\AME");
 
         public static bool DeCrippleDefender = false;
 
@@ -46,7 +46,32 @@ namespace KTWirzade.GUI
 
         private static async System.Threading.Tasks.Task ParseArguments(string[] args)
         {
-            SharpSevenZipBase.SetLibraryPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "7z.dll"));
+            // Distribuicao single-exe: 7z.dll pode nao existir ao lado do exe.
+            // Ordem: pasta do exe -> ActivePath (ja extraido) -> extrair do proprio exe.
+            string sevenZip = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "7z.dll");
+            if (!File.Exists(sevenZip))
+            {
+                string activeSevenZip = Path.Combine(ActivePath, "7z.dll");
+                if (File.Exists(activeSevenZip))
+                {
+                    sevenZip = activeSevenZip;
+                }
+                else
+                {
+                    try
+                    {
+                        if (!Directory.Exists(ActivePath)) Directory.CreateDirectory(ActivePath);
+                        ExtractEmbeddedResource("KTWirzade.GUI.Resources.7z.dll", activeSevenZip);
+                        sevenZip = activeSevenZip;
+                    }
+                    catch (Exception ex)
+                    {
+                        Core.Log.WriteExceptionSafe(ex, "Failed to extract 7z.dll from embedded resources.");
+                    }
+                }
+            }
+            if (File.Exists(sevenZip))
+                SharpSevenZipBase.SetLibraryPath(sevenZip);
             CommandLine.IArgumentData argumentsData = null;
             try
             {
@@ -69,6 +94,8 @@ namespace KTWirzade.GUI
                 {
                     System.Threading.Tasks.Task.Run((System.Action)RemoveKTWirzadeTask);
                 }
+                // Join the same IPC session (pipe namespace + DACL owner) as the root node.
+                InterLink.InitializeSession(interprocessData.Secret, interprocessData.OwnerSid);
                 await InterLink.InitializeConnection(interprocessData.Level, interprocessData.Mode, interprocessData.Host, interprocessData.Nodes?.Select((CommandLine.Interprocess.NodeData x) => (Level: x.Level, ProcessID: x.ProcessID)).ToArray() ?? null);
                 Environment.Exit(376);
             }
@@ -94,9 +121,87 @@ namespace KTWirzade.GUI
             CultureInfo.DefaultThreadCurrentCulture = culture;
         }
 
+        /// <summary>
+        /// Blocks startup with an actionable message when the installed .NET Framework is
+        /// too old. Without this, machines below 4.7.1 crash inside the WPF BAML loader with
+        /// "NotImplementedException: The method or operation is not implemented":
+        /// FluentIcons.Common is netstandard2.0 and needs the in-box netstandard.dll facade
+        /// that only ships with .NET Framework 4.7.1+, and the supportedRuntime sku does not
+        /// prevent the app from starting on older frameworks.
+        /// </summary>
+        private static void PreflightCheckFramework()
+        {
+            const int net48Release = 528040; // .NET Framework 4.8
+            int release = 0;
+            try
+            {
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"))
+                {
+                    release = (key?.GetValue("Release") as int?) ?? 0;
+                }
+            }
+            catch (Exception)
+            {
+            }
+            if (release > 0 && release < net48Release)
+            {
+                System.Windows.MessageBox.Show(
+                    "KT WIRZADE requires .NET Framework 4.8 (or newer), which is not installed on this computer.\r\n\r\n" +
+                    "Download and install it, then run KT WIRZADE again:\r\n" +
+                    "https://dotnet.microsoft.com/download/dotnet-framework/net48\r\n\r\n" +
+                    "(Detected .NET Framework release: " + release + ")",
+                    "KT WIRZADE", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Hand);
+                Environment.Exit(-1);
+            }
+        }
+
+        /// <summary>
+        /// Forces resolution of the assemblies referenced by the window BAML before the first
+        /// window is created. If one fails to load, the BAML loader would surface it as
+        /// "NotImplementedException: The method or operation is not implemented"
+        /// (Baml2006SchemaContext.ResolveBamlType), hiding the real cause. Loading them here
+        /// turns that into an actionable error message.
+        /// </summary>
+        private static void PreflightLoadUiAssemblies()
+        {
+            foreach (string assemblyName in new[] { "FluentIcons.Common", "FluentIcons.Wpf" })
+            {
+                try
+                {
+                    Assembly assembly = Assembly.Load(assemblyName);
+                    _ = assembly.DefinedTypes;
+                }
+                catch (Exception ex)
+                {
+                    System.Windows.MessageBox.Show(
+                        "Failed to load a required UI component (" + assemblyName + ").\r\n\r\n" +
+                        "Common causes:\r\n" +
+                        "- Outdated .NET Framework: install .NET Framework 4.8 from https://dotnet.microsoft.com/download/dotnet-framework/net48\r\n" +
+                        "- Incomplete installation: re-extract the full KT WIRZADE zip instead of running the exe alone\r\n\r\n" +
+                        "Details:\r\n" + ex,
+                        "KT WIRZADE", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Hand);
+                    Environment.Exit(-1);
+                }
+            }
+        }
+
         protected override async void OnStartup(StartupEventArgs e)
         {
+            // Force TLS 1.2 BEFORE any HTTP connection — GitHub API requires it.
+            // Must be set at process level before ServicePointManager creates connections.
+            try
+            {
+                System.Net.ServicePointManager.SecurityProtocol =
+                    (System.Net.SecurityProtocolType)3072 |  // Tls12
+                    (System.Net.SecurityProtocolType)768 |   // Tls11
+                    (System.Net.SecurityProtocolType)192;    // Tls
+            }
+            catch { /* older .NET — fallback to system default */ }
+
             ConfigureCulture();
+            PreflightCheckFramework();
+            // Extract FluentIcons to disk BEFORE any XAML — BAML needs LoadFrom context
+            ExtractFluentIconsToDisk();
             string[] arguments = Environment.GetCommandLineArgs();
             if (arguments.Length == 3 && arguments[1] == "--apply-package")
             {
@@ -147,8 +252,20 @@ namespace KTWirzade.GUI
             ThemeWatcher.WatchTheme();
             try
             {
-                _ktWirzadeMutex = new Mutex(initiallyOwned: true, "KTWirzade.Client");
-                if (!_ktWirzadeMutex.WaitOne(0))
+                // initiallyOwned must be false: with true (the old behavior) WaitOne(0) always
+                // succeeded for the creating process, so the duplicate-instance check never fired.
+                _ktWirzadeMutex = new Mutex(initiallyOwned: false, "KTWirzade.Client");
+                bool acquired;
+                try
+                {
+                    acquired = _ktWirzadeMutex.WaitOne(0);
+                }
+                catch (System.Threading.AbandonedMutexException)
+                {
+                    // A previous instance crashed without releasing it; we own it now.
+                    acquired = true;
+                }
+                if (!acquired)
                 {
                     KTWirzade.GUI.MessageBox.Show(null, "Another instance of KT WIRZADE Beta was detected, a new instance will not be started.", "Warning", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Warning, null, null);
                     Environment.Exit(-1);
@@ -176,7 +293,11 @@ namespace KTWirzade.GUI
             }
             try
             {
-                ExtractResourceFolder("WizardFiles", ActivePath, overwrite: true);
+                // Extracts every embedded runtime dependency (KTWirzade.GUI.Resources.*)
+                // into the active directory. The AssemblyResolve handler and the CLI
+                // partner process both resolve their dependencies from there — without
+                // this step a clean machine fails to load Core.Log (YamlDotNet missing).
+                ExtractRuntimeDependencies(ActivePath, overwrite: true);
             }
             catch (Exception ex3)
             {
@@ -193,13 +314,46 @@ namespace KTWirzade.GUI
         {
             base.DispatcherUnhandledException -= UnhandledExceptionShowMessageBox;
             base.DispatcherUnhandledException += App_DispatcherUnhandledException;
+            PreflightLoadUiAssemblies();
             Log.MetadataSource = (ILogMetadata)new WizardMetadata();
             if (!Directory.Exists(ActivePath))
             {
                 Directory.CreateDirectory(ActivePath);
             }
             Directory.SetCurrentDirectory(ActivePath);
-            SharpSevenZipBase.SetLibraryPath(Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "7z.dll"));
+
+            // Extract 7z.dll from embedded resources before loading it
+            string sevenZipPath = Path.Combine(ActivePath, "7z.dll");
+            if (!File.Exists(sevenZipPath))
+            {
+                try
+                {
+                    ExtractEmbeddedResource("KTWirzade.GUI.Resources.7z.dll", sevenZipPath);
+                }
+                catch (Exception ex)
+                {
+                    Log.WriteExceptionSafe(ex, "Failed to extract 7z.dll from embedded resources.");
+                }
+            }
+            SharpSevenZipBase.SetLibraryPath(sevenZipPath);
+
+            // The playbook is applied by launching KTWirzade.CLI.exe from the current
+            // directory (ProgressPageView). Nothing else puts it there, so extract the
+            // embedded copy - without this, a clean machine cannot start amelioration.
+            string cliExePath = Path.Combine(ActivePath, "KTWirzade.CLI.exe");
+            if (!File.Exists(cliExePath))
+            {
+                try
+                {
+                    ExtractEmbeddedResource("KTWirzade.GUI.Resources.KTWirzade.CLI.exe", cliExePath);
+                    string cliConfigPath = Path.Combine(ActivePath, "KTWirzade.CLI.exe.config");
+                    ExtractEmbeddedResource("KTWirzade.GUI.Resources.KTWirzade.CLI.exe.config", cliConfigPath);
+                }
+                catch (Exception ex)
+                {
+                    Log.WriteExceptionSafe(ex, "Failed to extract KTWirzade.CLI.exe from embedded resources.");
+                }
+            }
             InterLink.NodeExitedUnexpectedly += delegate (object sender, Level level)
             {
                 if ((int)level == 3)
@@ -227,10 +381,19 @@ namespace KTWirzade.GUI
                             Directory.Delete("KTWirzade", recursive: true);
                         }, false, (LogOptions)null);
                     }
-                    Current.Dispatcher.Invoke(() => MessageBox.Show(null, $"{level} process exited unexpectedly with exit code: " + (uint)sender, "Error", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Information, null, null));
+                    // Invoke with a hard 5s timeout: this handler runs on an IPC pipe thread;
+                    // an unbound dispatcher wait could block it forever if the UI is busy.
+                    // If the UI doesn't answer in 5s, we still show nothing extra and exit.
+                    Current.Dispatcher.Invoke(
+                        new System.Action(() => MessageBox.Show(null, $"{level} process exited unexpectedly with exit code: " + (uint)sender, "Error", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Information, null, null)),
+                        System.Windows.Threading.DispatcherPriority.Normal,
+                        default,
+                        TimeSpan.FromSeconds(5));
                     Environment.Exit(1);
                 }
             };
+            // Root of the IPC session: generate the per-run pipe secret before any node launch.
+            InterLink.InitializeSession();
             System.Threading.Tasks.Task initializeTask = InterLink.InitializeConnection((Level)2, (Mode)2, -1);
             WizardConfig.GetConfig();
             foreach (ISO item in GlobalsGUI.Current.Items.OfType<ISO>().ToList())
@@ -293,6 +456,44 @@ namespace KTWirzade.GUI
                 WizardConfig.Current.LastSelectedItem.Set(null);
             }
             System.Threading.Tasks.Task prepareTask = PrepareItems(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks"));
+            // Remove playbooks whose .apbx files no longer exist (deleted externally)
+            string pbDir = Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks");
+            foreach (PlaybookGUI pb in GlobalsGUI.Current.Items.OfType<PlaybookGUI>().ToList())
+            {
+                string apbxPath = Path.Combine(pbDir, pb.FileNameWithoutExtension + ".apbx");
+                if (!File.Exists(apbxPath))
+                {
+                    Current.Dispatcher.Invoke(() => GlobalsGUI.Current.Items.Remove(pb));
+                }
+            }
+            // Watch for externally deleted .apbx files
+            try
+            {
+                if (Directory.Exists(pbDir))
+                {
+                    var apbxWatcher = new FileSystemWatcher(pbDir, "*.apbx")
+                    {
+                        NotifyFilter = NotifyFilters.FileName,
+                        EnableRaisingEvents = true
+                    };
+                    apbxWatcher.Deleted += (sender, args) =>
+                    {
+                        var pb = GlobalsGUI.Current.Items.OfType<PlaybookGUI>().FirstOrDefault(x => pbDir + "\\" + x.FileNameWithoutExtension + ".apbx" == args.FullPath || string.Equals(x.FileNameWithoutExtension + ".apbx", args.Name, StringComparison.OrdinalIgnoreCase));
+                        if (pb != null)
+                        {
+                            Current.Dispatcher.Invoke(() => GlobalsGUI.Current.Items.Remove(pb));
+                        }
+                    };
+                    apbxWatcher.Created += (sender, args) =>
+                    {
+                        // Optionally reload if a new .apbx appears
+                    };
+                }
+            }
+            catch (Exception)
+            {
+                // Ignore watcher setup failures
+            }
             try
             {
                 InterLink.LaunchNode((Func<string, int>)((string arguments) => Process.Start(new ProcessStartInfo(Win32.ProcessEx.GetCurrentProcessFileLocation(), arguments)
@@ -324,7 +525,7 @@ namespace KTWirzade.GUI
                 InterLink.EnqueueSafe((Expression<System.Action>)(() => SetPBIcon()), 10000, true);
             }
             GlobalsGUI.Current.AppliedPlaybooks = Playbook.GetAppliedPlaybooks();
-            new MainWindow().Show();
+            new WelcomeWindow().Show();
             await initializeTask;
             await prepareTask;
             App.DispatchCompleted?.Invoke(null, new EventArgs());
@@ -339,7 +540,8 @@ namespace KTWirzade.GUI
             {
                 if (resource != null)
                 {
-                    if (!File.Exists(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks.ico")))
+                    // Was "!File.Exists(...)", which only deleted the icon when it was absent (no-op).
+                    if (File.Exists(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks.ico")))
                     {
                         File.Delete(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks.ico"));
                     }
@@ -347,7 +549,11 @@ namespace KTWirzade.GUI
                     resource.CopyTo(file);
                 }
             }
-            Registry.ClassesRoot.CreateSubKey(".apbx").CreateSubKey("DefaultIcon").SetValue("", "%PROGRAMDATA%\\KTWirzade\\Playbooks.ico", RegistryValueKind.ExpandString);
+            using (var apbxKey = Registry.ClassesRoot.CreateSubKey(".apbx"))
+            using (var iconKey = apbxKey?.CreateSubKey("DefaultIcon"))
+            {
+                iconKey?.SetValue("", "%PROGRAMDATA%\\KTWirzade\\Playbooks.ico", RegistryValueKind.ExpandString);
+            }
         }
 
         private static void CheckVersion()
@@ -412,6 +618,7 @@ namespace KTWirzade.GUI
             for (int i = 0; i < tasks.Count; i++)
             {
                 IDragItem item = await tasks[i];
+                if (item == null) continue;
                 PlaybookGUI pb = item as PlaybookGUI;
                 if (pb != null)
                 {
@@ -633,24 +840,37 @@ namespace KTWirzade.GUI
         private static void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             e.Handled = true;
-            if (unhandledCount == 3)
-            {
-                return;
-            }
             unhandledCount++;
             Log.EnqueueExceptionSafe((LogType)3, e.Exception, Array.Empty<(string, object)>());
+            if (unhandledCount >= 5)
+            {
+                KTWirzade.GUI.MessageBox.Show(null, "KT WIRZADE encontrou multiplos erros e precisa ser fechado.", "Erro critico", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Error, null, null);
+                Environment.Exit(-1);
+                return;
+            }
             if ((int)InterLink.ApplicationLevel == 2 || (int)InterLink.ApplicationLevel == 0)
             {
+                // The BAML loader reports assembly/type resolution failures (e.g. missing
+                // netstandard facade or a DLL not shipped next to the exe) as a bare
+                // NotImplementedException. Point the user at the actual remedy.
+                string hint = string.Empty;
+                if (e.Exception is System.Windows.Markup.XamlParseException && e.Exception.InnerException is NotImplementedException)
+                {
+                    hint = Environment.NewLine + Environment.NewLine +
+                        "This error usually means this computer cannot load a UI dependency." + Environment.NewLine +
+                        "1. Install .NET Framework 4.8: https://dotnet.microsoft.com/download/dotnet-framework/net48" + Environment.NewLine +
+                        "2. Re-extract the full KT WIRZADE zip (do not run the exe alone).";
+                }
                 try
                 {
                     Thread.CurrentThread.CurrentUICulture = CultureInfo.InvariantCulture;
                     SerializableTrace trace = new SerializableTrace(e.Exception, (string)null, 0, int.MaxValue);
                     KTWirzade.GUI.MessageBox.Show(null, "Please contact the KT WIRZADE team for assistance.", "A critical error occurred", KTWirzade.GUI.MessageBoxButton.Exit, KTWirzade.GUI.MessageBoxImage.Error, "[" + e.Exception.GetType().ToString().Split('.')
-                        .Last() + "] " + e.Exception.Message + Environment.NewLine + (object)trace, null);
+                        .Last() + "] " + e.Exception.Message + hint + Environment.NewLine + (object)trace, null);
                 }
                 catch (Exception)
                 {
-                    System.Windows.MessageBox.Show("Please contact the KT WIRZADE team for assistance.\r\n\r\n" + e.Exception.ToString(), "A critical error occurred", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Hand);
+                    System.Windows.MessageBox.Show("Please contact the KT WIRZADE team for assistance.\r\n\r\n" + e.Exception.ToString() + hint, "A critical error occurred", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Hand);
                 }
                 Environment.Exit(-1);
             }
@@ -715,27 +935,147 @@ namespace KTWirzade.GUI
             }
         }
 
+        /// <summary>
+        /// Extracts all embedded runtime dependencies (managed dlls, native helpers,
+        /// CLI executable and configs) into the given directory. The Defender .cab
+        /// packages stay embedded — ApplyPackageDialog streams them on demand.
+        /// </summary>
+        public static void ExtractRuntimeDependencies(string dir, bool overwrite = false)
+        {
+            if (!Directory.Exists(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            const string prefix = "KTWirzade.GUI.Resources.";
+            foreach (string res in assembly.GetManifestResourceNames())
+            {
+                if (!res.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string name = res.Substring(prefix.Length).Replace("---", "\\");
+                if (name.EndsWith(".cab", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
+                string file = dir + "\\" + name;
+                string fileDir = Path.GetDirectoryName(file);
+                if (fileDir != null && !Directory.Exists(fileDir))
+                {
+                    Directory.CreateDirectory(fileDir);
+                }
+
+                if (File.Exists(file) && !overwrite)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    using Stream stream = assembly.GetManifestResourceStream(res);
+                    if (stream == null)
+                        continue;
+
+                    using FileStream fileStream = new FileStream(file, FileMode.Create, FileAccess.Write);
+                    stream.CopyTo(fileStream);
+                }
+                catch (Exception)
+                {
+                    // A dependency locked by a running partner process keeps its existing copy.
+                }
+            }
+        }
+
+        /// <summary>
+        /// Extracts a single embedded resource to a file path.
+        /// </summary>
+        public static void ExtractEmbeddedResource(string resourceName, string outputPath)
+        {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+            using var stream = assembly.GetManifestResourceStream(resourceName);
+            if (stream == null)
+                throw new InvalidOperationException($"Embedded resource '{resourceName}' not found.");
+
+            string dir = Path.GetDirectoryName(outputPath);
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                Directory.CreateDirectory(dir);
+
+            using var fileStream = new FileStream(outputPath, FileMode.Create, FileAccess.Write);
+            stream.CopyTo(fileStream);
+        }
+
         private static Assembly CurrentDomain_AssemblyResolve(object sender, ResolveEventArgs args)
         {
             string activePath = ActivePath;
             AssemblyName assyName = new AssemblyName(args.Name);
-            string newPath = Path.Combine(activePath, assyName.Name);
-            if (!newPath.EndsWith(".dll") && !newPath.EndsWith(".winmd"))
+            string baseName = assyName.Name;
+
+            // 1) Try ActivePath (%TEMP%\AME)
+            string candidate = Path.Combine(activePath, baseName);
+            if (!candidate.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) && !candidate.EndsWith(".winmd", StringComparison.OrdinalIgnoreCase))
+                candidate = (!candidate.EndsWith("Windows", StringComparison.OrdinalIgnoreCase) ? candidate + ".dll" : candidate + ".winmd");
+            if (File.Exists(candidate))
             {
-                newPath = ((!newPath.EndsWith("Windows")) ? (newPath + ".dll") : (newPath + ".winmd"));
+                try { return Assembly.LoadFrom(candidate); } catch { }
             }
-            if (File.Exists(newPath))
+
+            // 2) Try alongside the exe (same as non-single probing path)
+            string exeDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            if (!string.IsNullOrEmpty(exeDir))
             {
-                try
-                {
-                    return Assembly.LoadFrom(newPath);
-                }
-                catch (Exception)
-                {
-                    return null;
-                }
+                string exeCandidate = Path.Combine(exeDir, baseName + ".dll");
+                if (File.Exists(exeCandidate))
+                    try { return Assembly.LoadFrom(exeCandidate); } catch { }
             }
+
             return null;
+        }
+
+        /// <summary>
+        /// Extracts FluentIcons.Common.dll and FluentIcons.Wpf.dll to the APPLICATION BASE DIRECTORY
+        /// (same folder as the exe) before any XAML is parsed.
+        /// 
+        /// WHY: Baml2006SchemaContext.ResolveBamlType does NOT fire AppDomain.AssemblyResolve.
+        /// It uses CLR probing: GAC → app base directory → probe subdirs.
+        /// For single-exe, FluentIcons is only in embedded resources — BAML can't find it.
+        /// Non-single works because FluentIcons.dll sits next to the exe (app base probing).
+        /// 
+        /// This method replicates that: extract FluentIcons beside the exe so BAML's own
+        /// probing finds them naturally, exactly like the non-single distribution.
+        /// </summary>
+        private static void ExtractFluentIconsToDisk()
+        {
+            try
+            {
+                var asm = Assembly.GetExecutingAssembly();
+                // PRIMARY: extract to app base directory (beside the exe) — where BAML probes
+                string dir = Path.GetDirectoryName(asm.Location);
+                if (string.IsNullOrEmpty(dir)) return;
+
+                foreach (string resSuffix in new[] { "FluentIcons.Common.dll", "FluentIcons.WPF.dll" })
+                {
+                    string resName = "KTWirzade.GUI.Resources." + resSuffix;
+                    string diskName = resSuffix.Replace("WPF", "Wpf");
+                    string outPath = Path.Combine(dir, diskName);
+                    if (File.Exists(outPath)) continue;
+                    foreach (var rn in asm.GetManifestResourceNames())
+                    {
+                        if (rn.Equals(resName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            using (var stream = asm.GetManifestResourceStream(rn))
+                            {
+                                if (stream != null)
+                                {
+                                    using (var fs = new FileStream(outPath, FileMode.Create, FileAccess.Write))
+                                        stream.CopyTo(fs);
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+            catch { }
         }
     }
 }

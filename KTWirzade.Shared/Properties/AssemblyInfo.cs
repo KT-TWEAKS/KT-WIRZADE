@@ -3,35 +3,24 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using KTWirzade.Shared;
 
-// General Information about an assembly is controlled through the following
-// set of attributes. Change these attribute values to modify the information
-// associated with an assembly.
 [assembly: AssemblyTitle("KTWirzade.Shared")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Ameliorated LLC")]
+[assembly: AssemblyCompany("KT WIRZADE")]
 [assembly: AssemblyProduct("KTWirzade.Shared")]
-[assembly: AssemblyCopyright("MIT License")]
+[assembly: AssemblyCopyright("MIT License - Modified by kelvenapk")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
-// Setting ComVisible to false makes the types in this assembly not visible
-// to COM components.  If you need to access a type in this assembly from
-// COM, set the ComVisible attribute to true on that type.
 [assembly: ComVisible(false)]
 
-// The following GUID is for the ID of the typelib if this project is exposed to COM
+// Lets the APBX Developer tool classify internal action types produced by the
+// shared playbook deserializer (LineInFileAction, ScheduledTaskAction, ...)
+// without having to widen them all to public.
+[assembly: InternalsVisibleTo("KTWirzade.DevTool")]
+[assembly: InternalsVisibleTo("KTWirzade.GUI")]
+
 [assembly: Guid("9bda9d32-e9a1-4db8-9d90-443792107e28")]
 
-// Version information for an assembly consists of the following four values:
-//
-//      Major Version
-//      Minor Version
-//      Build Number
-//      Revision
-//
-// You can specify all the values or you can default the Build and Revision Numbers
-// by using the '*' as shown below:
-// [assembly: AssemblyVersion("1.0.*")]
 [assembly: AssemblyVersion(Globals.CurrentVersion)]
 [assembly: AssemblyFileVersion(Globals.CurrentVersion)]

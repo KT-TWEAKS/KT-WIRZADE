@@ -86,7 +86,7 @@ namespace KTWirzade.GUI.Views
                             AppliedBox.Visibility = Visibility.Visible;
                         }
                     }
-                    else if (((Playbook)GlobalsGUI.Current.Playbook).Username == "Ameliorated" && GlobalsGUI.Current.Playbook.VerificationStatus == PlaybookGUI.VerificationLevel.Verified && HasAMEIntegriy())
+                    else if (((Playbook)GlobalsGUI.Current.Playbook).Username == "KTWirzade" && GlobalsGUI.Current.Playbook.VerificationStatus == PlaybookGUI.VerificationLevel.Verified && HasKTWirzadeIntegriy())
                     {
                         nextButton = false;
                         AppliedText.Text = "This Playbook is currently applied";
@@ -278,7 +278,7 @@ namespace KTWirzade.GUI.Views
             Continue(this, new RoutedEventArgs());
         }
 
-        private bool HasAMEIntegriy()
+        private bool HasKTWirzadeIntegriy()
         {
             if (Directory.Exists(Environment.ExpandEnvironmentVariables("%ProgramFiles%\\Windows Defender")))
             {
@@ -687,7 +687,7 @@ namespace KTWirzade.GUI.Views
             MainWindow.CurrentDispatcher.Invoke(delegate
             {
                 MainWindow owner = System.Windows.Application.Current.Windows.OfType<MainWindow>().First();
-                new UpdatesDialog().ShowDialog(owner);
+                new UpdateCheckDialog().Show(owner);
             });
         }
 
@@ -705,3 +705,4 @@ namespace KTWirzade.GUI.Views
         }
     }
 }
+

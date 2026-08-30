@@ -19,7 +19,7 @@ namespace KTWirzade.GUI.ViewModels
 
         public FinishPageViewModel(FinishPage finishPage)
         {
-            finishPage = finishPage;
+            this.finishPage = finishPage;
             MainCancelButtonActive = false;
             MainNextButtonContent = new TextBlock
             {

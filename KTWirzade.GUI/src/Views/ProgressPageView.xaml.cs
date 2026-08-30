@@ -5,8 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Management;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -40,12 +42,57 @@ namespace KTWirzade.GUI.Views
             });
         }
 
+        private static int CountDownloadActions(string apbxPath)
+        {
+            int count = 0;
+            try
+            {
+                if (string.IsNullOrEmpty(apbxPath) || !File.Exists(apbxPath))
+                    return 0;
+                using (var archive = ZipFile.OpenRead(apbxPath))
+                {
+                    foreach (var entry in archive.Entries)
+                    {
+                        if (!entry.FullName.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) && !entry.FullName.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
+                            continue;
+                        string content;
+                        using (var reader = new StreamReader(entry.Open()))
+                        {
+                            content = reader.ReadToEnd();
+                        }
+                        count += Regex.Matches(content, @"^[ \t]*-[ \t]*(DownloadAction|SoftwareAction)[ \t]*:", RegexOptions.Multiline).Count;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+            return count;
+        }
+
         private async void Begin(object sender, EventArgs e)
         {
             ComponentDispatcher.ThreadIdle -= Begin;
             try
             {
-                System.Windows.Controls.ProgressBar installationProgressBar = InstallationProgressBar;
+                try
+                {
+                    bool online = await Task.Run(() => KTWirzade.Shared.Cache.PlaybookCacheManager.CheckOnlineStatus());
+                    if (!online)
+                    {
+                        string playbookPath = ((Playbook)GlobalsGUI.Current.Playbook).Path;
+                        int downloads = await Task.Run(() => CountDownloadActions(playbookPath));
+                        if (downloads > 0)
+                        {
+                            MessageBox.Show(typeof(MainWindow), $"Sem conexao com a internet.\n\nEste playbook precisa baixar {downloads} arquivo(s) durante a aplicacao. Essas etapas vao falhar sem rede.\n\nConecte-se e verifique a conexao antes de continuar.", "Conexao necessaria", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                }
+                KTWirzade.GUI.Controls.ProgressBarDeterminate installationProgressBar = InstallationProgressBar;
                 installationProgressBar.Maximum = await Task.Run(delegate
                 {
                     CmdAction val = new CmdAction
@@ -83,6 +130,10 @@ namespace KTWirzade.GUI.Views
                 proc = new Process();
                 proc.StartInfo = new ProcessStartInfo(Path.Combine(directory, "KTWirzade.CLI.exe"));
                 proc.StartInfo.Arguments = "\"" + ((Playbook)GlobalsGUI.Current.Playbook).Path + "\"";
+                if (GlobalsGUI.SkipBuildCheck)
+                    proc.StartInfo.Arguments += " --skip-build";
+                if (GlobalsGUI.SkipRequirementsCheck)
+                    proc.StartInfo.Arguments += " --skip-requirements";
                 proc.StartInfo.UseShellExecute = false;
                 proc.StartInfo.WorkingDirectory = directory;
                 proc.StartInfo.RedirectStandardOutput = true;
@@ -186,7 +237,7 @@ namespace KTWirzade.GUI.Views
                         {
                         }
                         InstallationProgressBar.Value = InstallationProgressBar.Maximum;
-                        Registry.LocalMachine.CreateSubKey("SOFTWARE\\KTWirzade\\")?.SetValue("Ameliorated", true);
+                        Registry.LocalMachine.CreateSubKey("SOFTWARE\\KTWirzade\\")?.SetValue("KTWirzade", true);
                         try
                         {
                             string sourceDirName = Directory.GetCurrentDirectory() + "\\Logs";
@@ -252,7 +303,7 @@ namespace KTWirzade.GUI.Views
             {
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
-                string saveLogDir = System.Windows.Forms.Application.StartupPath + "\\AME Logs";
+                string saveLogDir = System.Windows.Forms.Application.StartupPath + "\\KT WIRZADE Logs";
                 if (Directory.Exists(saveLogDir))
                 {
                     Directory.Delete(saveLogDir, recursive: true);

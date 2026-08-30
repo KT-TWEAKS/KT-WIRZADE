@@ -32,7 +32,7 @@ namespace KTWirzade.GUI.Utils
                     }
                     if (serviceController.Status != ServiceControllerStatus.Running)
                     {
-                        server.Start();
+                        serviceController.Start();
                     }
                     server.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromMilliseconds(10000.0));
                     serviceController.WaitForStatus(ServiceControllerStatus.Running, TimeSpan.FromMilliseconds(10000.0));

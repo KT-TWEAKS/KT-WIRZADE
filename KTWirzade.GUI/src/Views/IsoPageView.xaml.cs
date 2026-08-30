@@ -612,7 +612,7 @@ namespace KTWirzade.GUI.Views
             catch (Exception ex)
             {
                 board1.Stop();
-                MessageBox.Show(typeof(UpdatesDialog), "Error while attempting to load Playbook: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(typeof(MainWindow), "Error while attempting to load Playbook: " + ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             PBLoadContainer.Visibility = Visibility.Collapsed;
             PBLoadContainer.Children.Remove(spinner);
@@ -665,7 +665,7 @@ namespace KTWirzade.GUI.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(typeof(UpdatesDialog), "Ensure you've updated KT WIRZADE, and contact your Playbook creator for further assistance.", "Error loading Playbook", MessageBoxButton.OK, MessageBoxImage.Warning, ex.ToString());
+                MessageBox.Show(typeof(MainWindow), "Ensure you've updated KT WIRZADE, and contact your Playbook creator for further assistance.", "Error loading Playbook", MessageBoxButton.OK, MessageBoxImage.Warning, ex.ToString());
             }
         }
 

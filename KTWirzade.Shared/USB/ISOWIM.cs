@@ -29,7 +29,7 @@ namespace iso_mode
             {
                 using var bootWim = Wim.OpenWim(Path.Combine(isoPath, @"sources\boot.wim"), OpenFlags.None);
                 int image = bootWim.GetWimInfo().BootIndex == 0 ? 1 : (int)bootWim.GetWimInfo().BootIndex;
-                var systemHivePath = Path.Combine(Path.GetTempPath(), "KTWirzade-BOOTWIM-" + guid, "SYSTEM");
+                var systemHivePath = Path.Combine(Path.GetTempPath(), "AME-BOOTWIM-" + guid, "SYSTEM");
                 bootWim.ExtractPath(image, Path.GetDirectoryName(systemHivePath), @"Windows\System32\config\SYSTEM", ExtractFlags.NoPreserveDirStructure);
                 if (Wrap.ExecuteSafe(() => WinUtil.RegistryManager.HookHive("BOOT-" + guid, systemHivePath), true) == null)
                 {

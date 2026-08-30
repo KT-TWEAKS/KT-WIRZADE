@@ -1,8 +1,8 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <SolidColorBrush x:Key="ButtonDockBorderBrush" Color="#c1c6c9" Opacity="0.6" />
-    <SolidColorBrush x:Key="WindowBorder" Color="#c2c6c8" Opacity="0.6" />
-    <SolidColorBrush x:Key="WindowBorderMinor" Color="#414141" Opacity="0.4" />
+    <SolidColorBrush x:Key="WindowBorder" Color="#7c3aed" Opacity="0.6" />
+    <SolidColorBrush x:Key="WindowBorderMinor" Color="#7c3aed" Opacity="0.4" />
     <Color x:Key="TextPrimaryColor">#191a1a</Color>
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#191a1a" />
     <SolidColorBrush x:Key="TextSoftBrush" Color="#282829" />
@@ -16,9 +16,9 @@
     <SolidColorBrush x:Key="PageBorderBrush" Color="#bfc6cd" Opacity="0.5" />
     <SolidColorBrush x:Key="PageSubtextColor" Color="#191a1a" />
     <Color x:Key="PlaybookFadeColor">#151312</Color>
-    <SolidColorBrush x:Key="PlaybookRectColor" Color="#0067c0" />
-    <Color x:Key="ProgressBarColor">#0067c0</Color>
-    <SolidColorBrush x:Key="ProgressBarBrush" Color="#0067c0" />
+    <SolidColorBrush x:Key="PlaybookRectColor" Color="#7c3aed" />
+    <Color x:Key="ProgressBarColor">#7c3aed</Color>
+    <SolidColorBrush x:Key="ProgressBarBrush" Color="#7c3aed" />
     <SolidColorBrush x:Key="ContentBoxBorderBrush" Color="#e3e5e8" />
     <SolidColorBrush x:Key="FakeBackgroundBrush" Color="#ecf1f4" Opacity="1" />
     <SolidColorBrush x:Key="FakePageBackgroundBrush" Color="#f8f9fc" Opacity="1" />
@@ -42,12 +42,22 @@
     <SolidColorBrush x:Key="TextDropDownBorderBrush" Color="#f1f1f1" />
     <SolidColorBrush x:Key="UpdatesUpToDateBrush" Color="#d4e7f7" />
     <SolidColorBrush x:Key="UpdatesUpdateReadyBrush" Color="#dff6dd" />
-    <SolidColorBrush x:Key="BlueInfoCircleFill" Color="#3276cd" />
+    <SolidColorBrush x:Key="BlueInfoCircleFill" Color="#7c3aed" />
     <SolidColorBrush x:Key="BlueInfoCircleSymbol" Color="#ffffff" />
     <SolidColorBrush x:Key="YellowInfoCircleFill" Color="#9d5d00" />
     <SolidColorBrush x:Key="YellowInfoCircleSymbol" Color="#ffffff" />
     <SolidColorBrush x:Key="ErrorInfoCircleFill" Color="#991c00" />
     <SolidColorBrush x:Key="ErrorInfoCircleSymbol" Color="#ffffff" />
+    <!-- Semantic status brushes (KT WIRZADE consistency pass) -->
+    <SolidColorBrush x:Key="StatusSuccessBrush" Color="#167C32" />
+    <SolidColorBrush x:Key="StatusSuccessSoftBrush" Color="#20167C32" />
+    <SolidColorBrush x:Key="StatusWarningBrush" Color="#B27C09" />
+    <SolidColorBrush x:Key="StatusWarningSoftBrush" Color="#20B27C09" />
+    <SolidColorBrush x:Key="StatusErrorBrush" Color="#991c00" />
+    <SolidColorBrush x:Key="StatusErrorSoftBrush" Color="#20C32B1D" />
+    <SolidColorBrush x:Key="OverlayScrimBrush" Color="#44000000" />
+    <SolidColorBrush x:Key="StatusInfoBrush" Color="#7c3aed" />
+    <SolidColorBrush x:Key="StatusInfoSoftBrush" Color="#207c3aed" />
     <BitmapImage x:Key="SecurityToggleOnBitmap" CreateOptions="IgnoreColorProfile" UriSource="/Icons/Light/security_toggle_on.png" />
     <BitmapImage x:Key="SecurityToggleOffBitmap" CreateOptions="IgnoreColorProfile" UriSource="/Icons/Light/security_toggle_off.png" />
     <BitmapImage x:Key="WindowsSecurityBitmap" CreateOptions="IgnoreColorProfile" UriSource="/Icons/Light/windows_security_screenshot.png" />
@@ -89,7 +99,7 @@
     <BitmapImage x:Key="VendorBox32" UriSource="/Icons/Light/vendor_box_32.png" />
     <BitmapImage x:Key="Web32" UriSource="/Icons/Light/web_32.png" />
     <BitmapImage x:Key="UsbDrive32" UriSource="/Icons/Light/FluentUsbStick20Regular.png" />
-    <BitmapImage x:Key="AmelioratedLogo" UriSource="/Icons/Light/ameliorated_logo_256.png" />
+    <BitmapImage x:Key="KTWirzadeLogo" UriSource="/Icons/Light/kt_wirzade_logo_256.png" />
     <SolidColorBrush x:Key="AboutBrush" Color="#f8fdff" Opacity="0.6" />
     <SolidColorBrush x:Key="TransparentButtonTextForeground" Color="#003e92" />
     <Rect x:Key="PageExcludeRect" X="197" Y="1" Height="1000" Width="1000" />

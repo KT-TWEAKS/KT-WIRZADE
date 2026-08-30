@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Input;
 using KTWirzade.GUI.Controls;
 using KTWirzade.GUI.ViewModels;
-using System.Diagnostics;
+using KTWirzade.Shared;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -26,7 +26,22 @@ namespace KTWirzade.GUI.Windows
         {
             DataContext = new AboutWindowViewModel();
             InitializeComponent();
-            VersionText.Text = "KT WIRZADE v0.8.4 Beta";
+            VersionText.Text = "v" + Globals.CurrentVersion;
+            OsInfoText.Text = GetOsLabel();
+        }
+
+        private static string GetOsLabel()
+        {
+            try
+            {
+                var v = Environment.OSVersion.Version;
+                var name = v.Build >= 22000 ? "Windows 11" : "Windows 10";
+                return $"{name} build {v.Build}";
+            }
+            catch
+            {
+                return "Windows";
+            }
         }
 
         public void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
@@ -42,15 +57,15 @@ namespace KTWirzade.GUI.Windows
             CloseWindow(aboutscale);
         }
 
-        private void DiscordButton_OnClick(object sender, RoutedEventArgs e)
+        private void WebsiteButton_OnClick(object sender, RoutedEventArgs e)
         {
             try
             {
-                Process.Start("https://discordapp.com/users/404770666416570368");
+                Process.Start("https://github.com/kelvenapk");
             }
             catch (Exception)
             {
-                MessageBox.Show(typeof(AboutWindow), "Link is invalid.", "Warning");
+                MessageBox.Show(typeof(AboutWindow), "Link invalido.", "Aviso");
             }
         }
 

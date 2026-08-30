@@ -38,6 +38,12 @@ namespace KTWirzade.GUI
             public NodeData[] Nodes { get; set; }
 
             public int Host { get; set; } = -1;
+
+            // Session identity propagated by the root node: random per-run pipe namespace
+            // suffix and the session-owner SID used for the restricted pipe DACL.
+            public string Secret { get; set; } = null;
+
+            public string OwnerSid { get; set; } = null;
         }
 
         public class Execute : IArgumentData

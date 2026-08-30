@@ -9,19 +9,20 @@ using YamlDotNet.Serialization;
 
 namespace KTWirzade.Shared.Actions
 {
-    internal class UpdateAction : Tasks.TaskAction, ITaskAction
+    public class UpdateAction : Tasks.TaskAction, ITaskAction
     {
         public void RunTaskOnMainThread(Output.OutputWriter output) { throw new NotImplementedException(); }
         [YamlMember(typeof(string), Alias = "name")]
         public string PackageName { get; set; }
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 1;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Notify;
         public bool GetRetryAllowed() => true;
         
         private bool InProgress { get; set; }
+        private int? ExitCode { get; set; }
         public void ResetProgress() => InProgress = false;
         
         public string ErrorString() => $"UpdateAction failed to remove update package {PackageName}.";
@@ -33,7 +34,7 @@ namespace KTWirzade.Shared.Actions
                 return UninstallTaskStatus.InProgress;
             }
 
-            return UninstallTaskStatus.Completed;
+            return ExitCode == null ? UninstallTaskStatus.ToDo : UninstallTaskStatus.Completed;
         }
 
         public async Task<bool> RunTask(Output.OutputWriter output)
@@ -52,10 +53,7 @@ namespace KTWirzade.Shared.Actions
                 Command = @$"DISM.exe /Online /Remove-Package /PackageName:{PackageName} /quiet /norestart"
             };
 
-            while(removeUpdate.GetStatus(output) != UninstallTaskStatus.Completed)
-            {
-                await removeUpdate.RunTask(Output.OutputWriter.Null);
-            }
+            removeUpdate.RunTaskOnMainThread(output);
 
             InProgress = false;
             return true;

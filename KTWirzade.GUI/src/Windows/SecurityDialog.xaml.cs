@@ -263,7 +263,7 @@ namespace KTWirzade.GUI.Windows
                 Storyboard.SetTargetProperty(scale_x, new PropertyPath(ScaleTransform.ScaleXProperty));
                 policyBoard.Children.Add(scale_x);
                 Storyboard.SetTarget(scale_y, policiestransform);
-                Storyboard.SetTargetProperty(scale_y, new PropertyPath(ScaleTransform.ScaleXProperty));
+                Storyboard.SetTargetProperty(scale_y, new PropertyPath(ScaleTransform.ScaleYProperty));
                 policyBoard.Children.Add(scale_y);
                 PolicyGrid.Visibility = Visibility.Visible;
             }

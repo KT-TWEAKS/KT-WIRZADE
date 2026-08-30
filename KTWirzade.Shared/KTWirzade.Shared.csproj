@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -19,9 +19,10 @@
     </AllowedReferenceRelatedFileExtensions>
     <Nullable>disable</Nullable>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
   </PropertyGroup>
   <PropertyGroup>
-    <PathMap>$([System.IO.Path]::GetFullPath('$(SolutionDir)'))=./</PathMap>
+    <PathMap Condition="'$(SolutionDir)' != '' And '$(SolutionDir)' != '*Undefined*'">$([System.IO.Path]::GetFullPath('$(SolutionDir)'))=./</PathMap>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
@@ -84,6 +85,7 @@
       <SpecificVersion>False</SpecificVersion>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Management" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.ServiceProcess" />
@@ -109,6 +111,7 @@
     <Compile Include="Actions\AppxAction.cs" />
     <Compile Include="Actions\LanguageAction.cs" />
     <Compile Include="Actions\RegistryKeyAction.cs" />
+    <Compile Include="Actions\RegexFileAction.cs" />
     <Compile Include="Actions\ServiceAction.cs" />
     <Compile Include="Actions\UpdateAction.cs" />
     <Compile Include="Actions\UserAction.cs" />
@@ -124,6 +127,11 @@
     <Compile Include="Playbook.cs" />
     <Compile Include="ProcessPrivilege.cs" />
     <Compile Include="ProviderStatus.cs" />
+    <Compile Include="Rollback\RollbackManager.cs" />
+    <Compile Include="Rollback\AdvancedRollback.cs" />
+    <Compile Include="Updates\UpdateChecker.cs" />
+    <Compile Include="Cache\PlaybookCacheManager.cs" />
+    <Compile Include="I18n\LanguageManager.cs" />
     <Compile Include="Exceptions\InvalidRegistryEntryException.cs" />
     <Compile Include="Exceptions\TaskInProgressException.cs" />
     <Compile Include="NativeProcess.cs" />
@@ -145,6 +153,7 @@
     <Compile Include="USB\Interop.cs" />
     <Compile Include="USB\ISO.cs" />
     <Compile Include="USB\ISOWIM.cs" />
+    <Compile Include="Customization\CustomizationManager.cs" />
     <Compile Include="USB\OSDownload.cs" />
     <Compile Include="USB\USB.cs" />
     <Compile Include="WimWrapper.cs" />
@@ -164,7 +173,12 @@
     <Compile Include="WimLib\WimLibLoadManager.cs" />
     <Compile Include="WimLib\WimStruct.cs" />
     <Compile Include="WinUtil.cs" />
+    <Compile Include="SFC\SFCInterface.cs" />
+    <Compile Include="Settings\SettingsPanel.cs" />
+    <Compile Include="AppFetch\AppFetch.cs" />
+    <Compile Include="Integrity\IntegrityCheck.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Debug\DebugLogger.cs" />
   </ItemGroup>
   <!--COM references removed for cross-platform build compatibility-->
   <ItemGroup>

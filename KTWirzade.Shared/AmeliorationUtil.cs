@@ -53,6 +53,10 @@ namespace KTWirzade.Shared
 
         public static bool UseKernelDriver = false;
 
+        public static bool SkipBuildCheck = false;
+
+        public static bool SkipRequirementsCheck = false;
+
         public static readonly List<string> ErrorDisplayList = new List<string>();
 
         public static int GetProgressMaximum(List<ITaskAction> actions) => actions.Sum(action => action.GetProgressWeight());
@@ -240,7 +244,7 @@ namespace KTWirzade.Shared
                             if (text.Length <= 1 || string.IsNullOrWhiteSpace(text))
                                 text = line;
 
-                            text = string.Join(Environment.NewLine + prefix.Length, text.SplitByLength(25).Select(x => x.Trim()));
+                            text = string.Join(Environment.NewLine + new string(' ', prefix.Length), text.SplitByLength(25).Select(x => x.Trim()));
 
                             sb.Append(prefix + text);
                             break;
@@ -248,17 +252,17 @@ namespace KTWirzade.Shared
                         else
                         {
                             var text = line.Substring(Math.Max(0, yamlEx.Start.Column - 1));
-                            text = string.Join(Environment.NewLine + prefix.Length, text.SplitByLength(25).Select(x => x.Trim()));
+                            text = string.Join(Environment.NewLine + new string(' ', prefix.Length), text.SplitByLength(25).Select(x => x.Trim()));
                             sb.Append(prefix + text);
                         }
                     }
                     else if (currentLine > yamlEx.Start.Line && currentLine < yamlEx.End.Line)
                     {
-                        var text = string.Join(Environment.NewLine + prefix.Length, line.SplitByLength(25).Select(x => x.Trim()));
+                        var text = string.Join(Environment.NewLine + new string(' ', prefix.Length), line.SplitByLength(25).Select(x => x.Trim()));
                         sb.Append(Environment.NewLine).Append(prefix + text);
                     } else if (currentLine == yamlEx.End.Line)
                     {
-                        var text = string.Join(Environment.NewLine + prefix.Length, line.Substring(0, yamlEx.End.Column).SplitByLength(25).Select(x => x.Trim()));
+                        var text = string.Join(Environment.NewLine + new string(' ', prefix.Length), line.Substring(0, yamlEx.End.Column).SplitByLength(25).Select(x => x.Trim()));
                         sb.Append(Environment.NewLine).Append(prefix + text);
                         break;
                     }
@@ -303,6 +307,12 @@ namespace KTWirzade.Shared
                 ErrorAction errorAction = ((Tasks.TaskAction)action).ErrorAction ?? action.GetDefaultErrorAction();
                 var errorString = action.ErrorString();
                 var retryAllowed = ((Tasks.TaskAction)action).AllowRetries ?? action.GetRetryAllowed();
+                bool actionFailedAfterRetries = false;
+                
+                var debugProps = KTWirzade.Shared.DebugLog.DebugLogger.GetActionProperties(action);
+                var debugStatus = ((Tasks.TaskAction)action).Status;
+                KTWirzade.Shared.DebugLog.DebugLogger.LogActionStart(actionName, debugProps, debugStatus);
+                var debugSw = Stopwatch.StartNew();
                 
                 int i = 0;
                 try
@@ -336,12 +346,12 @@ namespace KTWirzade.Shared
                                     {
                                         if (errorHandlingException.Action == TaskAction.ExitCodeAction.Retry)
                                         {
-                                            i = 0;
+                                            actionFailedAfterRetries = true;
                                             break;
                                         }
                                         if (errorHandlingException.Action == TaskAction.ExitCodeAction.RetryError)
                                         {
-                                            i = 0;
+                                            actionFailedAfterRetries = true;
                                             throw errorHandlingException;
                                         }
                                     }
@@ -378,6 +388,20 @@ namespace KTWirzade.Shared
                         if (action.GetStatus(writer) == UninstallTaskStatus.Completed)
                             break;
                     } while (i < 10);
+                    
+                    if (actionFailedAfterRetries && !((Tasks.TaskAction)action).IgnoreErrors)
+                    {
+                        if (errorAction == ErrorAction.Notify)
+                        {
+                            Log.WriteSafe(LogType.Warning, $"Action failed after retries: {errorString}", null, new Log.LogOptions(writer));
+                            errorOccurred = true;
+                        }
+                        else if (errorAction == ErrorAction.Halt)
+                        {
+                            Log.WriteSafe(LogType.Critical, $"Action failed after retries (halt): {errorString}", null, new Log.LogOptions(writer));
+                            throw new Exception($"Action {actionName} failed after retries: {errorString}");
+                        }
+                    }
                 }
                 catch (Exception e)
                 {
@@ -393,10 +417,13 @@ namespace KTWirzade.Shared
                         if (errorAction == ErrorAction.Halt)
                         {
                             Log.WriteExceptionSafe(LogType.Critical, e, "Playbook halted due to a failed critical action.", new Log.LogOptions(writer));
-                            throw e;
+                            throw;
                         }
                     }
                 }
+                
+                debugSw.Stop();
+                KTWirzade.Shared.DebugLog.DebugLogger.LogActionEnd(actionName, i == 10 ? -1 : 0, debugSw.ElapsedMilliseconds, i >= 10 ? errorString : null);
                 
                 progressReport(action.GetProgressWeight());
                 if (i == 10)
@@ -425,6 +452,7 @@ namespace KTWirzade.Shared
 
         public static Playbook DeserializePlaybook(string dir)
         {
+            string actualDir = ResolvePlaybookDirectory(dir);
             Playbook pb;
             
             XmlSerializer serializer = new XmlSerializer(typeof(Playbook));
@@ -438,7 +466,7 @@ namespace KTWirzade.Shared
             };*/
             try
             {
-                using (XmlReader reader = XmlReader.Create($"{dir}\\playbook.conf"))
+                using (XmlReader reader = XmlReader.Create($"{actualDir}\\playbook.conf"))
                 {
                     pb = (Playbook)serializer.Deserialize(reader);
                 }
@@ -451,8 +479,102 @@ namespace KTWirzade.Shared
                 throw new XmlException(e.Message.TrimEnd('.') + ": " + e.InnerException.Message);
             }
 
-            pb.Path = dir;
+            pb.Path = actualDir;
             return pb;
+        }
+
+        private static string ResolvePlaybookDirectory(string inputPath)
+        {
+            if (string.IsNullOrWhiteSpace(inputPath))
+                throw new ArgumentException("Playbook path is null or empty.", nameof(inputPath));
+
+            // If input is a file with .apbx or .zip extension, extract it to a temp folder
+            if (File.Exists(inputPath))
+            {
+                string ext = Path.GetExtension(inputPath);
+                if (ext.Equals(".apbx", StringComparison.OrdinalIgnoreCase) || ext.Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                {
+                    string tempDir = Path.Combine(Path.GetTempPath(), "AME-APBX-" + Guid.NewGuid().ToString("N"));
+                    Directory.CreateDirectory(tempDir);
+                    Log.WriteSafe(LogType.Info, $"[APBX] Extracting playbook archive '{inputPath}' to '{tempDir}'...", null, new Log.LogOptions(Output.OutputWriter.Null));
+                    if (TryExtractApbx(inputPath, tempDir))
+                    {
+                        Log.WriteSafe(LogType.Info, $"[APBX] Extraction completed. Playbook directory: {tempDir}", null, new Log.LogOptions(Output.OutputWriter.Null));
+                        return tempDir;
+                    }
+                    throw new IOException($"Failed to extract playbook archive '{inputPath}'. The archive may be corrupted or use an unsupported format.");
+                }
+                else
+                {
+                    Log.WriteSafe(LogType.Warning, $"[APBX] Input path is a file but not an archive: '{inputPath}'. Treating as directory path.", null, new Log.LogOptions(Output.OutputWriter.Null));
+                }
+            }
+
+            if (Directory.Exists(inputPath))
+            {
+                Log.WriteSafe(LogType.Info, $"[APBX] Using existing playbook directory: '{inputPath}'", null, new Log.LogOptions(Output.OutputWriter.Null));
+                return inputPath;
+            }
+
+            Log.WriteSafe(LogType.Warning, $"[APBX] Playbook path does not exist as file or directory: '{inputPath}'. Using as fallback.", null, new Log.LogOptions(Output.OutputWriter.Null));
+            return inputPath;
+        }
+
+        /// <summary>
+        /// Official APBX containers are encrypted archives (7zAES/ZipCrypto) using the
+        /// 'malte' password, so plain System.IO.Compression.ZipFile cannot read them.
+        /// Try SharpSevenZip with the official password first, then without, then a plain zip fallback.
+        /// </summary>
+        private static bool TryExtractApbx(string inputPath, string tempDir)
+        {
+            try
+            {
+                string sevenZipDll = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "7z.dll");
+                if (File.Exists(sevenZipDll))
+                    SharpSevenZip.SharpSevenZipBase.SetLibraryPath(sevenZipDll);
+            }
+            catch (Exception ex)
+            {
+                Log.WriteExceptionSafe(LogType.Warning, ex, "[APBX] Could not configure 7z.dll for SharpSevenZip.");
+            }
+
+            // 1) Official APBX format: SharpSevenZip with the 'malte' password.
+            try
+            {
+                using (var extractor = new SharpSevenZip.SharpSevenZipExtractor(inputPath, "malte"))
+                    extractor.ExtractArchive(tempDir);
+                if (File.Exists(Path.Combine(tempDir, "playbook.conf")))
+                    return true;
+            }
+            catch (Exception ex)
+            {
+                Log.WriteExceptionSafe(LogType.Warning, ex, "[APBX] SharpSevenZip extraction with password failed, trying fallback methods.");
+            }
+
+            // 2) SharpSevenZip without password (unencrypted archives).
+            try
+            {
+                using (var extractor = new SharpSevenZip.SharpSevenZipExtractor(inputPath))
+                    extractor.ExtractArchive(tempDir);
+                if (File.Exists(Path.Combine(tempDir, "playbook.conf")))
+                    return true;
+            }
+            catch (Exception ex)
+            {
+                Log.WriteExceptionSafe(LogType.Warning, ex, "[APBX] SharpSevenZip extraction without password failed, trying plain zip fallback.");
+            }
+
+            // 3) Plain ZIP fallback (some tools export APBX as standard zip).
+            try
+            {
+                System.IO.Compression.ZipFile.ExtractToDirectory(inputPath, tempDir);
+                return File.Exists(Path.Combine(tempDir, "playbook.conf"));
+            }
+            catch (Exception ex)
+            {
+                Log.WriteExceptionSafe(LogType.Error, ex, "[APBX] All extraction methods failed for the playbook archive.");
+            }
+            return false;
         }
 
         [Serializable]
@@ -528,6 +650,7 @@ namespace KTWirzade.Shared
         {
             Log.LogFileOverride = Path.Combine(logFolder, "Log.yml");
             Log.MetadataSource = new PlaybookMetadata(options, playbookName, playbookVersion);
+            KTWirzade.Shared.DebugLog.DebugLogger.Enable(logFolder);
             
             ISO = isoPath != null;
             
@@ -541,11 +664,15 @@ namespace KTWirzade.Shared
             AmeliorationUtil.Playbook = AmeliorationUtil.DeserializePlaybook(playbookPath);
             AmeliorationUtil.Playbook.Options = options?.ToList();
 
-            var extractedIso = Path.Combine(Path.GetTempPath(), "KTWirzade-ISO-" + Guid.NewGuid());
+            var extractedIso = Path.Combine(Path.GetTempPath(), "AME-ISO-" + Guid.NewGuid());
             var mountGuidString = Guid.NewGuid().ToString().Replace("-", "").Replace("{", "").Replace("}", "");
             var winMount = Path.Combine(Path.GetPathRoot(Path.GetTempPath()), "ISO-" + mountGuidString);
             var wimMount = Path.Combine(Path.GetPathRoot(Path.GetTempPath()), "WIM-" + mountGuidString);
             var wimStaging = Path.Combine(Path.GetPathRoot(Path.GetTempPath()), "TMP-" + mountGuidString);
+
+            // Assign early: the boot.wim block below uses ISOGuid for hive hook names and temp paths.
+            // Leaving it null made every ISO run hook the same literal "BOOT-" hive (collision-prone).
+            ISOGuid = mountGuidString;
             
             if (ISO) {
                 await new WriteStatusAction() { Status = "Extracting Image" }.RunTask(Output.OutputWriter.Null);
@@ -578,7 +705,7 @@ namespace KTWirzade.Shared
                     {
                         using var bootWim = Wim.OpenWim(Path.Combine(extractedIso, @"sources\boot.wim"), OpenFlags.None);
                         int image = bootWim.GetWimInfo().BootIndex == 0 ? 1 : (int)bootWim.GetWimInfo().BootIndex;
-                        var systemHivePath = Path.Combine(Path.GetTempPath(), "KTWirzade-BOOTWIM-" + ISOGuid, "SYSTEM");
+                        var systemHivePath = Path.Combine(Path.GetTempPath(), "AME-BOOTWIM-" + ISOGuid, "SYSTEM");
                         bootWim.ExtractPath(image, Path.GetDirectoryName(systemHivePath), @"Windows\System32\config\SYSTEM", ExtractFlags.NoPreserveDirStructure);
                         if (Wrap.ExecuteSafe(() => WinUtil.RegistryManager.HookHive("BOOT-" + ISOGuid, systemHivePath), true) == null)
                         {
@@ -737,13 +864,13 @@ namespace KTWirzade.Shared
                     */
 
                     progress.Report(systemDrivers || graphicsDrivers || networkDrivers ? 10 : 20);
-                    
-                    CopyDirectory(Path.Combine(playbookPath), Path.Combine(WimPath, @"ProgramData\KTWirzade\OOBE\Playbook"));
-                    
-                    if (File.Exists(Path.Combine(WimPath, @"ProgramData\KTWirzade\OOBE\playbook.apbx")))
-                        File.Delete(Path.Combine(WimPath, @"ProgramData\KTWirzade\OOBE\playbook.apbx"));
-                    File.Move(Path.Combine(Directory.GetCurrentDirectory(), "oobe_playbook.apbx"), Path.Combine(WimPath, @"ProgramData\KTWirzade\OOBE\playbook.apbx"));
+                    CopyDirectory(Path.Combine(playbookPath), Path.Combine(WimPath, @"ProgramData\AME\OOBE\Playbook"));
 
+                    if (File.Exists(Path.Combine(WimPath, @"ProgramData\AME\OOBE\playbook.apbx")))
+
+                        File.Delete(Path.Combine(WimPath, @"ProgramData\AME\OOBE\playbook.apbx"));
+
+                    File.Move(Path.Combine(Directory.GetCurrentDirectory(), "oobe_playbook.apbx"), Path.Combine(WimPath, @"ProgramData\AME\OOBE\playbook.apbx"));
                     XmlSerializer serializerIso = new XmlSerializer(typeof(ISO));
                     using (XmlWriter writer = XmlWriter.Create(Path.Combine(extractedIso, @"iso.conf"), new XmlWriterSettings() {Indent = true}))
                     {
@@ -844,10 +971,10 @@ namespace KTWirzade.Shared
                 Action<int> progressReport = addition =>
                 {
                     progressLeft -= addition;
-                    var progressValue = 1 - ((decimal)progressLeft / totalProgress);
+                    var progressValue = Math.Min(1m, Math.Max(0m, 1 - ((decimal)progressLeft / totalProgress)));
                     if (isoPath != null)
                         progressValue = progressValue * 0.75M;
-                    progress.Report(isoPath == null ? progressValue * 100 : 10 + (progressValue * 100));
+                    progress.Report(Math.Min(100m, isoPath == null ? progressValue * 100 : 10 + (progressValue * 100)));
                 };
 
                 WriteStatusAction.StatusReporter = statusReporter;
@@ -932,6 +1059,18 @@ namespace KTWirzade.Shared
                         progress.Report(98);
                         
                         await new WriteStatusAction() { Status = "Cleaning Up" }.RunTask(Output.OutputWriter.Null);
+                    }
+
+                    // Record successful (non-ISO) runs as well. Previously the applied-playbook record
+                    // was only written in the catch block below, so CLI consumers (which never write it
+                    // themselves) left GetAppliedPlaybooks/onUpgrade logic blind to completed playbooks.
+                    if (!ISO)
+                    {
+                        Wrap.ExecuteSafe(() =>
+                        {
+                            WriteAppliedPlaybook(playbookPath, null, null, Playbook.UniqueId, Playbook.Name, Playbook.Username,
+                                Playbook.Overhaul, Playbook.Version, options ?? Array.Empty<string>(), allOptions, errorOccurred, false, verified);
+                        }, true);
                     }
 
                     return errorOccurred;
@@ -1094,18 +1233,24 @@ namespace KTWirzade.Shared
             Assembly assembly = Assembly.GetExecutingAssembly();
             using (UnmanagedMemoryStream stream = (UnmanagedMemoryStream)assembly!.GetManifestResourceStream($"KTWirzade.Shared.Properties.Z-AME-NoDefender-Package31bf3856ad364e35{cabArch}1.0.0.0.cab"))
             {
-                byte[] buffer = new byte[stream!.Length];
+                if (stream == null || stream.Length == 0)
+                    throw new InvalidOperationException($"Pacote de remocao do Defender ({cabArch}) nao incluido neste build - recurso embutido ausente ou vazio.");
+                byte[] buffer = new byte[stream.Length];
                 stream.Read(buffer, 0, buffer.Length);
                 File.WriteAllBytes(destination, buffer);
             }
             return destination;
         }
         
-        private static int RunPSCommand(string command, [CanBeNull] DataReceivedEventHandler outputHandler, [CanBeNull] DataReceivedEventHandler errorHandler) =>
-            RunCommand("powershell.exe", $"-NoP -C \"{command}\"", outputHandler, errorHandler);
+        private static int RunPSCommand(string command, [CanBeNull] DataReceivedEventHandler outputHandler, [CanBeNull] DataReceivedEventHandler errorHandler)
+        {
+            var cleaned = command.Replace("\"\"\"", "\"");
+            var encoded = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(cleaned));
+            return RunCommand("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -NonInteractive -EncodedCommand {encoded}", outputHandler, errorHandler);
+        }
         private static int RunCommand(string exe, string arguments, [CanBeNull] DataReceivedEventHandler outputHandler, [CanBeNull] DataReceivedEventHandler errorHandler)
         {
-            var process = new Process
+            using var process = new Process
             {
                 StartInfo = new ProcessStartInfo()
                 {
@@ -1155,7 +1300,7 @@ namespace KTWirzade.Shared
         
         private static void DeleteAppliedPlaybook(string folderName)
         {
-            var appliedDir = Environment.ExpandEnvironmentVariables(@"%ProgramData%\KTWirzade\AppliedPlaybooks");
+            var appliedDir = Environment.ExpandEnvironmentVariables(@"%ProgramData%\AME\AppliedPlaybooks");
             if (Directory.Exists(Path.Combine(appliedDir, folderName)))
                 Directory.Delete(Path.Combine(appliedDir, folderName), true);
         }
@@ -1166,7 +1311,7 @@ namespace KTWirzade.Shared
             {
                 if (uniqueId != null)
                 {
-                    using var key = (rootKey ?? Registry.LocalMachine).CreateSubKey(@$"SOFTWARE\KTWirzade\Playbooks\Applied\{{{uniqueId.Value.ToString().ToUpper()}}}", true);
+                    using var key = (rootKey ?? Registry.LocalMachine).CreateSubKey(@$"SOFTWARE\AME\Playbooks\Applied\{{{uniqueId.Value.ToString().ToUpper()}}}", true);
                     key.SetValue("Name", name, RegistryValueKind.String);
                     key.SetValue("Username", username, RegistryValueKind.String);
                     key.SetValue("Overhaul", overhaul ? 1 : 0, RegistryValueKind.DWord);
@@ -1179,15 +1324,28 @@ namespace KTWirzade.Shared
                         key.SetValue("Image", File.ReadAllBytes(Path.Combine(playbookPath, "playbook.png")), RegistryValueKind.Binary);
                     else if (File.Exists(Path.Combine(playbookPath, "Images\\playbook.png")))
                         key.SetValue("Image", File.ReadAllBytes(Path.Combine(playbookPath, "Images\\playbook.png")), RegistryValueKind.Binary);
+                    // also expose AtlasOS version for Toolbox compatibility
+                    try
+                    {
+                        using var atlasKey = (rootKey ?? Registry.LocalMachine).CreateSubKey(@"SOFTWARE\AtlasOS", true);
+                        atlasKey.SetValue("InstalledVersion", version, RegistryValueKind.String);
+                        atlasKey.SetValue("InstalledName", name, RegistryValueKind.String);
+                    }
+                    catch { }
                 }
                 else
                 {
-                    var parent = Directory.CreateDirectory(ameRoot != null ? Path.Combine(ameRoot, "AppliedPlaybooks") : Environment.ExpandEnvironmentVariables(@"%ProgramData%\KTWirzade\AppliedPlaybooks"));
+                    var parent = Directory.CreateDirectory(ameRoot != null ? Path.Combine(ameRoot, "AppliedPlaybooks") : Environment.ExpandEnvironmentVariables(@"%ProgramData%\AME\AppliedPlaybooks"));
                     var indexes = parent.GetDirectories().Where(v => int.TryParse(v.Name, out _)).Select(v => int.Parse(v.Name)).ToList();
 
                     var currentIndex = indexes.Count > 0 ? indexes.Max() : 0;
                     if (currentIndex >= 10)
-                        Wrap.ExecuteSafe(() => parent.GetDirectories().First().Delete(true), true);
+                        // First() without ordering deletes the alphabetically-first folder
+                        // ("10" before "2") instead of the numerically oldest one.
+                        Wrap.ExecuteSafe(() => parent.GetDirectories()
+                            .Where(v => int.TryParse(v.Name, out _))
+                            .OrderBy(v => int.Parse(v.Name))
+                            .FirstOrDefault()?.Delete(true), true);
 
                     var target = parent.CreateSubdirectory((currentIndex + 1).ToString());
 
@@ -1341,7 +1499,7 @@ namespace KTWirzade.Shared
                         };
 
 
-                            var amePath = Path.Combine(Path.GetTempPath(), "KTWirzade\\");
+                            var amePath = Path.Combine(Path.GetTempPath(), "AME\\");
                             //Create the directory if it doesn't exist.
                             var file = new FileInfo(amePath);
                             file.Directory?.Create(); //Does nothing if the directory already exists
@@ -1446,6 +1604,9 @@ namespace KTWirzade.Shared
         
         public static bool IsApplicableWindowsVersion(string version, bool ISO, [CanBeNull] string targetISOVersion = null, [CanBeNull] string targetISOUpdateVersion = null)
         {
+            if (SkipBuildCheck)
+                return true;
+
             bool negative = false;
             if (version.StartsWith("!"))
             {

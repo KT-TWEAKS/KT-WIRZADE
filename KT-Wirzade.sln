@@ -11,7 +11,12 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "Interprocess", "Interproces
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "KTWirzade.Shared", "KTWirzade.Shared\KTWirzade.Shared.csproj", "{9BDA9D32-E9A1-4DB8-9D90-443792107E28}"
 EndProject
-
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KTWirzade.GUI", "KTWirzade.GUI\src\KTWirzade.GUI.csproj", "{1CBDA84C-2B2F-40A7-AEC0-84EC5EA0F677}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KTWirzade.DevTool", "KTWirzade.DevTool\KTWirzade.DevTool.csproj", "{01839DBB-5A69-4E7B-AB54-A05524426F1E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "KTWirzade.DevKit", "KTWirzade.DevKit\KTWirzade.DevKit.csproj", "{3C9F8A2D-71E4-4B8C-9D2F-5A1E77C40B93}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -26,7 +31,12 @@ Global
 		{9BDA9D32-E9A1-4DB8-9D90-443792107E28}.Debug|x64.Build.0 = Debug|x64
 		{9BDA9D32-E9A1-4DB8-9D90-443792107E28}.Release|x64.ActiveCfg = Release|x64
 		{9BDA9D32-E9A1-4DB8-9D90-443792107E28}.Release|x64.Build.0 = Release|x64
-
+		{1CBDA84C-2B2F-40A7-AEC0-84EC5EA0F677}.Debug|x64.ActiveCfg = Debug|x64
+		{1CBDA84C-2B2F-40A7-AEC0-84EC5EA0F677}.Release|x64.ActiveCfg = Release|x64
+		{01839DBB-5A69-4E7B-AB54-A05524426F1E}.Debug|x64.ActiveCfg = Debug|x64
+		{01839DBB-5A69-4E7B-AB54-A05524426F1E}.Release|x64.ActiveCfg = Release|x64
+		{3C9F8A2D-71E4-4B8C-9D2F-5A1E77C40B93}.Debug|x64.ActiveCfg = Debug|x64
+		{3C9F8A2D-71E4-4B8C-9D2F-5A1E77C40B93}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

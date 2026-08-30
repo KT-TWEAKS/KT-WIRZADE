@@ -153,7 +153,7 @@ namespace KTWirzade.GUI.Windows
                 Storyboard.SetTargetProperty(scale_x, new PropertyPath(ScaleTransform.ScaleXProperty));
                 storyboard.Children.Add(scale_x);
                 Storyboard.SetTargetName(scale_y, "ContinueScaleTransform");
-                Storyboard.SetTargetProperty(scale_y, new PropertyPath(ScaleTransform.ScaleXProperty));
+                Storyboard.SetTargetProperty(scale_y, new PropertyPath(ScaleTransform.ScaleYProperty));
                 storyboard.Children.Add(scale_y);
                 DoubleAnimation moveAnim = new DoubleAnimation
                 {

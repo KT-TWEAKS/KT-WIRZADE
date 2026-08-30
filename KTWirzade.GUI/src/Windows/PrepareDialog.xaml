@@ -11,7 +11,7 @@
         Style="{DynamicResource Window}" 
         WindowStartupLocation="CenterOwner" 
         RenderTransformOrigin="0.5,0.5" 
-        Title="Prepare System" CornerType="Round" 
+        Title="Preparar sistema" CornerType="Round" 
         MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}" 
         MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}">
 
@@ -40,7 +40,7 @@
         <DockPanel Name="TitleBar" Dock="Top" Height="40" VerticalAlignment="Top">
             <Image Style="{StaticResource QualityImage}" Margin="8, 6,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="21" Height="21" />
             <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" IsEnabled="False" DockPanel.Dock="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
-            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Width="770" Text="Prepare System" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
+            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Width="770" Text="Preparar sistema" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
         </DockPanel>
         <Grid Row="1">
             <Grid.ColumnDefinitions>
@@ -65,17 +65,17 @@
                 <Border Name="PageContainer" UseLayoutRounding="True" BorderBrush="{DynamicResource PageBorderBrush}" BorderThickness="1,1,0,1" Background="#00FFFFFF" CornerRadius="8,0,0,8" Padding="29,31,29,0">
                     <Grid>
                         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
-                            <TextBlock FontSize="16" FontWeight="Bold" Text="Prepare System" />
-                            <TextBlock Name="EnsureText" Text="This ensures that your installation is in the proper condition to be ameliorated. It includes disabling certain services and components. This process may take a few minutes." FontSize="13" Width="350" HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,14,0,0" />
+                            <TextBlock FontSize="16" FontWeight="Bold" Text="Preparar sistema" />
+                            <TextBlock Name="EnsureText" Text="Garante que a instalacao esteja em condicoes adequadas para ser otimizada. Inclui desativar alguns servicos e componentes. Este processo pode levar alguns minutos." FontSize="13" Width="350" HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,14,0,0" />
                             <StackPanel Margin="0,108,0,0" Grid.Column="1" HorizontalAlignment="Left">
-                                <TextBlock Name="StatusText" FontWeight="Bold" Margin="0,2,0,3" FontSize="15" Text="Preparing system..." />
+                                <TextBlock Name="StatusText" FontWeight="Bold" Margin="0,2,0,3" FontSize="15" Text="Preparando o sistema..." />
                                 <controls:ProgressBarDeterminate x:Name="ProgressBar" Width="362" HorizontalAlignment="Left" />
-                                <TextBlock Name="FinishText" Visibility="Collapsed" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,-2,0,0" Text="Restart at the soonest possible time" />
+                                <TextBlock Name="FinishText" Visibility="Collapsed" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,-2,0,0" Text="Reiniciar assim que possivel" />
                             </StackPanel>
                         </StackPanel>
                         <Grid Name="RestartGrid">
                             <CheckBox Name="CheckBox" IsChecked="True" IsEnabled="True" VerticalAlignment="Bottom" Opacity="1" HorizontalAlignment="Right" Margin="0,0,33,24" />
-                            <TextBlock Name="RestartTextCheck" VerticalAlignment="Bottom" Opacity="1" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Width="240" TextWrapping="Wrap" Margin="-1,0,15,20" Text="The system will automatically be restarted once the process completes." />
+                            <TextBlock Name="RestartTextCheck" VerticalAlignment="Bottom" Opacity="1" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Width="240" TextWrapping="Wrap" Margin="-1,0,15,20" Text="O sistema sera reiniciado automaticamente apos a conclusao do processo." />
                         </Grid>
                     </Grid>
                 </Border>

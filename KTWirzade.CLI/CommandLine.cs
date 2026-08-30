@@ -27,6 +27,10 @@ namespace KTWirzade.CLI
             [Required] public Mode Mode { get; set; }
             [CanBeNull] public NodeData[] Nodes { get; set; } = null;
             public int Host { get; set; } = -1;
+            // Session identity propagated by the root node: random per-run pipe namespace
+            // suffix and the session-owner SID used for the restricted pipe DACL.
+            [CanBeNull] public string Secret { get; set; } = null;
+            [CanBeNull] public string OwnerSid { get; set; } = null;
 
             public class NodeData
             {
@@ -143,7 +147,7 @@ namespace KTWirzade.CLI
 
                 if (property.PropertyType == typeof(bool) && (args.Count - 1 == i || args[i + 1].StartsWith("--")))
                 {
-                    DeserializeArgument(property.PropertyType, "true", result);
+                    property.SetValue(result, DeserializeArgument(property.PropertyType, "true", result));
                     continue;
                 }
                 

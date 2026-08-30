@@ -15,7 +15,11 @@ namespace KTWirzade.Shared
 {
     public class Globals
     {
-        public const string CurrentVersion = "0.8.5";
+        // Keep in sync with README/CHANGELOG and the <Version> property in
+        // KTWirzade.GUI.csproj / KTWirzade.DevTool.csproj. UpdateChecker compares
+        // this value against GitHub release tags, so a stale value here causes
+        // permanent false "update available" prompts.
+        public const string CurrentVersion = "1.0.0";
         public static readonly VersionNumber CurrentVersionNumber = VersionNumber.GetVersionNumber(CurrentVersion);
     }
     [Serializable]

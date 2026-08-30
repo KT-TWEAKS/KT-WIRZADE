@@ -24,8 +24,6 @@ namespace KTWirzade.GUI.Pages.SelectPage
 
         private bool animating;
 
-        private int enabledIndex = -1;
-
         private System.Windows.Controls.Button parentNextButton;
 
 

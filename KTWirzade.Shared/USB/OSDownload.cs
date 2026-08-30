@@ -102,6 +102,7 @@ namespace iso_mode
             Ubuntu,
             Arch,
             SteamOS,
+            Windows10,
         }
 
         public static async Task<(string Link, string? Version, string? Hash)> GetDownloadLinkAsyncResilient(OS os)
@@ -132,12 +133,20 @@ namespace iso_mode
 
         private static Task<(string Link, string? Version, string? Hash)> GetOSDownloadLinkTask(OS os) => os switch
         {
-            OS.Windows => GetWindowsDownloadLinkAsync(),
+            OS.Windows => GetWindowsDownloadLinkAsync("windows11"),
+            OS.Windows10 => GetWindows10DownloadLinkAsync(),
             OS.Ubuntu => GetUbuntuDownloadLinkAsync(),
             OS.Arch => GetArchDownloadLinkAsync(),
             OS.SteamOS => GetSteamOSDownloadLinkAsync(),
             _ => throw new Exception("Unknown OS")
         };
+
+        private static async Task<(string Link, string? Version, string? Hash)> GetWindows10DownloadLinkAsync()
+        {
+            // Microsoft discontinued automated Windows 10 downloads
+            // Use the Windows 10 download page directly
+            return ("https://www.microsoft.com/software-download/windows10ISO", "22H2", null);
+        }
 
         public static async Task DownloadISOAsync(string isoDownloadLink, string filePath, string? hash, CancellationToken cancellationToken, Action<int, string> onProgressChanged)
         {
@@ -174,7 +183,7 @@ namespace iso_mode
             }
         }
 
-        private static async Task<(string Link, string? Version, string? Hash)> GetWindowsDownloadLinkAsync()
+        private static async Task<(string Link, string? Version, string? Hash)> GetWindowsDownloadLinkAsync(string edition = "windows11")
         {
             string language = GetInstalledLanguageName();
 
@@ -186,7 +195,7 @@ namespace iso_mode
 
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36");
             string sessionId = Guid.NewGuid().ToString();
-            string url = "https://www.microsoft.com/en-us/software-download/windows11";
+            string url = $"https://www.microsoft.com/en-us/software-download/{edition}";
 
             string html = await httpClient.GetStringAsync(url);
             var match = Regex.Match(html, @"<option value=""(\d+)"">Windows");

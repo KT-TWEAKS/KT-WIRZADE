@@ -41,11 +41,12 @@ namespace KTWirzade.Shared.Tasks
             private readonly AugmentedProcess.Process augmentedProcess;
             private static readonly Encoding s_outputEncoding = Encoding.GetEncoding((int)GetOEMCP());
             
-            public OutputHandler(string name, Process process, [NotNull] OutputWriter writer)
+            public OutputHandler(string name, Process process, [NotNull] OutputWriter writer, Encoding outputEncoding = null)
             {
                 this.name = name;
                 this.writer = writer;
                 this.process = process;
+                var encoding = outputEncoding ?? s_outputEncoding;
                 if (!process.StartInfo.RedirectStandardOutput)
                     OutputEndReached.Set();
                 if (!process.StartInfo.RedirectStandardError)
@@ -53,20 +54,21 @@ namespace KTWirzade.Shared.Tasks
 
                 if (process.StartInfo.RedirectStandardOutput)
                 {
-                    process.StartInfo.StandardOutputEncoding = s_outputEncoding;
+                    process.StartInfo.StandardOutputEncoding = encoding;
                     process.OutputDataReceived += WriteOutputSafe;
                 }
                 if (process.StartInfo.RedirectStandardError)
                 {
-                    process.StartInfo.StandardErrorEncoding = s_outputEncoding;
+                    process.StartInfo.StandardErrorEncoding = encoding;
                     process.ErrorDataReceived += WriteErrorSafe;
                 }
             }
-            public OutputHandler(string name, AugmentedProcess.Process process, [NotNull] OutputWriter writer)
+            public OutputHandler(string name, AugmentedProcess.Process process, [NotNull] OutputWriter writer, Encoding outputEncoding = null)
             {
                 this.name = name;
                 this.writer = writer;
                 this.augmentedProcess = process;
+                var encoding = outputEncoding ?? s_outputEncoding;
                 if (!process.StartInfo.RedirectStandardOutput)
                     OutputEndReached.Set();
                 if (!process.StartInfo.RedirectStandardError)
@@ -74,12 +76,12 @@ namespace KTWirzade.Shared.Tasks
 
                 if (process.StartInfo.RedirectStandardOutput)
                 {
-                    process.StartInfo.StandardOutputEncoding = s_outputEncoding;
+                    process.StartInfo.StandardOutputEncoding = encoding;
                     process.OutputDataReceived += WriteOutputSafe;
                 }
                 if (process.StartInfo.RedirectStandardError)
                 {
-                    process.StartInfo.StandardErrorEncoding = s_outputEncoding;
+                    process.StartInfo.StandardErrorEncoding = encoding;
                     process.ErrorDataReceived += WriteErrorSafe;
                 }
             }

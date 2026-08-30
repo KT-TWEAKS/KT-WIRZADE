@@ -33,7 +33,7 @@ namespace KTWirzade.GUI.Windows
         public PrepareDialog()
         {
             InitializeComponent();
-            if ((GlobalsGUI.Current.Playbook).Username == "Ameliorated" && GlobalsGUI.Current.Playbook.VerificationStatus == PlaybookGUI.VerificationLevel.Verified)
+            if ((GlobalsGUI.Current.Playbook).Username == "KTWirzade" && GlobalsGUI.Current.Playbook.VerificationStatus == PlaybookGUI.VerificationLevel.Verified)
             {
                 EnsureText.Text = "This ensures that your installation is in the proper condition to be ameliorated. It includes disabling certain services and components. This process may take a few minutes.";
             }

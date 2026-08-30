@@ -15,6 +15,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Security;
 using System.Security.AccessControl;
+using System.Security.Cryptography;
 using System.Security.Principal;
 using System.Text;
 using System.Text.Json;
@@ -60,9 +61,96 @@ namespace Interprocess
     
     public static partial class InterLink
     {
-        // 10MB
+        // 100MB - upper bound for a single IPC frame (largest observed: big YAML task payloads)
         private const int MaxMessageSize = 1024 * 1024 * 100;
         private const string PipePrefix = @"KTWirzade";
+
+        // --- Session security -----------------------------------------------------------
+        // Previously all pipes used static predictable names (KTWirzade-<Level>-<Role>)
+        // and granted Everyone read/write access, so *any* local process could connect,
+        // self-register as an elevated node and drive TrustedInstaller sinks — a local
+        // privilege escalation all the way to TrustedInstaller.
+        //
+        // Current design (defense in depth):
+        //  * The root node generates a per-run secret; every child receives it via the
+        //    --Secret command line and all pipe names carry it as a suffix, so an
+        //    outside process cannot even find the pipes.
+        //  * Pipe DACLs are restricted to the session owner user, SYSTEM and the
+        //    TrustedInstaller service SID — never Everyone.
+        //  * Node registration additionally verifies the peer's mandatory integrity
+        //    level through pipe impersonation (Administrator/TrustedInstaller
+        //    registration requires High integrity; see ThrowIfInsufficientClientIntegrity).
+        private static string _sessionSecret;
+        private static string _sessionOwnerSid;
+
+        public static bool HasSession => _sessionSecret != null;
+
+        /// <summary>
+        /// Establishes the IPC session identity. The root node calls this once without
+        /// arguments (a fresh secret is generated); child nodes pass the values received
+        /// on the command line so every node shares the same namespace/ACL owner.
+        /// </summary>
+        public static void InitializeSession(string sessionSecret = null, string ownerSid = null)
+        {
+            if (_sessionSecret != null && sessionSecret == null)
+                return;
+
+            if (sessionSecret != null)
+            {
+                _sessionSecret = sessionSecret;
+            }
+            else
+            {
+                // Use cryptographically secure random bytes for the session secret
+                var bytes = new byte[16];
+                using (var rng = RandomNumberGenerator.Create())
+                {
+                    rng.GetBytes(bytes);
+                }
+                _sessionSecret = Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").Substring(0, 16);
+            }
+
+            if (ownerSid != null)
+            {
+                _sessionOwnerSid = ownerSid;
+            }
+            else if (_sessionOwnerSid == null)
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                _sessionOwnerSid = identity.User?.Value;
+            }
+        }
+
+        /// <summary>Command-line fragment that propagates the session identity to child nodes.</summary>
+        public static string BuildSessionArgs() => $" --Secret {_sessionSecret} --OwnerSid {_sessionOwnerSid}";
+
+        private static string PipeNamespace => _sessionSecret == null ? PipePrefix : $"{PipePrefix}-{_sessionSecret}";
+        internal static string ReceiverPipeName(InternalLevel level) => $"{PipeNamespace}-{level}-Receiver";
+        internal static string ResultReceiverPipeName(InternalLevel level) => $"{PipeNamespace}-{level}-ResultReceiver";
+        internal static string VerificationPipeName(InternalLevel level) => $"{PipeNamespace}-{level}-VerificationReceiver";
+
+        /// <summary>
+        /// Builds the pipe DACL: session owner user (covers the root + same-logon-session
+        /// elevated nodes), LocalSystem, and the TrustedInstaller service SID. The old
+        /// Everyone read/write rule is gone.
+        /// </summary>
+        internal static PipeSecurity CreatePipeSecurity()
+        {
+            if (!HasSession)
+                InitializeSession();
+
+            var pipeSecurity = new PipeSecurity();
+            var rights = PipeAccessRights.Read | PipeAccessRights.Synchronize | PipeAccessRights.Write;
+
+            if (_sessionOwnerSid != null)
+                Wrap.ExecuteSafe(() => pipeSecurity.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(_sessionOwnerSid), rights, AccessControlType.Allow)), true);
+
+            Wrap.ExecuteSafe(() => pipeSecurity.AddAccessRule(new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.LocalSystemSid, null), rights, AccessControlType.Allow)), true);
+            // NT SERVICE\TrustedInstaller service SID.
+            Wrap.ExecuteSafe(() => pipeSecurity.AddAccessRule(new PipeAccessRule(new SecurityIdentifier("S-1-5-80-956008885-3418522649-1831038044-1853292631-2271478464"), rights, AccessControlType.Allow)), true);
+
+            return pipeSecurity;
+        }
         
         public static InternalLevel ApplicationLevel { get; private set; } = InternalLevel.Uninitialized;
         private static Mode _mode;
@@ -93,7 +181,7 @@ namespace Interprocess
             lock (_launchLock)
             {
                 var nodes = LevelController.GetRegisteredNodes();
-                var arguments = $"\"{Directory.GetCurrentDirectory()}\" Interprocess {level.ToString()} --Mode {mode.ToString()} --Nodes {$"Level={ApplicationLevel}:ProcessID={Process.GetCurrentProcess().Id}" + (nodes.Length > 0 ? "," : string.Empty) + string.Join(",", nodes.Select(x => $"Level={x.Level}:ProcessID={x.ProcessID}"))}" + (hostPid != -1 ? $" --Host {hostPid}" : string.Empty);
+                var arguments = $"\"{Directory.GetCurrentDirectory()}\" Interprocess {level.ToString()} --Mode {mode.ToString()} --Nodes {$"Level={ApplicationLevel}:ProcessID={Process.GetCurrentProcess().Id}" + (nodes.Length > 0 ? "," : string.Empty) + string.Join(",", nodes.Select(x => $"Level={x.Level}:ProcessID={x.ProcessID}"))}" + (hostPid != -1 ? $" --Host {hostPid}" : string.Empty) + BuildSessionArgs();
 
                 var message = GetLambdaMessage(() => LaunchNode(GetLambdaMessage(launchMethod, parentLevel, arguments), level, ApplicationLevel, mode, hostPid, allowAutoRelaunch), parentLevel);
                 ExecuteCore(message);
@@ -179,7 +267,7 @@ namespace Interprocess
             {
                 var nodes = LevelController.GetRegisteredNodes();
 
-                var arguments = $"\"{Directory.GetCurrentDirectory()}\" Interprocess {level.ToString()} --Mode {mode.ToString()} --Nodes {$"Level={ApplicationLevel}:ProcessID={Process.GetCurrentProcess().Id}" + (nodes.Length > 0 ? "," : string.Empty) + string.Join(",", nodes.Select(x => $"Level={x.Level}:ProcessID={x.ProcessID}"))}" + (hostPid != -1 ? $" --Host {hostPid}" : string.Empty);
+                var arguments = $"\"{Directory.GetCurrentDirectory()}\" Interprocess {level.ToString()} --Mode {mode.ToString()} --Nodes {$"Level={ApplicationLevel}:ProcessID={Process.GetCurrentProcess().Id}" + (nodes.Length > 0 ? "," : string.Empty) + string.Join(",", nodes.Select(x => $"Level={x.Level}:ProcessID={x.ProcessID}"))}" + (hostPid != -1 ? $" --Host {hostPid}" : string.Empty) + BuildSessionArgs();
                 var processId = launchCode.Invoke(arguments);
                 
                 SafeTask.Run(() =>
@@ -332,10 +420,9 @@ namespace Interprocess
             }
             _hostPID = hostPid;
             
-            var pipeSecurity = new PipeSecurity();
-
-            var adminRule = new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), PipeAccessRights.Read | PipeAccessRights.Synchronize | PipeAccessRights.Write, AccessControlType.Allow);
-            pipeSecurity.SetAccessRule(adminRule);
+            // Restricted pipe DACL (session owner + SYSTEM + TrustedInstaller) - the old
+            // WorldSid read/write rule let any local process connect to the chain.
+            var pipeSecurity = CreatePipeSecurity();
 
             // .NET 8: Remove async since we don't need to prep the serializer due to Source Generation.
             await Task.Run(() =>
@@ -655,30 +742,30 @@ namespace Interprocess
             await ExecuteDisposableCoreAsync<Void>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, null);
         
         public static Wrap.SafeResult<TResult> ExecuteDisposableSafe<TResult>(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Func<TResult>> operation, int timeout = 60000, bool logExceptions = false) =>
-            Wrap.ExecuteSafe(() => ExecuteDisposableCore<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}")));
+            Wrap.ExecuteSafe(() => ExecuteDisposableCore<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}")));
         public static Wrap.SafeResult<TResult> ExecuteDisposableSafe<TResult>(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Func<Task<TResult>>> operation, int timeout = 60000, bool logExceptions = false) =>
-            Wrap.ExecuteSafe(() => ExecuteDisposableCore<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}")));
+            Wrap.ExecuteSafe(() => ExecuteDisposableCore<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}")));
         public static Exception ExecuteDisposableSafe(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Action> operation, int timeout = 60000, bool logExceptions = false) =>
-            Wrap.ExecuteSafe((Action)(() => ExecuteDisposableCore<Void>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}"))));
+            Wrap.ExecuteSafe((Action)(() => ExecuteDisposableCore<Void>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}"))));
         public static Task<Wrap.SafeResult<TResult>> ExecuteDisposableSafeAsync<TResult>(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Func<TResult>> operation, int timeout = 60000, bool logExceptions = false) =>
-            Wrap.ExecuteSafeAsync(async token => await ExecuteDisposableCoreAsync<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}")));
+            Wrap.ExecuteSafeAsync(async token => await ExecuteDisposableCoreAsync<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}")));
         public static Task<Wrap.SafeResult<TResult>> ExecuteDisposableSafeAsync<TResult>(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Func<Task<TResult>>> operation, int timeout = 60000, bool logExceptions = false) => 
-            Wrap.ExecuteSafeAsync(async token => await ExecuteDisposableCoreAsync<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}")));
+            Wrap.ExecuteSafeAsync(async token => await ExecuteDisposableCoreAsync<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}")));
         public static Task<Exception> ExecuteDisposableSafeAsync(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Action> operation, int timeout = 60000, bool logExceptions = false) =>
-            Wrap.ExecuteSafeAsync((Func<CancellationToken, Task>)(async token => await ExecuteDisposableCoreAsync<Void>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"Interprocess --ActivePath \"{Directory.GetCurrentDirectory()}\" Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}"))));
+            Wrap.ExecuteSafeAsync((Func<CancellationToken, Task>)(async token => await ExecuteDisposableCoreAsync<Void>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"Interprocess --ActivePath \"{Directory.GetCurrentDirectory()}\" Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}"))));
         
         public static TResult ExecuteDisposable<TResult>(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Func<TResult>> operation, int timeout = 60000, bool logExceptions = false) =>
-            ExecuteDisposableCore<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}"));
+            ExecuteDisposableCore<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}"));
         public static TResult ExecuteDisposable<TResult>(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Func<Task<TResult>>> operation, int timeout = 60000, bool logExceptions = false) =>
-            ExecuteDisposableCore<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}"));
+            ExecuteDisposableCore<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}"));
         public static void ExecuteDisposable(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Action> operation, int timeout = 60000, bool logExceptions = false) =>
-            ExecuteDisposableCore<Void>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}"));
+            ExecuteDisposableCore<Void>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}"));
         public static Task<TResult> ExecuteDisposableAsync<TResult>(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Func<TResult>> operation, int timeout = 60000, bool logExceptions = false) =>
-            ExecuteDisposableCoreAsync<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}"));
+            ExecuteDisposableCoreAsync<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}"));
         public static Task<TResult> ExecuteDisposableAsync<TResult>(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Func<Task<TResult>>> operation, int timeout = 60000, bool logExceptions = false) => 
-            ExecuteDisposableCoreAsync<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}"));
+            ExecuteDisposableCoreAsync<TResult>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}"));
         public static async Task ExecuteDisposableAsync(TargetLevel parentLevel, Expression<Func<string, int>> launchMethod, Expression<Action> operation, int timeout = 60000, bool logExceptions = false) =>
-            await ExecuteDisposableCoreAsync<Void>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}"));
+            await ExecuteDisposableCoreAsync<Void>(parentLevel, GetLambdaMessage(operation, parentLevel), timeout, logExceptions, GetLambdaMessage(launchMethod, parentLevel, $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={parentLevel}:ProcessID={(ApplicationLevel == parentLevel.ToInternalLevel() ? Process.GetCurrentProcess().Id : LevelController.GetRegisteredNodes().First(x => x.Level == parentLevel.ToInternalLevel()).ProcessID)} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}"));
         
         #endregion
 
@@ -822,8 +909,6 @@ namespace Interprocess
                     }
                     else
                         SetMessageResult(message, new MessageResult(new Guid(), message.TargetLevel, message.CallerLevel, result.Value), null);
-
-                    message.Processed.Release();
                 });
                 return;
             }
@@ -964,7 +1049,7 @@ namespace Interprocess
         
         private static Process LaunchDisposableNode()
         {
-            var arguments = $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={ApplicationLevel}:ProcessID={Process.GetCurrentProcess().Id} --Host {Process.GetCurrentProcess().Id}";
+            var arguments = $"\"{Directory.GetCurrentDirectory()}\" Interprocess Disposable --Mode TwoWay --Nodes Level={ApplicationLevel}:ProcessID={Process.GetCurrentProcess().Id} --Host {Process.GetCurrentProcess().Id}{BuildSessionArgs()}";
             return Process.Start(new ProcessStartInfo(Win32.ProcessEx.GetCurrentProcessFileLocation(), arguments) {UseShellExecute = false, CreateNoWindow = true});
         }
 
@@ -1136,7 +1221,15 @@ namespace Interprocess
                 }
 
                 if (sizeBytesLeft > 0)
-                    pipe.Read(header, header.Length - sizeBytesLeft, sizeBytesLeft);
+                {
+                    int totalRead = 0;
+                    while (totalRead < sizeBytesLeft)
+                    {
+                        int n = pipe.Read(header, header.Length - sizeBytesLeft + totalRead, sizeBytesLeft - totalRead);
+                        if (n == 0) throw new IOException("Pipe closed during header read.");
+                        totalRead += n;
+                    }
+                }
 
                 var result = new ReadJsonResult();
                 if (isMessage)
@@ -1148,6 +1241,8 @@ namespace Interprocess
                 try
                 {
                     int messageLength = BitConverter.ToInt32(header, isMessage ? 20 : 0);
+                    if (messageLength < 0)
+                        throw new SerializationException($"Received negative message length ({messageLength}).");
                     if (messageLength > MaxMessageSize)
                         throw new SerializationException($"Received data is more than the maximum message size ({messageLength / 1024}KB > {MaxMessageSize / 1024}KB).");
 
@@ -1163,7 +1258,15 @@ namespace Interprocess
                     }
                     
                     if (jsonBytesLeft > 0)
-                        pipe.Read(jsonBuffer, jsonBuffer.Length - jsonBytesLeft, jsonBytesLeft);
+                    {
+                        int totalRead2 = 0;
+                        while (totalRead2 < jsonBytesLeft)
+                        {
+                            int n = pipe.Read(jsonBuffer, jsonBuffer.Length - jsonBytesLeft + totalRead2, jsonBytesLeft - totalRead2);
+                            if (n == 0) throw new IOException("Pipe closed during body read.");
+                            totalRead2 += n;
+                        }
+                    }
 
                     result.Json = jsonBuffer;
                     return result;
@@ -1220,7 +1323,7 @@ namespace Interprocess
             {
                 foreach (var invoker in handler.GetInvocationList())
                 {
-                    SafeTask.Run(() => ((EventHandler<Level>)invoker).Invoke(exitCode, level.ToLevel()), true);
+                    SafeTask.Run(() => ((EventHandler<Level>)invoker).Invoke(null, level.ToLevel()), true);
                 }
             }
         }
@@ -1257,10 +1360,10 @@ namespace Interprocess
                         if (message.LogExceptions)
                             Log.EnqueueExceptionSafe(exception, null, null, ("Enqueued", "true"));
                         
-                        if (exception is SerializableException serializableException)
-                            message.Result.Exception = serializableException;
-                        else
-                            message.Result.Exception = new SerializableException(exception);
+                        var serializableException = exception is SerializableException se
+                            ? se
+                            : new SerializableException(exception);
+                        message.Result = new MessageResult(message.MessageID, message.TargetLevel, message.CallerLevel, serializableException);
                     }
                     message.Processed.Release();
                     Tasks.TryRemove(message.MessageID, out _);
@@ -1347,6 +1450,119 @@ namespace Interprocess
             if (Win32.ProcessEx.GetProcessFileLocation((int)id) != currentExe)
                 throw new SecurityException("Process path mismatch.");
         }
+
+        // --- Peer integrity verification ------------------------------------------------
+        // The node registration message lets a peer claim any Level, but revealing that
+        // claim (e.g. "I am Administrator") must require actually running at elevated
+        // integrity. We impersonate the connected client through the pipe and read the
+        // mandatory integrity level of its token.
+
+        [DllImport("advapi32.dll", SetLastError = true)]
+        private static extern bool GetTokenInformation(IntPtr TokenHandle, int TokenInformationClass, IntPtr TokenInformation, uint TokenInformationLength, out uint ReturnLength);
+
+        private const int TRENTokenIntegrityLevel = 25;
+        public const int SECURITY_MANDATORY_MEDIUM_RID = 0x2000;
+        public const int SECURITY_MANDATORY_HIGH_RID = 0x3000;
+
+        /// <summary>
+        /// Impersonates the connected pipe client and returns the mandatory integrity RID
+        /// of its token (0x1000 Low, 0x2000 Medium, 0x3000 High, 0x4000 System).
+        /// Returns -1 when the client identity cannot be determined.
+        /// </summary>
+        public static int GetClientIntegrityRid(NamedPipeServerStream server)
+        {
+            try
+            {
+                int rid = -1;
+                server.RunAsClient(() =>
+                {
+                    using var identity = WindowsIdentity.GetCurrent();
+                    rid = GetTokenIntegrityRid(identity.Token);
+                });
+                return rid;
+            }
+            catch (Exception)
+            {
+                return -1;
+            }
+        }
+
+        private static int GetTokenIntegrityRid(IntPtr token)
+        {
+            uint length = 0;
+            GetTokenInformation(token, TRENTokenIntegrityLevel, IntPtr.Zero, 0, out length);
+            if (length == 0)
+                return -1;
+
+            IntPtr info = Marshal.AllocHGlobal((int)length);
+            try
+            {
+                if (!GetTokenInformation(token, TRENTokenIntegrityLevel, info, length, out _))
+                    return -1;
+
+                // TOKEN_MANDATORY_LABEL is a single PSID; read the last SID sub-authority.
+                IntPtr sid = Marshal.ReadIntPtr(info);
+                byte subAuthorityCount = Marshal.ReadByte(sid, 1);
+                if (subAuthorityCount == 0)
+                    return -1;
+
+                uint subAuthority = (uint)Marshal.ReadInt32(sid, 8 + 4 * (subAuthorityCount - 1));
+                return unchecked((int)subAuthority);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(info);
+            }
+        }
+
+        /// <summary>
+        /// Rejects a node registration that claims an elevated level without the matching
+        /// mandatory integrity level. Identical-exe middlemen at Medium integrity can no
+        /// longer register themselves as Administrator/TrustedInstaller nodes.
+        /// </summary>
+        public static void ThrowIfInsufficientPeerIntegrity(int integrityRid, InternalLevel claimedLevel)
+        {
+            if (integrityRid < 0)
+            {
+                if (claimedLevel == InternalLevel.Administrator || claimedLevel == InternalLevel.TrustedInstaller)
+                    throw new System.Security.SecurityException(
+                        $"Cannot verify peer integrity for '{claimedLevel}' node registration — rejecting.");
+                Wrap.ExecuteSafe(() => Log.EnqueueSafe(LogType.Warning,
+                    $"Could not determine peer integrity for '{claimedLevel}' node registration.",
+                    new SerializableTrace(), null, ("Claimed Level", claimedLevel)), true);
+                return;
+            }
+
+            int required;
+            switch (claimedLevel)
+            {
+                case InternalLevel.Administrator:
+                case InternalLevel.TrustedInstaller:
+                    required = SECURITY_MANDATORY_HIGH_RID;
+                    break;
+                default:
+                    required = SECURITY_MANDATORY_MEDIUM_RID;
+                    break;
+            }
+
+            if (integrityRid < required)
+                throw new SecurityException(
+                    $"Node registration rejected: peer mandatory integrity level 0x{integrityRid:X} is below the required 0x{required:X} for level '{claimedLevel}'.");
+        }
+
+        // --- Verification acknowledgement authentication ----------------------------------
+        // The verification round trip used to be echoed with a single raw "1" byte, which
+        // any process on the pipe could forge. Every response now carries an HMAC of the
+        // request id under the per-run session secret shared by the node chain.
+
+        internal static byte[] ComputeVerificationMac(Guid messageId, byte resultByte)
+        {
+            using var hmac = new System.Security.Cryptography.HMACSHA256(Encoding.UTF8.GetBytes(_sessionSecret ?? string.Empty));
+            var data = new byte[17];
+            Array.Copy(messageId.ToByteArray(), 0, data, 0, 16);
+            data[16] = resultByte;
+            return hmac.ComputeHash(data);
+        }
         
         private static Task ThrowIfUnauthorizedMessageSender(InterMessage message) => ThrowIfUnauthorizedSender(new VerificationRequest()
         {
@@ -1373,7 +1589,7 @@ namespace Interprocess
             {
                 return Wrap.ExecuteSafe(() =>
                 {
-                    NamedPipeClientStream clientPipe = new NamedPipeClientStream(".", $"{PipePrefix}-{request.TargetLevel}-VerificationReceiver", PipeDirection.InOut, PipeOptions.None);
+                    NamedPipeClientStream clientPipe = new NamedPipeClientStream(".", VerificationPipeName(request.TargetLevel), PipeDirection.InOut, PipeOptions.None);
 
                     bool retried = false;
                     byte[] json = JsonSerializer.SerializeToUtf8Bytes(request, _serializerOptions);
@@ -1391,7 +1607,7 @@ namespace Interprocess
 
                             retried = true;
                             clientPipe.Dispose();
-                            clientPipe = new NamedPipeClientStream(".", $"{PipePrefix}-{request.TargetLevel}-VerificationReceiver", PipeDirection.InOut, PipeOptions.None);
+                            clientPipe = new NamedPipeClientStream(".", VerificationPipeName(request.TargetLevel), PipeDirection.InOut, PipeOptions.None);
                         }
                     }
 
@@ -1404,6 +1620,28 @@ namespace Interprocess
                         byte[] verifiedByte = new byte[] { 0 };
                         using (_ = new SynchronousIoCanceler(5000))
                             clientPipe.Read(verifiedByte, 0, verifiedByte.Length);
+
+                        // The response is a 1-byte verdict followed by a 32-byte HMAC-SHA256
+                        // of (message id + verdict) keyed with the session secret. Any peer
+                        // that cannot reproduce the MAC is not part of this session, so a
+                        // forged raw "1" byte no longer passes verification. Pipe reads can
+                        // return short, so read the MAC in a loop until complete.
+                        byte[] responseMac = new byte[32];
+                        using (_ = new SynchronousIoCanceler(5000))
+                        {
+                            int macOffset = 0;
+                            int bytesRead;
+                            while (macOffset < responseMac.Length &&
+                                   (bytesRead = clientPipe.Read(responseMac, macOffset, responseMac.Length - macOffset)) > 0)
+                            {
+                                macOffset += bytesRead;
+                            }
+                            if (macOffset < responseMac.Length)
+                                throw new UnauthorizedAccessException("Verification response was truncated.");
+                        }
+
+                        if (!responseMac.SequenceEqual(ComputeVerificationMac(request.IdToVerify, verifiedByte[0])))
+                            throw new UnauthorizedAccessException("Verification response authentication failed.");
 
                         if (verifiedByte[0] != 1)
                             throw new UnauthorizedAccessException("Verification failed.");

@@ -58,13 +58,15 @@ namespace KTWirzade.Shared
         
         public static bool operator ==(VersionNumber a, VersionNumber b)
         {
-            if (a is null || b is null) return true;
+            if (a is null && b is null) return true;
+            if (a is null || b is null) return false;
             return a.IsEqual(b);
         }
-        
+
         public static bool operator !=(VersionNumber a, VersionNumber b)
         {
-            if (a is null || b is null) return false;
+            if (a is null && b is null) return false;
+            if (a is null || b is null) return true;
             return !a.IsEqual(b);
         }
         public static bool operator >=(VersionNumber a, VersionNumber b)
@@ -258,16 +260,15 @@ namespace KTWirzade.Shared
         [XmlIgnore] [CanBeNull]
         public byte[] ImageBytes = null;
 
-        [XmlIgnore]
+        [CanBeNull]
         public List<WindowsUpdate> ExcludedWindowsUpdates { get; set; } = null;
-        [XmlIgnore]
         public bool ExcludeBadWindowsUpdates { get; set; } = false;
 
         [NotNull]
         public static Playbook[] GetAppliedPlaybooks()
         {
             var list = new List<Playbook>();
-            using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\KTWirzade\Playbooks\Applied");
+            using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\AME\Playbooks\Applied");
             if (key != null)
             {
                 foreach (var subKeyName in key.GetSubKeyNames())
@@ -299,7 +300,7 @@ namespace KTWirzade.Shared
                 }
             }
 
-            var appliedDir = Environment.ExpandEnvironmentVariables(@"%ProgramData%\KTWirzade\AppliedPlaybooks");
+            var appliedDir = Environment.ExpandEnvironmentVariables(@"%ProgramData%\AME\AppliedPlaybooks");
             if (Directory.Exists(appliedDir))
             {
                 foreach (var appliedPB in Directory.GetDirectories(appliedDir).Reverse())
@@ -462,7 +463,7 @@ namespace KTWirzade.Shared
             httpClient.Client.DefaultRequestHeaders.UserAgent.ParseAdd("curl/7.55.1"); //Required for GitHub
 
             var downloadUrl = string.Empty;
-            var downloadDir = System.IO.Path.Combine(Environment.GetEnvironmentVariable("TEMP"), "KTWirzade");
+            var downloadDir = System.IO.Path.Combine(Environment.GetEnvironmentVariable("TEMP"), "AME");
             var downloadPath = System.IO.Path.Combine(downloadDir, "playbook.apbx");
 
             string baseUrl;
@@ -576,13 +577,13 @@ namespace KTWirzade.Shared
         {
             public override void Validate()
             {
-                if (Options.Length > 2 && TopLine != null && BottomLine != null)
-                    throw new Exception(@$"CheckboxPage with a TopLine and BottomLine must not have more than 2 options.");
-                if (Options.Length > 3 && (TopLine != null || BottomLine != null))
-                    throw new Exception(@$"CheckboxPage with a TopLine or BottomLine must not have more than 3 options.");
-                if (Options.Length > 4)
-                    throw new Exception(@$"CheckboxPage must not have more than 4 options.");
-                
+                if (Options.Length > 4 && TopLine != null && BottomLine != null)
+                    throw new Exception(@$"CheckboxPage with a TopLine and BottomLine must not have more than 4 options.");
+                if (Options.Length > 5 && (TopLine != null || BottomLine != null))
+                    throw new Exception(@$"CheckboxPage with a TopLine or BottomLine must not have more than 5 options.");
+                if (Options.Length > 7)
+                    throw new Exception(@$"CheckboxPage must not have more than 7 options.");
+
                 if (Options.Distinct().Count() != Options.Length)
                     throw new XmlException("Duplicate options found in CheckboxPage.");
             }
@@ -603,12 +604,12 @@ namespace KTWirzade.Shared
         {
             public override void Validate()
             {
-                if (Options.Length > 2 && TopLine != null && BottomLine != null)
-                    throw new XmlException(@$"RadioPage with a TopLine and BottomLine must not have more than 2 options.");
-                if (Options.Length > 3 && (TopLine != null || BottomLine != null))
-                    throw new XmlException(@$"RadioPage with a TopLine or BottomLine must not have more than 3 options.");
-                if (Options.Length > 4)
-                    throw new XmlException(@$"RadioPage must not have more than 4 options.");
+                if (Options.Length > 4 && TopLine != null && BottomLine != null)
+                    throw new XmlException(@$"RadioPage with a TopLine and BottomLine must not have more than 4 options.");
+                if (Options.Length > 5 && (TopLine != null || BottomLine != null))
+                    throw new XmlException(@$"RadioPage with a TopLine or BottomLine must not have more than 5 options.");
+                if (Options.Length > 7)
+                    throw new XmlException(@$"RadioPage must not have more than 7 options.");
                     
                 if (DefaultOption != null && !Options.Any(x => x.Name == DefaultOption))
                     throw new XmlException(@$"No option matching DefaultOption {DefaultOption} in Radio");
@@ -632,8 +633,8 @@ namespace KTWirzade.Shared
         {
             public override void Validate()
             {
-                if (Options.Length > 4)
-                    throw new XmlException(@$"RadioImagePage must not have more than 4 options.");
+                if (Options.Length > 8)
+                    throw new XmlException(@$"RadioImagePage must not have more than 8 options.");
                 
                 if (DefaultOption != null && !Options.Any(x => x.Name == DefaultOption))
                     throw new XmlException(@$"No option matching DefaultOption {DefaultOption} in RadioImagePage.");

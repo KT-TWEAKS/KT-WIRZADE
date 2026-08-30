@@ -59,7 +59,7 @@ namespace KTWirzade.GUI.Controls
             else
             {
                 Visibility = Visibility.Collapsed;
-                StatusText.Text = "Select";
+                StatusText.Text = "Selecionar";
                 Button.IsEnabled = false;
                 Button.Click -= VerificationButton_OnClick;
                 //StatusIcon.Symbol = (Symbol)60482;
@@ -178,7 +178,7 @@ namespace KTWirzade.GUI.Controls
 
         private void SetContent()
         {
-            if (lastVerificationLevel == selectedPB.VerificationStatus && StatusText.Text != "Select")
+            if (lastVerificationLevel == selectedPB.VerificationStatus && StatusText.Text != "Selecionar")
             {
                 return;
             }
@@ -190,46 +190,46 @@ namespace KTWirzade.GUI.Controls
                     case null:
                     case PlaybookGUI.VerificationLevel.Verified:
                         //StatusIcon.Symbol = (Symbol)60488;
-                        StatusText.Text = "Verified";
-                        PopupHeader.Text = "Verified Playbook";
+                        StatusText.Text = "Verificado";
+                        PopupHeader.Text = "Playbook verificado";
                         PopupText.Inlines.Clear();
-                        PopupText.Text = "This Playbook was verified by Ameliorated to be from a trustworthy developer.";
-                        PopupButtonText.Text = "Visit website";
+                        PopupText.Text = "Este playbook foi verificado pelo KT WIRZADE como sendo de um desenvolvedor confiavel.";
+                        PopupButtonText.Text = "Visitar site";
                         PopupButtonImage.SetResourceReference(System.Windows.Controls.Image.SourceProperty, "Web64");
                         PopupButton.SetResourceReference(BackgroundProperty, "VerificationVerifiedBrush");
                         break;
                     case PlaybookGUI.VerificationLevel.Unverified:
                         //StatusIcon.Symbol = (Symbol)60506;
-                        StatusText.Text = "Unverified";
-                        PopupHeader.Text = "Unverified Playbook";
+                        StatusText.Text = "Não verificado";
+                        PopupHeader.Text = "Playbook não verificado";
                         PopupText.Text = string.Empty;
-                        PopupText.Inlines.Add(new Run("This Playbook has"));
-                        PopupText.Inlines.Add(new Run(" not ")
+                        PopupText.Inlines.Add(new Run("Este playbook"));
+                        PopupText.Inlines.Add(new Run(" não ")
                         {
                             FontWeight = FontWeights.Bold
                         });
-                        PopupText.Inlines.Add(new Run("been verified by Ameliorated to be from a trustworthy developer."));
-                        PopupButtonText.Text = "I understand";
+                        PopupText.Inlines.Add(new Run("foi verificado pelo KT WIRZADE como sendo de um desenvolvedor confiável."));
+                        PopupButtonText.Text = "Eu entendo";
                         PopupButtonImage.SetResourceReference(System.Windows.Controls.Image.SourceProperty, "ShieldCheckmark64");
                         PopupButton.SetResourceReference(BackgroundProperty, "VerificationUnverifiedBrush");
                         break;
                     case PlaybookGUI.VerificationLevel.Malicious:
                         //StatusIcon.Symbol = (Symbol)60490;
-                        StatusText.Text = "Malicious";
-                        PopupHeader.Text = "Malicious Playbook";
+                        StatusText.Text = "Malicioso";
+                        PopupHeader.Text = "Playbook malicioso";
                         PopupText.Inlines.Clear();
-                        PopupText.Text = "This Playbook was detected as intentionally malicious, and has been reported to Ameliorated.";
-                        PopupButtonText.Text = "Delete Playbook";
+                        PopupText.Text = "Este playbook foi detectado como intencionalmente malicioso e foi reportado ao KT WIRZADE.";
+                        PopupButtonText.Text = "Excluir playbook";
                         PopupButtonImage.SetResourceReference(System.Windows.Controls.Image.SourceProperty, "Trash64");
                         PopupButton.SetResourceReference(BackgroundProperty, "VerificationMaliciousBrush");
                         break;
                     case PlaybookGUI.VerificationLevel.Unreached:
                         //StatusIcon.Symbol = (Symbol)59281;
-                        StatusText.Text = "Unverified";
-                        PopupHeader.Text = "Unverified Playbook";
+                        StatusText.Text = "Não verificado";
+                        PopupHeader.Text = "Playbook não verificado";
                         PopupText.Text = string.Empty;
-                        PopupText.Text = "Unable to reach verification servers. This Playbook may be unverified or malicious.";
-                        PopupButtonText.Text = "I understand";
+                        PopupText.Text = "Não foi possível acessar os servidores de verificação. Este playbook pode não ser verificado ou ser malicioso.";
+                        PopupButtonText.Text = "Eu entendo";
                         PopupButtonImage.SetResourceReference(System.Windows.Controls.Image.SourceProperty, "ShieldCheckmark64");
                         PopupButton.SetResourceReference(BackgroundProperty, "VerificationUnverifiedBrush");
                         break;
@@ -249,7 +249,7 @@ namespace KTWirzade.GUI.Controls
                 case PlaybookGUI.VerificationLevel.Verified:
                     if ((selectedPB).Website == null)
                     {
-                        MessageBox.Show(typeof(MainWindow), "No website available for this Playbook.", "Information");
+                        MessageBox.Show(typeof(MainWindow), "Nenhum site disponivel para este playbook.", "Information");
                         break;
                     }
                     try
@@ -259,7 +259,7 @@ namespace KTWirzade.GUI.Controls
                     }
                     catch (Exception)
                     {
-                        MessageBox.Show(typeof(MainWindow), "Website link is invalid.", "Warning");
+                        MessageBox.Show(typeof(MainWindow), "Link do site invalido.", "Warning");
                         break;
                     }
                 case PlaybookGUI.VerificationLevel.Unverified:

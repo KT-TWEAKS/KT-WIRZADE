@@ -308,6 +308,9 @@ namespace KTWirzade.Shared
                     if (exitCode == 1)
                         throw new Exception("Could not add certificate.");
 
+                    // The exported .cer temp file has served its purpose after import.
+                    try { File.Delete(certPath); } catch { }
+
                     progress.Report(10);
 
                     reporter.Report("Applying service package...");
@@ -345,9 +348,12 @@ namespace KTWirzade.Shared
                     {
                         if (noSafeBoot)
                         {
-                            Console.WriteLine("\r\nDefender removal package application failed. Please restart and try again.");
-                            Environment.Exit(1);
-                            return false;
+                            // This runs inside the IPC TrustedInstaller node: Environment.Exit
+                            // would kill the process without returning the reason to the caller.
+                            // Throw instead so the GUI/CLI receives a descriptive failure.
+                            throw new Exception(
+                                "Defender removal package application failed (DISM exit code " + exitCode + ")." +
+                                (string.IsNullOrEmpty(err) ? "" : " DISM: " + err));
                         }
                         
                         Log.EnqueueSafe(LogType.Info, "Live dism application failed: " + err, new SerializableTrace(), ("Exit code", exitCode));
@@ -546,8 +552,12 @@ namespace KTWirzade.Shared
             return (status.dwCurrentState == desiredStatus || status.dwCurrentState == Win32.Service.ServiceState.NotFound);
         }
 
-        private static int RunPSCommand(string command, [CanBeNull] DataReceivedEventHandler outputHandler, [CanBeNull] DataReceivedEventHandler errorHandler) =>
-            RunCommand("powershell.exe", $"-NoP -C \"{command}\"", outputHandler, errorHandler);
+        private static int RunPSCommand(string command, [CanBeNull] DataReceivedEventHandler outputHandler, [CanBeNull] DataReceivedEventHandler errorHandler)
+        {
+            var cleaned = command.Replace("\"\"\"", "\"");
+            var encoded = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(cleaned));
+            return RunCommand("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -NonInteractive -EncodedCommand {encoded}", outputHandler, errorHandler);
+        }
         private static int RunCommand(string exe, string arguments, [CanBeNull] DataReceivedEventHandler outputHandler, [CanBeNull] DataReceivedEventHandler errorHandler)
         {
             var process = new Process
@@ -598,14 +608,33 @@ namespace KTWirzade.Shared
                 return destination;
             }
             
-            Assembly assembly = Assembly.GetEntryAssembly();
-            using (UnmanagedMemoryStream stream = (UnmanagedMemoryStream)assembly!.GetManifestResourceStream($"KTWirzade.GUI.Resources.Z-AME-NoDefender-Package31bf3856ad364e35{cabArch}1.0.0.0.cab"))
+            // The cab is embedded in the entry application (GUI or CLI), with the
+            // Shared assembly as a final fallback so IPC child nodes always resolve it.
+            var resourceName = $"Z-AME-NoDefender-Package31bf3856ad364e35{cabArch}1.0.0.0.cab";
+            string[] candidates =
             {
-                byte[] buffer = new byte[stream!.Length];
-                stream.Read(buffer, 0, buffer.Length);
-                File.WriteAllBytes(destination, buffer);
+                $"KTWirzade.GUI.Resources.{resourceName}",   // when entry process is the GUI
+                $"KTWirzade.CLI.Properties.{resourceName}",  // when entry process is the CLI
+                $"KTWirzade.Shared.Properties.{resourceName}"// fallback: executing Shared assembly
+            };
+
+            foreach (var asm in new[] { Assembly.GetEntryAssembly(), Assembly.GetExecutingAssembly() })
+            {
+                if (asm == null) continue;
+                foreach (var name in candidates)
+                {
+                    using (UnmanagedMemoryStream stream = (UnmanagedMemoryStream)asm.GetManifestResourceStream(name))
+                    {
+                        if (stream == null || stream.Length == 0) continue;
+                        byte[] buffer = new byte[stream.Length];
+                        stream.Read(buffer, 0, buffer.Length);
+                        File.WriteAllBytes(destination, buffer);
+                        return destination;
+                    }
+                }
             }
-            return destination;
+
+            throw new InvalidOperationException($"Pacote de remocao do Defender ({cabArch}) nao incluido neste build - recurso embutido ausente ou vazio.");
         }
         
         [InterprocessMethod(Level.Administrator)]
@@ -764,6 +793,8 @@ namespace KTWirzade.Shared
             }
 
 
+            // Memory integrity disable (single pass - this block was previously duplicated
+            // verbatim, running the same registry write and NSudo fallback twice).
             try
             {
                 // Can cause ProcessHacker driver warnings without this
@@ -775,34 +806,7 @@ namespace KTWirzade.Shared
             }
             catch (Exception e)
             {
-                Log.EnqueueExceptionSafe(e, "First memory integrity disable failed.");
-
-                new RunAction()
-                {
-                    RawPath = Directory.GetCurrentDirectory(),
-                    Exe = $"NSudoLC.exe",
-                    Arguments =
-                        @"-U:T -P:E -M:S -ShowWindowMode:Hide -Priority:RealTime -Wait reg add ""HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity"" /v Enabled /d 0 /f",
-                    CreateWindow = false
-                }.RunTask();
-
-                if (new RegistryValueAction() { KeyName = @"HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", Value = "Enabled", Data = 0, }.GetStatus()
-                    != UninstallTaskStatus.Completed)
-                    Log.EnqueueSafe(LogType.Warning, "Could not disable memory integrity.", new SerializableTrace());
-            }
-            
-            try
-            {
-                // Can cause ProcessHacker driver warnings without this
-                new RegistryValueAction() { KeyName = @"HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", Value = "Enabled", Data = 0, }.RunTask();
-
-                if (new RegistryValueAction() { KeyName = @"HKLM\SYSTEM\CurrentControlSet\Control\DeviceGuard\Scenarios\HypervisorEnforcedCodeIntegrity", Value = "Enabled", Data = 0, }.GetStatus()
-                    != UninstallTaskStatus.Completed)
-                    throw new Exception("Unknown error");
-            }
-            catch (Exception e)
-            {
-                Log.EnqueueExceptionSafe(e, "First memory integrity disable failed.");
+                Log.EnqueueExceptionSafe(e, "Memory integrity disable failed, retrying via NSudo.");
 
                 new RunAction()
                 {

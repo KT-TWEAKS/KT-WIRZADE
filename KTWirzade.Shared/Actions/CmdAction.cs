@@ -47,7 +47,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(int), Alias = "timeout")]
         public int? Timeout { get; set; }
         
-        [YamlMember(typeof(string), Alias = "wait")]
+        [YamlMember(typeof(bool), Alias = "wait")]
         public bool Wait { get; set; } = true;
         
         [YamlMember(typeof(bool), Alias = "exeDir")]
@@ -56,7 +56,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(Dictionary<string, ExitCodeAction>), Alias = "handleExitCodes")]
         [CanBeNull] public Dictionary<string, ExitCodeAction> HandleExitCodes { get; set; } = null;
 
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 1;
         
         public int GetProgressWeight() => ProgressWeight;
@@ -93,7 +93,7 @@ namespace KTWirzade.Shared.Actions
             {
                 WindowStyle = ProcessWindowStyle.Normal,
                 FileName = "cmd.exe",
-                Arguments = "/C " + $"\"{this.Command}\"",
+                Arguments = "/S /C " + $"\"{this.Command}\"",
                 UseShellExecute = false,
                 // .NET has a bug when the start command is used. Using WaitForExit() waits for the
                 // started process to exit, instead of just the original cmd.exe process. For some
@@ -119,7 +119,7 @@ namespace KTWirzade.Shared.Actions
             using (var handler = new OutputHandler("Process", process, output))
             {
                 handler.StartProcess(RunAs);
-             
+              
                 if (!Wait)
                 {
                     return;
@@ -182,7 +182,7 @@ namespace KTWirzade.Shared.Actions
             {
                 WindowStyle = ProcessWindowStyle.Normal,
                 FileName = "cmd.exe",
-                Arguments = "/C " + $"{this.Command}",
+                Arguments = "/S /C " + $"\"{this.Command}\"",
                 UseShellExecute = false,
                 RedirectStandardError = true,
                 RedirectStandardOutput = true,

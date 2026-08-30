@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Animation;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -36,6 +37,11 @@ namespace KTWirzade.GUI.Controls
 
         public CornerRadius CornerRadius { get; set; } = new CornerRadius(1.0);
 
+        /// <summary>
+        /// Eased width transition applied on value changes (milliseconds).
+        /// </summary>
+        public int AnimationDurationMs { get; set; } = 260;
+
         public double Maximum
         {
             get
@@ -51,15 +57,15 @@ namespace KTWirzade.GUI.Controls
                     double toBeWidth = Value / Math.Max(_maximum, 1.0) * Container.ActualWidth;
                     if (toBeWidth > Container.ActualWidth)
                     {
-                        Rect.Width = Container.ActualWidth;
+                        SetWidthDirect(Container.ActualWidth);
                     }
                     else if (toBeWidth < 0.0)
                     {
-                        Rect.Width = 0.0;
+                        SetWidthDirect(0.0);
                     }
                     else
                     {
-                        Rect.Width = toBeWidth;
+                        SetWidthDirect(toBeWidth);
                     }
                 }
             }
@@ -78,15 +84,15 @@ namespace KTWirzade.GUI.Controls
                 {
                     if (value > Container.ActualWidth)
                     {
-                        Rect.Width = Container.ActualWidth;
+                        SetWidthDirect(Container.ActualWidth);
                     }
                     else if (value < 0.0)
                     {
-                        Rect.Width = 0.0;
+                        SetWidthDirect(0.0);
                     }
                     else
                     {
-                        Rect.Width = value;
+                        SetWidthDirect(value);
                     }
                 }
             }
@@ -122,20 +128,51 @@ namespace KTWirzade.GUI.Controls
             DataContext = this;
             Loaded += delegate
             {
-                double num = Value / Math.Max(_maximum, 1.0) * Container.ActualWidth;
-                if (num > Container.ActualWidth)
-                {
-                    Rect.Width = Container.ActualWidth;
-                }
-                else if (num < 0.0)
-                {
-                    Rect.Width = 0.0;
-                }
-                else
-                {
-                    Rect.Width = num;
-                }
+                Container.SizeChanged += delegate { RefreshWidth(); };
+                RefreshWidth();
             };
+        }
+
+        private void RefreshWidth()
+        {
+            double num = Value / Math.Max(_maximum, 1.0) * (Container.ActualWidth - _progressOffset) + _progressOffset;
+            if (num > Container.ActualWidth)
+            {
+                SetWidthDirect(Container.ActualWidth);
+            }
+            else if (num < 0.0)
+            {
+                SetWidthDirect(0.0);
+            }
+            else
+            {
+                SetWidthDirect(num);
+            }
+        }
+
+        private void SetWidthDirect(double width)
+        {
+            // Clear any running animation so the direct value wins.
+            Rect.BeginAnimation(Border.WidthProperty, null);
+            Rect.Width = width;
+        }
+
+        private void AnimateToWidth(double targetWidth)
+        {
+            if (!IsLoaded || Container.ActualWidth <= 0 || AnimationDurationMs <= 0)
+            {
+                SetWidthDirect(targetWidth);
+                return;
+            }
+
+            DoubleAnimation animation = new DoubleAnimation
+            {
+                From = Rect.ActualWidth,
+                To = targetWidth,
+                Duration = TimeSpan.FromMilliseconds(AnimationDurationMs),
+                EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
+            };
+            Rect.BeginAnimation(Border.WidthProperty, animation);
         }
 
         private static void OnValueChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -150,15 +187,15 @@ namespace KTWirzade.GUI.Controls
                 double toBeWidth = num / Math.Max(maximum, 1.0) * (containerWidth - progressOffset) + progressOffset;
                 if (toBeWidth > containerWidth)
                 {
-                    control.Rect.Width = containerWidth;
+                    control.AnimateToWidth(containerWidth);
                 }
                 else if (toBeWidth < 0.0)
                 {
-                    control.Rect.Width = 0.0;
+                    control.AnimateToWidth(0.0);
                 }
                 else
                 {
-                    control.Rect.Width = toBeWidth;
+                    control.AnimateToWidth(toBeWidth);
                 }
             }
         }

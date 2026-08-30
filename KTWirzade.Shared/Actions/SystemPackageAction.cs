@@ -13,7 +13,7 @@ using Core;
 namespace KTWirzade.Shared.Actions
 {
     // Integrate ame-assassin later
-    internal class SystemPackageAction : Tasks.TaskAction, ITaskAction
+    public class SystemPackageAction : Tasks.TaskAction, ITaskAction
     {
         public void RunTaskOnMainThread(Output.OutputWriter output) { throw new NotImplementedException(); }
         public enum Architecture
@@ -28,18 +28,18 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(string), Alias = "name")]
         public string Name { get; set; }
 
-        [YamlMember(typeof(string), Alias = "arch")]
+        [YamlMember(typeof(Architecture), Alias = "arch")]
         public Architecture Arch { get; set; } = Architecture.All;
 
         [YamlMember(typeof(string), Alias = "language")]
         public string Language { get; set; } = "*";
 
-        [YamlMember(typeof(string), Alias = "regexExcludeFiles")]
+        [YamlMember(typeof(string[]), Alias = "regexExcludeFiles")]
         public string[]? RegexExcludeList { get; set; }
-        [YamlMember(typeof(string), Alias = "excludeDependents")]
+        [YamlMember(typeof(string[]), Alias = "excludeDependents")]
         public string[]? ExcludeDependentsList { get; set; }
 
-        [YamlMember(typeof(string[]), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 15;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Notify;
@@ -59,7 +59,7 @@ namespace KTWirzade.Shared.Actions
         private bool HasFinished = false;
         public async Task<bool> RunTask(Output.OutputWriter output)
         {                
-            if (InProgress) throw new TaskInProgressException("Another Appx action was called while one was in progress.");
+            if (InProgress) throw new TaskInProgressException("Another SystemPackage action was called while one was in progress.");
             InProgress = true;
 
             output.WriteLineSafe("Info", $"Removing system package '{Name}'...");
@@ -84,7 +84,17 @@ namespace KTWirzade.Shared.Actions
 
             string kernelDriverArg = AmeliorationUtil.UseKernelDriver ? " -UseKernelDriver" : "";
 
-            string ameAssassinPath = Path.Combine(AmeliorationUtil.Playbook.Path, "Executables", "ame-assassin", "ame-assassin.exe");
+            // Same lookup as AppxAction: the CLI extracts ame-assassin next to its own
+            // executable, so check the app directory before the playbook folders.
+            string ameAssassinPath = new[]
+            {
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ame-assassin", "ame-assassin.exe"),
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ame-assassin.exe"),
+                Path.Combine(Directory.GetCurrentDirectory(), "ame-assassin", "ame-assassin.exe"),
+                Path.Combine(Directory.GetCurrentDirectory(), "ame-assassin.exe"),
+                Path.Combine(AmeliorationUtil.Playbook.Path ?? "", "Executables", "ame-assassin", "ame-assassin.exe"),
+                Path.Combine(AmeliorationUtil.Playbook.Path ?? "", "Tools", "ame-assassin", "ame-assassin.exe"),
+            }.FirstOrDefault(File.Exists);
 
             if (!File.Exists(ameAssassinPath))
             {
@@ -104,7 +114,7 @@ namespace KTWirzade.Shared.Actions
 
             outputWriter = output;
 
-            var proc = Process.Start(psi);
+            using var proc = Process.Start(psi);
 
             if (proc == null)
             {
@@ -138,11 +148,13 @@ namespace KTWirzade.Shared.Actions
             string escapedName = Name.Replace("'", "''");
             string psCommand = $"Get-WindowsPackage -Online | Where-Object {{ $_.PackageName -like '*{escapedName}*' }} | Remove-WindowsPackage -Online -NoRestart -ErrorAction SilentlyContinue";
 
+            var cleaned = psCommand.Replace("\"\"\"", "\"");
+            var encoded = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(cleaned));
             var psi = new ProcessStartInfo()
             {
                 UseShellExecute = false,
                 CreateNoWindow = true,
-                Arguments = $"-NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -Command \"{psCommand}\"",
+                Arguments = $"-NoProfile -NonInteractive -NoLogo -ExecutionPolicy Bypass -EncodedCommand {encoded}",
                 FileName = "powershell.exe",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true

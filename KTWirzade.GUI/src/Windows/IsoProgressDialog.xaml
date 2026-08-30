@@ -10,7 +10,7 @@
         mc:Ignorable="d"
         Height="584" Width="855" Style="{DynamicResource Window}"
         WindowStartupLocation="CenterOwner" RenderTransformOrigin="0.5,0.5" 
-        Title="Playbook to ISO" CornerType="Round" Topmost="False"
+        Title="Playbook para ISO" CornerType="Round" Topmost="False"
         MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}" 
         MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}">
     <UIElement.RenderTransform>
@@ -38,7 +38,7 @@
         <DockPanel Name="TitleBar" Dock="Top" Height="40" VerticalAlignment="Top">
             <Image Style="{StaticResource QualityImage}" Margin="8, 6,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="21" Height="21" />
             <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" IsEnabled="False" DockPanel.Dock="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
-            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" HorizontalAlignment="Left" LineHeight="12" Text="Playbook to ISO" Width="770" TextTrimming="CharacterEllipsis" Height="25" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" MouseLeftButtonDown="TitleBar_MouseDown" />
+            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" HorizontalAlignment="Left" LineHeight="12" Text="Playbook para ISO" Width="770" TextTrimming="CharacterEllipsis" Height="25" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" MouseLeftButtonDown="TitleBar_MouseDown" />
         </DockPanel>
         <Grid Row="1">
             <Grid.ColumnDefinitions>
@@ -58,20 +58,20 @@
                 <Border Name="PageContainer" BorderBrush="{DynamicResource PageBorderBrush}" BorderThickness="1,1,0,1" Background="#00FFFFFF" CornerRadius="8,0,0,8" Padding="29,31,29,0">
                     <Grid>
                         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
-                            <TextBlock Name="PageTitleText" FontSize="16" FontWeight="Bold" Text="Applying Playbook to ISO" MaxWidth="305" HorizontalAlignment="Left" VerticalAlignment="Top" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" />
-                            <TextBlock Text="This will pre-apply the Playbook configuration to the Windows ISO. Injecting registry edits, changes to system services, new applications, system settings, and more." FontSize="13" Width="350" HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,14,0,0" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" />
+                            <TextBlock Name="PageTitleText" FontSize="16" FontWeight="Bold" Text="Aplicando playbook na ISO" MaxWidth="305" HorizontalAlignment="Left" VerticalAlignment="Top" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" />
+                            <TextBlock Text="Ira pre-aplicar a configuracao do playbook na ISO do Windows. Injetando edicoes de registro, alteracoes em servicos, novos aplicativos, configuracoes e mais." FontSize="13" Width="350" HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,14,0,0" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" />
                             <Grid Name="ProgressGrid">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <StackPanel Margin="0,109,0,0" Grid.Column="0" HorizontalAlignment="Left">
-                                    <TextBlock Name="StatusText" FontWeight="Bold" Margin="0,2,0,3" FontSize="15" Text="Extracting Playbook..." Width="230" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Name="StatusText" FontWeight="Bold" Margin="0,2,0,3" FontSize="15" Text="Extraindo playbook..." Width="230" HorizontalAlignment="Left" TextTrimming="CharacterEllipsis" />
                                     <controls:ProgressBarDeterminate x:Name="ProgressBar" Width="362" HorizontalAlignment="Left" />
-                                    <TextBlock Name="FinishText" Visibility="Collapsed" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,-2,0,0" Text="This window can now be closed" Width="230" TextTrimming="CharacterEllipsis" HorizontalAlignment="Left" />
+                                    <TextBlock Name="FinishText" Visibility="Collapsed" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,-2,0,0" Text="Esta janela pode ser fechada" Width="230" TextTrimming="CharacterEllipsis" HorizontalAlignment="Left" />
                                 </StackPanel>
                                 <Button Name="ShowLogsButton" Grid.Column="1" Style="{DynamicResource ContentBoxButton}" Margin="10,0,0,0" HorizontalAlignment="Right" Visibility="Collapsed" VerticalAlignment="Bottom" Click="ShowLogs_OnClick">
-                                    <TextBlock FontSize="14" Margin="0,0,0,0" Text="Show logs" />
+                                    <TextBlock FontSize="14" Margin="0,0,0,0" Text="Mostrar logs" />
                                 </Button>
                             </Grid>
                         </StackPanel>

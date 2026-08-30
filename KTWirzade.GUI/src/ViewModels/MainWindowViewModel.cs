@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using KTWirzade.GUI.Models;
+using KTWirzade.Shared.Cache;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -83,6 +84,24 @@ namespace KTWirzade.GUI.ViewModels
         private bool _UpdatesButtonActive;
 
         private bool _StatusButtonActive;
+
+        private bool _isOnline = true;
+        public bool IsOnline
+        {
+            get => _isOnline;
+            set
+            {
+                SetProperty(ref _isOnline, value);
+                NetworkStatusText = value ? "Online" : "Offline";
+            }
+        }
+
+        private string _networkStatusText = "Online";
+        public string NetworkStatusText
+        {
+            get => _networkStatusText;
+            set => SetProperty(ref _networkStatusText, value);
+        }
 
         private Visibility _StatusButtonVisibility;
 
@@ -402,6 +421,10 @@ namespace KTWirzade.GUI.ViewModels
             state = new ApplicationState();
             CurrentViewModel = ((GlobalsGUI.Current.Playbook != null) ? GlobalsGUI.Current.Playbook.CurrentPage : ((GlobalsGUI.Current.ISO != null) ? GlobalsGUI.Current.ISO.CurrentPage : new SelectPageViewModel()));
             GlobalsGUI.Current.PropertyChanged += Globals_OnPropertyChanged;
+
+            PlaybookCacheManager.NetworkStatusChanged += (s, e) => IsOnline = e.IsOnline;
+            System.Threading.Tasks.Task.Run(() => PlaybookCacheManager.CheckOnlineStatus())
+                .ContinueWith(t => IsOnline = t.Result, System.Threading.Tasks.TaskScheduler.FromCurrentSynchronizationContext());
         }
 
         private void Subscribe()

@@ -64,7 +64,7 @@ namespace KTWirzade.GUI.Windows
             {
                 UsbImage.SetResourceReference(System.Windows.Controls.Image.SourceProperty, "Steam_SVG");
             }
-            else if (GlobalsGUI.Current.ISO.Username == "Ameliorated")
+            else if (GlobalsGUI.Current.ISO.Username == "KTWirzade")
             {
                 UsbImage.SetResourceReference(System.Windows.Controls.Image.SourceProperty, "AME_SVG");
             }
@@ -186,10 +186,14 @@ namespace KTWirzade.GUI.Windows
             }
             _usbNotifier = new NotificationContext();
             _usbNotifier.Register(new CM_NOTIFY_CALLBACK(NotificationReceived));
-            while (true)
+            // Poll until the window is closed - a plain while(true) kept spinning forever
+            // after the dialog was dismissed and dereferenced WriteTask before the
+            // children were added (NRE in async void would crash the app).
+            while (IsLoaded)
             {
                 await Task.Delay(500);
-                if (UsbWriteStack.Children.OfType<UsbProgressItem>().All((UsbProgressItem x) => x.WriteTask.IsCompleted || x.WriteTask.IsFaulted))
+                var items = UsbWriteStack.Children.OfType<UsbProgressItem>().ToList();
+                if (items.All((UsbProgressItem x) => x.WriteTask?.IsCompleted != false))
                 {
                     CloseButton.IsEnabled = true;
                 }
@@ -277,3 +281,4 @@ namespace KTWirzade.GUI.Windows
         }
     }
 }
+

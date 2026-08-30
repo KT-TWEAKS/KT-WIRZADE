@@ -109,6 +109,7 @@ namespace KTWirzade.GUI.Windows
                 string timestamp = DateTime.Now.ToString("yyyy-MM-dd (h.mm tt)").Replace(" )", ")");
                 string folderName = "[" + timestamp + "] " + RemoveInvalidFilePathCharacters(((Playbook)GlobalsGUI.Current.ISO.SelectedPlaybook).Name, "~");
                 logFolder = Path.Combine(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Logs"), folderName);
+                Directory.CreateDirectory(logFolder);
                 bool errorsOccurred = false;
                 DispatcherTimer dispatcherTimer = new DispatcherTimer
                 {

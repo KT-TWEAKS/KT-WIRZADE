@@ -31,6 +31,15 @@ namespace KTWirzade.GUI.Controls
                 IntPtr handle = new WindowInteropHelper(this).Handle;
                 SetWindowLong(handle, -16, GetWindowLong(handle, -16) & -524289);
             };
+            // Keep the Win10 rounded region in sync with geometry changes.
+            base.SizeChanged += delegate
+            {
+                MaterialManager.ApplyRoundedCornerRegion(this);
+            };
+            base.StateChanged += delegate
+            {
+                Dispatcher.BeginInvoke(new Action(() => MaterialManager.ApplyRoundedCornerRegion(this)));
+            };
         }
         protected override void OnActivated(EventArgs e)
         {

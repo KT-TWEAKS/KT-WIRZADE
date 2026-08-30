@@ -124,7 +124,9 @@ namespace KTWirzade.Shared.Actions
             
             try
             {
-                await RunChoco(output, $"install -y --allow-empty-checksums \"{Name}\"{(null == null ? null : $" --source=\"'{Source}'\"")}");
+                // Was "null == null ? ...", an always-true literal that silently dropped the
+                // playbook-provided Source and also produced a malformed --source='' quoting.
+                await RunChoco(output, $"install -y --allow-empty-checksums \"{Name}\"{(Source != null ? $" --source=\"{Source}\"" : null)}");
             }
             catch (Exception e)
             {
@@ -171,10 +173,10 @@ namespace KTWirzade.Shared.Actions
             XNamespace ns = "http://www.w3.org/2005/Atom";
             try
             {
-                string xml;
-                for (int i = 0; true; i++)
+                string xml = null;
+                for (int i = 0; i < 4; i++)
                 {
-                    await Task.Delay(1000 * i);
+                    if (i > 0) await Task.Delay(1000 * i);
                     try
                     {
                         using (var response = await httpClient.GetAsync(queryUrl))
@@ -204,17 +206,17 @@ namespace KTWirzade.Shared.Actions
 
                 output.WriteLineSafe("Info", $"Querying '{queryUrl}'...");
                 
-                string xml;
-                for (int i = 0; true; i++)
+                string xml = null;
+                for (int i = 0; i < 4; i++)
                 {
-                    await Task.Delay(1000 * i);
+                    if (i > 0) await Task.Delay(1000 * i);
                     try
                     {
-                        var response = await httpClient.GetAsync(queryUrl);
-                        response.EnsureSuccessStatusCode();
-                        
-                        xml = await response.Content.ReadAsStringAsync();
-                        response.Dispose();
+                        using (var response = await httpClient.GetAsync(queryUrl))
+                        {
+                            response.EnsureSuccessStatusCode();
+                            xml = await response.Content.ReadAsStringAsync();
+                        }
                         break;
                     }
                     catch (Exception ex)
@@ -567,7 +569,7 @@ namespace KTWirzade.Shared.Actions
                     await httpClient.StartDownload(downloadUrl, downloadPath, 300000);
                 }
 
-                var temp = Path.GetTempPath() + "\\KTWirzade-CHOCO-" + new Random().Next(10000, 700000);
+                var temp = Path.GetTempPath() + "\\AME-CHOCO-" + new Random().Next(10000, 700000);
                 ExtractArchive(downloadPath, temp);
 
                 var startInfo = new ProcessStartInfo

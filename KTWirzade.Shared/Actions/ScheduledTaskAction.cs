@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.DirectoryServices.ActiveDirectory;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -31,7 +33,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(Alias = "path")]
         public string Path { get; set; }
 
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 1;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Log;
@@ -139,6 +141,7 @@ namespace KTWirzade.Shared.Actions
                         // TODO: This will probably not work if we actually use sub-folders
                         try
                         {
+                            CaptureRollback(output, Path, Rollback.RollbackOperation.Delete);
                             ts.RootFolder.DeleteTask(Path, false);
                             DeleteUsingRegistry(Path.TrimStart('\\').Replace('/', '\\'));
                         }
@@ -165,6 +168,11 @@ namespace KTWirzade.Shared.Actions
 
                             if (!(task is null))
                             {
+                                // Record the previous enabled state so rollback can flip it back.
+                                CaptureRollback(output, Path,
+                                    Rollback.RollbackOperation.Modify,
+                                    previousState: task.Enabled.ToString());
+
                                 task.Enabled = Operation == ScheduledTaskOperation.Enable;
                             }
                             else
@@ -195,6 +203,7 @@ namespace KTWirzade.Shared.Actions
                     {
                         try
                         {
+                            CaptureRollback(output, System.IO.Path.Combine(Path.TrimStart('\\').Replace('/', '\\'), x.Name), Rollback.RollbackOperation.Delete);
                             folder.DeleteTask(x.Name, false);
                             DeleteUsingRegistry(System.IO.Path.Combine(Path.TrimStart('\\').Replace('/', '\\'), x.Name));
                         }
@@ -280,6 +289,69 @@ namespace KTWirzade.Shared.Actions
                 return;
                 
             flagsKey.DeleteSubKeyTree(flagMatch);
+        }
+
+        /// <summary>
+        /// Records the task state for rollback. For deletes, exports the task definition
+        /// XML first so RollbackManager can re-create it with schtasks /Create /XML.
+        /// </summary>
+        private static void CaptureRollback(Output.OutputWriter output, string taskPath,
+            Rollback.RollbackOperation operation, string previousState = null)
+        {
+            try
+            {
+                var session = Rollback.RollbackManager.CurrentSession;
+                if (session == null)
+                    return;
+
+                string xmlBackup = null;
+                if (operation == Rollback.RollbackOperation.Delete)
+                {
+                    var backupDir = System.IO.Path.Combine(
+                        Rollback.RollbackPaths.GetSessionDir(session.SessionId), "tasks");
+                    Directory.CreateDirectory(backupDir);
+
+                    var safeName = string.Join("_", taskPath.TrimStart('\\')
+                        .Split(System.IO.Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries));
+                    xmlBackup = System.IO.Path.Combine(backupDir, safeName + ".xml");
+
+                    var psi = new ProcessStartInfo("schtasks.exe", $"/Query /TN \"{taskPath}\" /XML")
+                    {
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true
+                    };
+                    using (var p = Process.Start(psi))
+                    {
+                        if (p == null) return;
+                        string xml = p.StandardOutput.ReadToEnd();
+                        p.StandardError.ReadToEnd();
+                        p.WaitForExit(10000);
+                        if (p.ExitCode == 0 && !string.IsNullOrWhiteSpace(xml))
+                            File.WriteAllText(xmlBackup, xml);
+                        else
+                            xmlBackup = null;
+                    }
+                }
+
+                var entry = new Rollback.RollbackEntry
+                {
+                    TaskName = "ScheduledTaskAction",
+                    ActionType = Rollback.RollbackActionType.ScheduledTask,
+                    Operation = operation,
+                    Target = taskPath,
+                    PreviousValue = previousState
+                };
+                if (xmlBackup != null)
+                    entry.ExtraData["xmlBackup"] = xmlBackup;
+
+                Rollback.RollbackManager.LogEntry(entry);
+            }
+            catch (Exception e)
+            {
+                Log.EnqueueExceptionSafe(LogType.Warning, e);
+            }
         }
     }
 }

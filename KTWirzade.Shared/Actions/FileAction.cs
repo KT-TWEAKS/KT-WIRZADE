@@ -26,13 +26,13 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(string), Alias = "path")]
         public string RawPath { get; set; }
         
-        [YamlMember(typeof(string), Alias = "prioritizeExe")]
+        [YamlMember(typeof(bool), Alias = "prioritizeExe")]
         public bool ExeFirst { get; set; } = false;
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 2;
         
-        [YamlMember(typeof(string), Alias = "useNSudoTI")]
+        [YamlMember(typeof(bool), Alias = "useNSudoTI")]
         public bool TrustedInstaller { get; set; } = false;
 
         public int GetProgressWeight() => ProgressWeight;
@@ -98,7 +98,7 @@ namespace KTWirzade.Shared.Actions
         {
             if (!TrustedInstaller)
             {
-                try { File.Delete(file);} catch (Exception e) { }
+                try { File.Delete(file);} catch (Exception e) { Log.WriteSafe(LogType.Warning, $"Failed to delete: {e.Message}", new SerializableTrace(), output.LogOptions); }
                     
                 if (File.Exists(file))
                 {
@@ -114,7 +114,7 @@ namespace KTWirzade.Shared.Actions
                     try { await Task.Run(() => File.Delete(file)); }
                     catch (Exception e)
                     {
-                        //Testing.WriteLine(e, "DeleteFile > File.Delete(File)");
+                        Log.WriteSafe(LogType.Warning, $"Failed to delete: {e.Message}", new SerializableTrace(), output.LogOptions);
                     }
                     CmdAction delAction = new CmdAction()
                     {
@@ -137,7 +137,7 @@ namespace KTWirzade.Shared.Actions
                 RunAction tiDelAction = new RunAction()
                 {
                     Exe = "NSudoLC.exe",
-                    Arguments = $"-U:T -P:E -M:S -Priority:RealTime -UseCurrentConsole -Wait cmd /c \"del /q /f \"{file}\"\"",
+                    Arguments = $"-U:T -P:E -M:S -Priority:RealTime -UseCurrentConsole -Wait cmd /c 'del /q /f \"{file}\"'",
                     BaseDir = true,
                     CreateWindow = false
                 };
@@ -153,7 +153,7 @@ namespace KTWirzade.Shared.Actions
         {
             if (!TrustedInstaller)
             {
-                try { Directory.Delete(dir, true); } catch { }
+                try { Directory.Delete(dir, true); } catch (Exception e) { Log.WriteSafe(LogType.Warning, $"Failed to delete: {e.Message}", new SerializableTrace(), output.LogOptions); }
                     
                 if (Directory.Exists(dir))
                 {
@@ -170,7 +170,7 @@ namespace KTWirzade.Shared.Actions
                 RunAction tiDelAction = new RunAction()
                 {
                     Exe = "NSudoLC.exe",
-                    Arguments = $"-U:T -P:E -M:S -Priority:RealTime -UseCurrentConsole -Wait cmd /c \"rmdir /q /s \"{dir}\"\"",
+                    Arguments = $"-U:T -P:E -M:S -Priority:RealTime -UseCurrentConsole -Wait cmd /c 'rmdir /q /s \"{dir}\"'",
                     BaseDir = true,
                     CreateWindow = false
                 };
@@ -425,6 +425,27 @@ namespace KTWirzade.Shared.Actions
                 if (parentPath.Contains("*")) throw new ArgumentException("Parent directories to a given file filter cannot contain wildcards.");
                 var filter = realPath.Substring(lastToken + 1);
 
+                try
+                {
+                    foreach (var file in Directory.EnumerateFiles(parentPath, filter))
+                    {
+                        var backupPath = Rollback.RollbackManager.BackupFileForRollback(file);
+                        if (backupPath == null) continue;
+                        Rollback.RollbackManager.LogEntry(new Rollback.RollbackEntry
+                        {
+                            TaskName = ((Tasks.TaskAction)this).Status ?? "Delete",
+                            ActionType = Rollback.RollbackActionType.File,
+                            Operation = Rollback.RollbackOperation.Delete,
+                            Target = file,
+                            PreviousValue = backupPath
+                        });
+                    }
+                }
+                catch (Exception backupError)
+                {
+                    Log.WriteExceptionSafe(LogType.Warning, backupError, output.LogOptions);
+                }
+
                 await DeleteItemsInDirectory(parentPath, output, filter);
 
                 InProgress = false;
@@ -436,6 +457,31 @@ namespace KTWirzade.Shared.Actions
             
             if (isDirectory)
             {
+                // Backup every file inside the directory before deleting it, so
+                // whole-folder removals are revertible like single-file deletions.
+                try
+                {
+                    foreach (var file in Directory.EnumerateFiles(Environment.ExpandEnvironmentVariables(realPath), "*", SearchOption.AllDirectories))
+                    {
+                        var backupPath = Rollback.RollbackManager.BackupFileForRollback(file);
+                        if (backupPath == null) continue;
+                        Rollback.RollbackManager.LogEntry(new Rollback.RollbackEntry
+                        {
+                            TaskName = ((Tasks.TaskAction)this).Status ?? "Delete",
+                            ActionType = Rollback.RollbackActionType.File,
+                            Operation = Rollback.RollbackOperation.Delete,
+                            Target = file,
+                            // RollbackFile reads the backup path from PreviousValue
+                            // (same convention as single-file deletion below).
+                            PreviousValue = backupPath
+                        });
+                    }
+                }
+                catch (Exception backupError)
+                {
+                    Log.WriteExceptionSafe(LogType.Warning, backupError, output.LogOptions);
+                }
+
                 System.GC.Collect();
                 System.GC.WaitForPendingFinalizers();
                 await RemoveDirectory(realPath, output);
@@ -502,7 +548,19 @@ namespace KTWirzade.Shared.Actions
                     var lockedFilesList = new List<string> { "MpOAV.dll", "MsMpLics.dll", "EppManifest.dll", "MpAsDesc.dll", "MpClient.dll", "MsMpEng.exe" };
                     var fileName = realPath.Split('\\').LastOrDefault();
 
-                    
+                    var backupPath = Rollback.RollbackManager.BackupFileForRollback(realPath);
+                    if (backupPath != null)
+                    {
+                        Rollback.RollbackManager.LogEntry(new Rollback.RollbackEntry
+                        {
+                            TaskName = "FileAction",
+                            ActionType = Rollback.RollbackActionType.File,
+                            Operation = Rollback.RollbackOperation.Delete,
+                            Target = realPath,
+                            PreviousValue = backupPath
+                        });
+                    }
+
                     System.GC.Collect();
                     System.GC.WaitForPendingFinalizers();
 
@@ -642,7 +700,7 @@ namespace KTWirzade.Shared.Actions
                                     }
                                     if (Regex.Match(process.ProcessName, "ame.?wizard", RegexOptions.IgnoreCase).Success)
                                     {
-                                        output.WriteLineSafe("Info", "Skipping AME Wizard...");
+                                        output.WriteLineSafe("Info", "Skipping KT WIRZADE Wizard...");
                                         continue;
                                     }
 

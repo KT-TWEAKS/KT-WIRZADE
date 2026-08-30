@@ -29,9 +29,7 @@ namespace KTWirzade.GUI.ViewModels
 
         private Thickness _SourceMargin = new Thickness(0.0, 0.0, 4.0, 0.0);
 
-        private Visibility _DonateVisibility;
 
-        private bool _DonateActive = true;
 
         private Visibility _NotVerifiedVisibility = Visibility.Collapsed;
 
@@ -53,7 +51,6 @@ namespace KTWirzade.GUI.ViewModels
 
         private string _SourceText = "Website";
 
-        private string _DonateText = "Donate";
 
         private double _UpdateBoxOpacity = 1.0;
 
@@ -69,9 +66,7 @@ namespace KTWirzade.GUI.ViewModels
 
         private Thickness _TransitionSourceMargin = new Thickness(0.0, 0.0, 4.0, 0.0);
 
-        private Visibility _TransitionDonateVisibility;
 
-        private bool _TransitionDonateActive = true;
 
         private Visibility _TransitionNotVerifiedVisibility = Visibility.Collapsed;
 
@@ -93,7 +88,6 @@ namespace KTWirzade.GUI.ViewModels
 
         private string _TransitionSourceText = "Website";
 
-        private string _TransitionDonateText = "Donate";
 
         private double _TransitionUpdateBoxOpacity = 1.0;
 
@@ -111,7 +105,6 @@ namespace KTWirzade.GUI.ViewModels
                 {
                     SourceText = "Source Code";
                     UpToDateText = "Playbook is up-to-date!";
-                    DonateText = "Donate";
                 }
                 if (value.PendingUpdate == null)
                 {
@@ -137,54 +130,21 @@ namespace KTWirzade.GUI.ViewModels
                 if (value.VerificationStatus != PlaybookGUI.VerificationLevel.Malicious)
                 {
                     SourceVisibility = Visibility.Visible;
-                    DonateVisibility = Visibility.Visible;
                     if (((Playbook)value).Name == "KT WIRZADE Beta")
                     {
                         SourceText = "Website";
                         UpToDateText = "KT WIRZADE Beta is up-to-date!";
-                        DonateText = "Donate";
-                        DonateVisibility = Visibility.Collapsed;
-                    }
-                    else if (((Playbook)value).Username == "Ameliorated")
-                    {
-                        SourceText = "Website";
-                        DonateText = "Donate";
-                        DonateVisibility = Visibility.Collapsed;
                     }
                     PublisherOpacity = 1.0;
                     NotVerifiedVisibility = Visibility.Collapsed;
                     if (((Playbook)value).Git != null)
                     {
                         SourceActive = true;
+                        SourceVisibility = Visibility.Visible;
                     }
                     else
                     {
                         SourceActive = false;
-                    }
-                    if (((Playbook)value).DonateLink != null)
-                    {
-                        DonateActive = true;
-                    }
-                    else
-                    {
-                        DonateActive = false;
-                    }
-                    if (((Playbook)value).DonateLink != null || ((Playbook)value).Git != null)
-                    {
-                        PublisherOpacity = 1.0;
-                        if (((Playbook)value).Git != null)
-                        {
-                            SourceVisibility = Visibility.Visible;
-                        }
-                        if (((Playbook)value).DonateLink != null)
-                        {
-                            DonateVisibility = Visibility.Visible;
-                        }
-                    }
-                    else
-                    {
-                        PublisherOpacity = 0.5;
-                        DonateVisibility = Visibility.Collapsed;
                     }
                     UpdateBoxOpacity = 1.0;
                     UpdateButtonsActive = true;
@@ -193,14 +153,13 @@ namespace KTWirzade.GUI.ViewModels
                 {
                     PublisherOpacity = 0.5;
                     SourceVisibility = Visibility.Collapsed;
-                    DonateVisibility = Visibility.Collapsed;
                     NotVerifiedVisibility = Visibility.Visible;
                     UpdateBoxOpacity = 0.5;
                     UpdateButtonsActive = false;
                     UpToDateVisibility = Visibility.Collapsed;
                     UpdateReadyVisibility = Visibility.Collapsed;
                 }
-                if (((Playbook)value).Name == "None" && ((Playbook)value).Username == "Ameliorated" && value.VerificationStatus == PlaybookGUI.VerificationLevel.Verified)
+                if (((Playbook)value).Name == "None" && value.VerificationStatus == PlaybookGUI.VerificationLevel.Verified)
                 {
                     ContentGridVisibility = Visibility.Collapsed;
                     NoneGridVisibility = Visibility.Visible;
@@ -226,7 +185,6 @@ namespace KTWirzade.GUI.ViewModels
                 {
                     TransitionSourceText = "Source Code";
                     TransitionUpToDateText = "Playbook is up-to-date!";
-                    TransitionDonateText = "Donate";
                 }
                 if (value.PendingUpdate == null)
                 {
@@ -252,54 +210,25 @@ namespace KTWirzade.GUI.ViewModels
                 if (value.VerificationStatus != PlaybookGUI.VerificationLevel.Malicious)
                 {
                     TransitionSourceVisibility = Visibility.Visible;
-                    TransitionDonateVisibility = Visibility.Visible;
                     if (((Playbook)value).Name == "KT WIRZADE Beta")
                     {
                         TransitionSourceText = "Website";
                         TransitionUpToDateText = "KT WIRZADE Beta is up-to-date!";
-                        TransitionDonateText = "Donate";
-                        TransitionDonateVisibility = Visibility.Collapsed;
                     }
-                    else if (((Playbook)value).Username == "Ameliorated")
+                    else if (((Playbook)value).Username == "KTWirzade")
                     {
                         TransitionSourceText = "Website";
-                        TransitionDonateText = "Donate";
-                        TransitionDonateVisibility = Visibility.Collapsed;
                     }
                     TransitionPublisherOpacity = 1.0;
                     TransitionNotVerifiedVisibility = Visibility.Collapsed;
                     if (((Playbook)value).Git != null)
                     {
                         TransitionSourceActive = true;
+                        TransitionSourceVisibility = Visibility.Visible;
                     }
                     else
                     {
                         TransitionSourceActive = false;
-                    }
-                    if (((Playbook)value).DonateLink != null)
-                    {
-                        TransitionDonateActive = true;
-                    }
-                    else
-                    {
-                        TransitionDonateActive = false;
-                    }
-                    if (((Playbook)value).DonateLink != null || ((Playbook)value).Git != null)
-                    {
-                        TransitionPublisherOpacity = 1.0;
-                        if (((Playbook)value).Git != null)
-                        {
-                            TransitionSourceVisibility = Visibility.Visible;
-                        }
-                        if (((Playbook)value).DonateLink != null)
-                        {
-                            TransitionDonateVisibility = Visibility.Visible;
-                        }
-                    }
-                    else
-                    {
-                        TransitionPublisherOpacity = 0.5;
-                        TransitionDonateVisibility = Visibility.Collapsed;
                     }
                     TransitionUpdateBoxOpacity = 1.0;
                     TransitionUpdateButtonsActive = true;
@@ -308,14 +237,13 @@ namespace KTWirzade.GUI.ViewModels
                 {
                     TransitionPublisherOpacity = 0.5;
                     TransitionSourceVisibility = Visibility.Collapsed;
-                    TransitionDonateVisibility = Visibility.Collapsed;
                     TransitionNotVerifiedVisibility = Visibility.Visible;
                     TransitionUpdateBoxOpacity = 0.5;
                     TransitionUpdateButtonsActive = false;
                     TransitionUpToDateVisibility = Visibility.Collapsed;
                     TransitionUpdateReadyVisibility = Visibility.Collapsed;
                 }
-                if (((Playbook)value).Name == "None" && ((Playbook)value).Username == "Ameliorated" && value.VerificationStatus == PlaybookGUI.VerificationLevel.Verified)
+                if (((Playbook)value).Name == "None" && value.VerificationStatus == PlaybookGUI.VerificationLevel.Verified)
                 {
                     TransitionContentGridVisibility = Visibility.Collapsed;
                     TransitionNoneGridVisibility = Visibility.Visible;
@@ -386,31 +314,6 @@ namespace KTWirzade.GUI.ViewModels
             set
             {
                 SetProperty(ref _SourceMargin, value, "SourceMargin");
-            }
-        }
-
-        public Visibility DonateVisibility
-        {
-            get
-            {
-                return _DonateVisibility;
-            }
-            set
-            {
-                SourceMargin = ((value == Visibility.Visible) ? new Thickness(0.0, 0.0, 4.0, 0.0) : new Thickness(0.0, 0.0, 0.0, 0.0));
-                SetProperty(ref _DonateVisibility, value, "DonateVisibility");
-            }
-        }
-
-        public bool DonateActive
-        {
-            get
-            {
-                return _DonateActive;
-            }
-            set
-            {
-                SetProperty(ref _DonateActive, value, "DonateActive");
             }
         }
 
@@ -534,18 +437,6 @@ namespace KTWirzade.GUI.ViewModels
             }
         }
 
-        public string DonateText
-        {
-            get
-            {
-                return _DonateText;
-            }
-            set
-            {
-                SetProperty(ref _DonateText, value, "DonateText");
-            }
-        }
-
         public double UpdateBoxOpacity
         {
             get
@@ -627,31 +518,6 @@ namespace KTWirzade.GUI.ViewModels
             set
             {
                 SetProperty(ref _TransitionSourceMargin, value, "TransitionSourceMargin");
-            }
-        }
-
-        public Visibility TransitionDonateVisibility
-        {
-            get
-            {
-                return _TransitionDonateVisibility;
-            }
-            set
-            {
-                TransitionSourceMargin = ((value == Visibility.Visible) ? new Thickness(0.0, 0.0, 4.0, 0.0) : new Thickness(0.0, 0.0, 0.0, 0.0));
-                SetProperty(ref _TransitionDonateVisibility, value, "TransitionDonateVisibility");
-            }
-        }
-
-        public bool TransitionDonateActive
-        {
-            get
-            {
-                return _TransitionDonateActive;
-            }
-            set
-            {
-                SetProperty(ref _TransitionDonateActive, value, "TransitionDonateActive");
             }
         }
 
@@ -775,18 +641,6 @@ namespace KTWirzade.GUI.ViewModels
             }
         }
 
-        public string TransitionDonateText
-        {
-            get
-            {
-                return _TransitionDonateText;
-            }
-            set
-            {
-                SetProperty(ref _TransitionDonateText, value, "TransitionDonateText");
-            }
-        }
-
         public double TransitionUpdateBoxOpacity
         {
             get
@@ -827,3 +681,4 @@ namespace KTWirzade.GUI.ViewModels
         }
     }
 }
+

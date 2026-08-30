@@ -4,32 +4,48 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:KTWirzade.GUI.Views"
+             xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
-            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="70" />
+                <RowDefinition Height="80" />
                 <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <TextBlock Text="Process Completed" Style="{DynamicResource BlueHeaderText}" FontSize="16" />
+            <TextBlock Text="Processo concluido com erros" Style="{DynamicResource BlueHeaderText}" FontSize="18" FontWeight="SemiBold" Foreground="{DynamicResource YellowInfoCircleFill}" />
             <Grid Row="1">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Image Name="VersionIcon" Source="/Icons/playbook_frame_128.png" Width="24" Margin="5,5,5,5" />
-                <TextBlock Name="RebootText" VerticalAlignment="Center" Grid.Column="1" Text="The Playbook completed with notable errors. Contact the team for help." Style="{DynamicResource InText}" />
+                <Border Width="44" Height="44" CornerRadius="22" Margin="0,0,14,0" VerticalAlignment="Center">
+                    <Border.Background>
+                        <SolidColorBrush Color="#433519" Opacity="0.6" />
+                    </Border.Background>
+                    <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Warning" TextBlock.Foreground="#fce100" TextBlock.FontSize="22" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Name="RebootText" Style="{DynamicResource InText}" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" Text="O playbook foi concluido com erros." />
+                    <TextBlock FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" Text="Consulte o log abaixo para mais detalhes." />
+                </StackPanel>
             </Grid>
-            <Grid Row="2">
-                <TextBox Name="errorBox" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Style="{DynamicResource Output}" Padding="3,0,0,5" Margin="5,15,5,-233" VerticalAlignment="Top" VerticalContentAlignment="Bottom" />
+            <Border Grid.Row="2" Margin="0,10,0,0" CornerRadius="6" Padding="12,8" Background="{DynamicResource WarningBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
+                <StackPanel Orientation="Horizontal">
+                    <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Info" TextBlock.Foreground="{DynamicResource YellowInfoCircleFill}" TextBlock.FontSize="16" Margin="0,0,8,0" />
+                    <TextBlock FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="Entre em contato com o suporte para obter ajuda." />
+                </StackPanel>
+            </Border>
+            <Grid Row="3">
+                <TextBox Name="errorBox" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Style="{DynamicResource Output}" Padding="8,6,8,6" Margin="0,10,0,0" VerticalAlignment="Top" VerticalContentAlignment="Bottom" />
             </Grid>
         </Grid>
-        <TextBlock VerticalAlignment="Bottom" Margin="10,0,-10,10" Grid.Row="1" Style="{DynamicResource InText}">Click the <Bold>Reboot</Bold> button below to finish the setup.</TextBlock>
+        <TextBlock VerticalAlignment="Bottom" Margin="10,0,-10,10" Grid.Row="1" Style="{DynamicResource InText}">Clique no botao <Bold>Reboot</Bold> abaixo para finalizar.</TextBlock>
     </Grid>
 </UserControl>

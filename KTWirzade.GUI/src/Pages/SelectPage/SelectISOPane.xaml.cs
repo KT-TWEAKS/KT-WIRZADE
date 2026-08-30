@@ -149,6 +149,16 @@ namespace KTWirzade.GUI.Pages.SelectPage
                     this.SwitchRadioImage(panel, new RoutedEventArgs());
                 }
             }
+            int optionCount = template.OptionsContainer.Children.Count;
+            double naturalWidth = 78.0 * optionCount + 8.0 * (optionCount - 1);
+            if (naturalWidth > 350.0)
+            {
+                double scale = 350.0 / naturalWidth;
+                foreach (System.Windows.Controls.Control child in template.OptionsContainer.Children)
+                {
+                    child.LayoutTransform = new System.Windows.Media.ScaleTransform(scale, scale);
+                }
+            }
             Grid.SetColumn(template, this.MainContainerGrid.ColumnDefinitions.Count - 1);
             this.MainContainerGrid.Children.Add(template);
         }
@@ -567,9 +577,16 @@ namespace KTWirzade.GUI.Pages.SelectPage
                 Storyboard.SetTargetProperty(textFadeAnim, new PropertyPath("Opacity"));
                 board.Children.Add(textFadeAnim);
                 board.Begin();
-                if (newButton.Text.Text == "SteamOS 3" && !HasShownSteamEULA)
+                if (MainContainerGrid.Children.Count > 0)
                 {
-                    await ((SelectISOPage)MainContainerGrid.Children[0]).ShowSteamEULA(NextButton, e);
+                    if (newButton.Text.Text == "SteamOS 3" && !HasShownSteamEULA)
+                    {
+                        await ((SelectISOPage)MainContainerGrid.Children[0]).ShowSteamEULA(NextButton, e);
+                    }
+                    if ((newButton.Text.Text == "Win 11" || newButton.Text.Text == "Win 10") && !HasShownBinbowsEULA)
+                    {
+                        await ((SelectISOPage)MainContainerGrid.Children[0]).ShowBinbowsEULA(NextButton, e);
+                    }
                 }
             }
         }
@@ -577,6 +594,10 @@ namespace KTWirzade.GUI.Pages.SelectPage
         public void NextButton_OnClick(object sender, RoutedEventArgs e)
         {
             if (animating)
+            {
+                return;
+            }
+            if (Index >= MainContainerGrid.Children.Count)
             {
                 return;
             }
@@ -608,13 +629,18 @@ namespace KTWirzade.GUI.Pages.SelectPage
             }
             animating = true;
             int activeIndex = Index;
-            SelectISOPage nextPage;
+            SelectISOPage nextPage = null;
             do
             {
                 Index++;
+                if (Index >= MainContainerGrid.Children.Count)
+                {
+                    Index = MainContainerGrid.Children.Count - 1;
+                    break;
+                }
                 nextPage = (SelectISOPage)MainContainerGrid.Children[Index];
             }
-            while (nextPage.DependsOn != null && !Choices.Contains(nextPage.DependsOn));
+            while (nextPage != null && nextPage.DependsOn != null && !Choices.Contains(nextPage.DependsOn));
             if (MainContainerGrid.Children.Count - 1 == Index)
             {
                 NextText.Text = "OK";

@@ -243,60 +243,67 @@ namespace KTWirzade.Shared
         
         public class DefenderToggled : RequirementBase, IRequirements
         {
+            // Mirrors CLI.GetDefenderToggles semantics: a toggle counts as satisfied when
+            // its registry value is in the "off" state, and MISSING/unreadable keys count
+            // as satisfied (component absent). Returns true only when everything is off,
+            // i.e. the user has actually toggled Defender down as the playbook requires.
             public async Task<bool> IsMet()
             {
-                var defenderKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows Defender");
+                bool realtimeOff = true, reportingOff = true, consentOff = true, tamperOff = true;
 
-                RegistryKey realtimeKey = null;
                 try
                 {
-                    realtimeKey = defenderKey.OpenSubKey("Real-Time Protection");
-                }
-                catch
-                {
-                    
-                }
-                if (realtimeKey != null)
-                {
+                    using var defenderKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows Defender");
+                    using var policiesKey = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Policies\Microsoft\Windows Defender");
+
+                    var realtimeKey = policiesKey?.OpenSubKey("Real-Time Protection") ?? defenderKey?.OpenSubKey("Real-Time Protection");
+
+                    if (realtimeKey != null)
+                    {
+                        try
+                        {
+                            realtimeOff = (int)realtimeKey.GetValue("DisableRealtimeMonitoring") == 1;
+                        }
+                        catch
+                        {
+                            // value missing -> treat as off (matches CLI behavior)
+                            realtimeOff = true;
+                        }
+                    }
+
+                    int reporting = 0, consent = 0, tamper = -1;
+
+                    var spynetKey = policiesKey?.OpenSubKey("SpyNet") ?? defenderKey?.OpenSubKey("SpyNet");
                     try
                     {
-                        if (!((int)realtimeKey.GetValue("DisableRealtimeMonitoring") != 1))
-                            return false;
+                        if (spynetKey != null) reporting = (int)spynetKey.GetValue("SpyNetReporting");
                     }
-                    catch (Exception exception)
+                    catch { }
+                    try
                     {
-                        return false;
+                        if (spynetKey != null) consent = (int)spynetKey.GetValue("SubmitSamplesConsent");
                     }
-                }
+                    catch { }
 
-                try
-                {
-                    if (!((int)defenderKey.OpenSubKey("SpyNet").GetValue("SpyNetReporting") != 0))
-                            return false;
+                    try
+                    {
+                        using var featuresKey = defenderKey?.OpenSubKey("Features");
+                        if (featuresKey != null) tamper = (int)featuresKey.GetValue("TamperProtection");
+                    }
+                    catch { }
+
+                    reportingOff = reporting == 0;
+                    consentOff = consent == 0 || consent == 2 || consent == 4;
+                    // TamperProtection: 5 = user-disabled, 0/missing = state unknown -> lenient.
+                    // 4 = active -> not toggled.
+                    tamperOff = tamper != 4;
+
+                    return realtimeOff && reportingOff && consentOff && tamperOff;
                 }
                 catch
                 {
-
+                    return false;
                 }
-                try
-                {
-                    if (!((int)defenderKey.OpenSubKey("SpyNet").GetValue("SubmitSamplesConsent") != 0))
-                            return false;
-                }
-                catch
-                {
-
-                }
-                try
-                {
-                    if (!((int)defenderKey.OpenSubKey("Features").GetValue("TamperProtection") != 4))
-                            return false;
-                }
-                catch
-                {
-
-                }
-                return true;
             }
 
             public async Task<bool> Meet()

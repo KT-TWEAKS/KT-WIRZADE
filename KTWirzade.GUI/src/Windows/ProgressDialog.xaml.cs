@@ -15,6 +15,8 @@ using System.Windows.Threading;
 using KTWirzade.GUI.Controls;
 using KTWirzade.GUI.Utils;
 using KTWirzade.Shared;
+using KTWirzade.Shared.Customization;
+using KTWirzade.Shared.Rollback;
 using static Core.Log;
 using static Core.Win32;
 using static Interprocess.InterLink;
@@ -31,13 +33,16 @@ namespace KTWirzade.GUI.Windows;
 public partial class ProgressDialog : AcrylicWindow
 {
     private string logFolder;
+    private CustomizationProfile _customizationProfile;
+    private UserCustomizationChoices _customizationChoices;
+    private bool _playbookRunning = false;
 
     public ProgressDialog()
     {
         InitializeComponent();
 
         if (GlobalsGUI.Current.Playbook.VerificationStatus == PlaybookGUI.VerificationLevel.Verified
-            && (GlobalsGUI.Current.Playbook).Username == "Ameliorated")
+            && (GlobalsGUI.Current.Playbook).Username == "KTWirzade")
         {
             Title = "Ameliorate System";
             TitleSpace.Text = "Ameliorate System";
@@ -63,6 +68,7 @@ public partial class ProgressDialog : AcrylicWindow
     private async void Begin(object sender, EventArgs e)
     {
         ContentRendered -= Begin;
+        _playbookRunning = true;
 
         TaskBar.TaskbarNotifier taskbarProgress = Wrap.ExecuteSafe(() => new TaskBar.TaskbarNotifier(), true, null).Value;
         try
@@ -112,6 +118,27 @@ public partial class ProgressDialog : AcrylicWindow
             string timestamp = DateTime.Now.ToString("yyyy-MM-dd (h.mm tt)").Replace(" )", ")");
             string folderName = "[" + timestamp + "] " + RemoveInvalidFilePathCharacters((GlobalsGUI.Current.Playbook).Name, "~");
             logFolder = Path.Combine(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Logs"), folderName);
+            Directory.CreateDirectory(logFolder);
+
+            _customizationProfile = null;
+            _customizationChoices = null;
+            try
+            {
+                _customizationProfile = CustomizationManager.LoadProfile(playbookPath);
+                if (_customizationProfile != null && _customizationProfile.HasCustomizations)
+                {
+                    StatusText.Text = "Customization options available";
+                    var dialog = new CustomizationDialog(_customizationProfile, playbookPath) { Owner = this };
+                    if (dialog.ShowDialog() == true)
+                    {
+                        _customizationChoices = dialog.Choices;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log.EnqueueExceptionSafe(ex, "Could not load customizations.", Array.Empty<(string, object)>());
+            }
 
             bool errorsOccurred = false;
             DispatcherTimer dispatcherTimer = new DispatcherTimer
@@ -163,21 +190,26 @@ public partial class ProgressDialog : AcrylicWindow
 
                 if (GlobalsGUI.UserPassword != null || GlobalsGUI.AdminPassword != null)
                 {
-                    status = "Setting credentials";
-                    StatusText.Text = "Setting credentials...";
-
-                    if (GlobalsGUI.UserPassword != null)
+                    bool hasCustomCreds = _customizationProfile != null && _customizationProfile.HasCustomizations &&
+                        (!string.IsNullOrEmpty(_customizationProfile.AccountPassword) || !string.IsNullOrEmpty(_customizationProfile.Username));
+                    if (!hasCustomCreds)
                     {
-                        string fullUsername = WindowsIdentity.GetCurrent().Name;
-                        SecurityIdentifier sid = WindowsIdentity.GetCurrent().User;
-                        string username = fullUsername.Split('\\').Last();
-                        string domain = fullUsername.Split('\\').FirstOrDefault();
-                        await ExecuteAsync((Expression<Action>)(() => CredentialManager.SetUserCredentials(username, GlobalsGUI.Username, domain, sid == null ? null : sid.ToString(), GlobalsGUI.UserPassword, GlobalsGUI.AutoLogon)), false, -1);
-                    }
+                        status = "Setting credentials";
+                        StatusText.Text = "Setting credentials...";
 
-                    if (GlobalsGUI.AdminPassword != null)
-                    {
-                        await ExecuteAsync((Expression<Action>)(() => CredentialManager.SetAdminPassword(GlobalsGUI.AdminPassword)), false, -1);
+                        if (GlobalsGUI.UserPassword != null)
+                        {
+                            string fullUsername = WindowsIdentity.GetCurrent().Name;
+                            SecurityIdentifier sid = WindowsIdentity.GetCurrent().User;
+                            string username = fullUsername.Split('\\').Last();
+                            string domain = fullUsername.Split('\\').FirstOrDefault();
+                            await ExecuteAsync((Expression<Action>)(() => CredentialManager.SetUserCredentials(username, GlobalsGUI.Username, domain, sid == null ? null : sid.ToString(), GlobalsGUI.UserPassword, GlobalsGUI.AutoLogon)), false, -1);
+                        }
+
+                        if (GlobalsGUI.AdminPassword != null)
+                        {
+                            await ExecuteAsync((Expression<Action>)(() => CredentialManager.SetAdminPassword(GlobalsGUI.AdminPassword)), false, -1);
+                        }
                     }
 
                     ProgressBar.Value += 0.5;
@@ -236,6 +268,8 @@ public partial class ProgressDialog : AcrylicWindow
                         Playbook playbook = GlobalsGUI.Current.Playbook;
                         playbook.Options = playbook.Options?.Where(x => !x.StartsWith("none-") || !int.TryParse(x.Substring(5), out _)).ToList();
 
+                        RollbackManager.BeginSession(playbook.Name);
+
                         string[] allOptions = playbook.FeaturePages == null
                             ? Array.Empty<string>()
                             : playbook.FeaturePages
@@ -265,6 +299,10 @@ public partial class ProgressDialog : AcrylicWindow
                     }
                     finally
                     {
+                        // Must run even when RunPlaybook throws, otherwise the session stays
+                        // open forever (CompletedAt == null) and PruneSessions refuses to prune it.
+                        try { RollbackManager.EndSession(!errorsOccurred); }
+                        catch { /* keep the original exception flowing */ }
                         ((IDisposable)progress)?.Dispose();
                     }
                 }
@@ -324,7 +362,7 @@ public partial class ProgressDialog : AcrylicWindow
 
             await ExecuteSafeAsync((Expression<Action>)(() => DeleteKPH()), true, -1);
 
-            if (GlobalsGUI.Username != null && !fatalError)
+            if (GlobalsGUI.Username != null && !fatalError && _customizationProfile == null)
             {
                 status = "Setting credentials";
                 StatusText.Text = "Setting username...";
@@ -334,6 +372,28 @@ public partial class ProgressDialog : AcrylicWindow
                 if (exception != null)
                 {
                     Log.EnqueueExceptionSafe(exception, "Could not rename user.", new LogOptions(Path.Combine(logFolder, "Log.yml")), null, Array.Empty<(string, object)>());
+                    errorsOccurred = true;
+                }
+            }
+
+            if (_customizationProfile != null && !fatalError)
+            {
+                status = "Applying customizations";
+                StatusText.Text = "Applying customizations...";
+                try
+                {
+                    var progress = new Progress<string>(msg => Dispatcher.BeginInvoke(new Action(() => StatusText.Text = msg)));
+                    bool customOk = await CustomizationManager.ApplyCustomizations(
+                        _customizationProfile, _customizationChoices, playbookPath, progress);
+                    if (!customOk)
+                    {
+                        Log.EnqueueExceptionSafe(new Exception("Some customizations failed."), "Customization errors.", Array.Empty<(string, object)>());
+                        errorsOccurred = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.EnqueueExceptionSafe(ex, "Could not apply customizations.", new LogOptions(Path.Combine(logFolder, "Log.yml")), null, Array.Empty<(string, object)>());
                     errorsOccurred = true;
                 }
             }
@@ -407,6 +467,7 @@ public partial class ProgressDialog : AcrylicWindow
         }
         finally
         {
+            _playbookRunning = false;
             ((IDisposable)taskbarProgress)?.Dispose();
         }
     }
@@ -453,7 +514,16 @@ public partial class ProgressDialog : AcrylicWindow
 
             int currentIndex = indexes.Count > 0 ? indexes.Max() : 0;
             if (currentIndex >= 10)
-                Wrap.ExecuteSafe(() => parent.GetDirectories().First().Delete(recursive: true), true, null);
+                // GetDirectories().First() returned the alphabetically-first folder ("1", then
+                // "10" before "2" once it existed), deleting the wrong (not oldest) entry.
+                Wrap.ExecuteSafe(() =>
+                {
+                    DirectoryInfo oldest = parent.GetDirectories()
+                        .Where(v => int.TryParse(v.Name, out _))
+                        .OrderBy(v => int.Parse(v.Name))
+                        .FirstOrDefault();
+                    oldest?.Delete(recursive: true);
+                }, true, null);
 
             DirectoryInfo target = parent.CreateSubdirectory((currentIndex + 1).ToString());
 
@@ -521,6 +591,17 @@ public partial class ProgressDialog : AcrylicWindow
 
     private async void CloseButton_Click(object sender, RoutedEventArgs e)
     {
+        if (_playbookRunning)
+        {
+            var result = KTWirzade.GUI.MessageBox.Show(
+                this,
+                "O playbook ainda esta em execucao. Tem certeza que deseja fechar?",
+                "Confirmar",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+                return;
+        }
         CloseWindow(progressscale);
     }
 
@@ -578,3 +659,4 @@ public partial class ProgressDialog : AcrylicWindow
         MessageBox.Show(typeof(ProgressDialog), "Could not find log directory.", "Information");
     }
 }
+

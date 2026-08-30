@@ -51,6 +51,9 @@ namespace KTWirzade.GUI.Utils
 
             public ConfigObject<DateTime> LastChecked { get; set; } = new ConfigObject<DateTime>(default(DateTime), "LastChecked");
 
+            // Version the user chose to ignore when prompted about an update.
+            public ConfigObject<string> SkippedUpdateVersion { get; set; } = new ConfigObject<string>(null, "SkippedUpdateVersion");
+
             public Config()
             {
                 GlobalsGUI.Current.Items.CollectionChanged += delegate
@@ -316,13 +319,33 @@ namespace KTWirzade.GUI.Utils
         {
             lock (_lockObject)
             {
+                // Flush config synchronously BEFORE cancelling the background thread.
+                // This ensures the latest state (e.g. playbook removals) is always
+                // persisted, even if the user closes the app immediately after an edit.
+                try
+                {
+                    if (Current != null && !string.IsNullOrEmpty(ConfigPath))
+                    {
+                        XmlSerializer serializer = new XmlSerializer(typeof(Config));
+                        using XmlWriter writer = XmlWriter.Create(ConfigPath, new XmlWriterSettings
+                        {
+                            Indent = true
+                        });
+                        serializer.Serialize(writer, Current);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.EnqueueExceptionSafe(ex, "Failed to flush config on exit.", Array.Empty<(string, object)>());
+                }
+
                 CancellationTokenSource configThreadCancel = _configThreadCancel;
                 if (configThreadCancel != null && !configThreadCancel.IsCancellationRequested)
                 {
                     _configThreadCancel.Cancel();
                     if (!_configThread.Join(2000))
                     {
-                        throw new TimeoutException("Log thread took too long to exit.");
+                        Log.EnqueueSafe(LogType.Warning, "Config thread took too long to exit; abandoning.", null, Array.Empty<(string, object)>());
                     }
                     _configThread = null;
                 }

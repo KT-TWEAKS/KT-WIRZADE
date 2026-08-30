@@ -71,7 +71,7 @@ namespace iso_mode
                     File.WriteAllText(Path.Combine(targetFolder, "drivers.json"), json);
 
                     var graphicsWeight = drivers.Graphics.Sum(x => x.FileSize);
-                    var networkWeight = drivers.Graphics.Sum(x => x.FileSize);
+                    var networkWeight = drivers.Network.Sum(x => x.FileSize);
                     var totalWeight = (graphics ? graphicsWeight : 0) + (network ? networkWeight : 0) + (system ? (((graphics ? graphicsWeight : 0) + (network ? networkWeight : 0)) / 10) : 0);
 
                     if (graphics)

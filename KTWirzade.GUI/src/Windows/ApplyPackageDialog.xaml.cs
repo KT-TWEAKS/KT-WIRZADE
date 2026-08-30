@@ -224,7 +224,7 @@ namespace KTWirzade.GUI.Windows
                 {
                     ProgressBar.Dispatcher.Invoke(() => ProgressBar.Value = 90.0);
                     StatusText.Dispatcher.Invoke(() => StatusText.Text = "Removing certificate...");
-                    RunPSCommand("$cert = (Get-AuthenticodeSignature '" + text + "').SignerCertificate; Get-ChildItem 'Cert:\\LocalMachine\\Root\\$($cert.Thumbprint)' | Remove-Item -Force | Out-NullRemove-Item \"HKLM:\\Software\\Microsoft\\SystemCertificates\\ROOT\\Certificates\\8A334AA8052DD244A647306A76B8178FA215F344\" -Force -Recurse | Out-Null", null, null);
+                    RunPSCommand("$cert = (Get-AuthenticodeSignature '" + text + "').SignerCertificate; Get-ChildItem 'Cert:\\LocalMachine\\Root\\$($cert.Thumbprint)' | Remove-Item -Force | Out-Null; Remove-Item \"HKLM:\\Software\\Microsoft\\SystemCertificates\\ROOT\\Certificates\\8A334AA8052DD244A647306A76B8178FA215F344\" -Force -Recurse | Out-Null", null, null);
                 }
                 catch (Exception)
                 {
@@ -307,7 +307,9 @@ namespace KTWirzade.GUI.Windows
 
         private static int RunPSCommand(string command, DataReceivedEventHandler outputHandler, DataReceivedEventHandler errorHandler)
         {
-            return RunCommand("powershell.exe", "-NoP -C \"" + command + "\"", outputHandler, errorHandler);
+            var cleaned = command.Replace("\"\"\"", "\"");
+            var encoded = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(cleaned));
+            return RunCommand("powershell.exe", $"-NoProfile -ExecutionPolicy Bypass -NonInteractive -EncodedCommand {encoded}", outputHandler, errorHandler);
         }
 
         private static int RunCommand(string exe, string arguments, DataReceivedEventHandler outputHandler, DataReceivedEventHandler errorHandler)
@@ -359,6 +361,10 @@ namespace KTWirzade.GUI.Windows
                 return destination;
             }
             using UnmanagedMemoryStream stream = (UnmanagedMemoryStream)Assembly.GetEntryAssembly().GetManifestResourceStream("KTWirzade.GUI.Resources.Z-AME-NoDefender-Package31bf3856ad364e35" + cabArch + "1.0.0.0.cab");
+            if (stream == null || stream.Length == 0)
+            {
+                throw new InvalidOperationException("Pacote de remocao do Defender nao incluido neste build - recurso embutido ausente ou vazio.");
+            }
             byte[] buffer = new byte[stream.Length];
             stream.Read(buffer, 0, buffer.Length);
             File.WriteAllBytes(destination, buffer);
@@ -367,12 +373,18 @@ namespace KTWirzade.GUI.Windows
 
         public void DisableDontDisplayLastUsername()
         {
-            Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", writable: true)?.SetValue("dontdisplaylastusername", 0, RegistryValueKind.DWord);
+            using (var key = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", writable: true))
+            {
+                key?.SetValue("dontdisplaylastusername", 0, RegistryValueKind.DWord);
+            }
         }
 
         private static void RemoveServiceSafeBoot()
         {
-            Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Control\\SafeBoot\\Minimal", writable: true)?.DeleteSubKeyTree("KTWirzadePrepare", throwOnMissingSubKey: false);
+            using (var key = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Control\\SafeBoot\\Minimal", writable: true))
+            {
+                key?.DeleteSubKeyTree("KTWirzadePrepare", throwOnMissingSubKey: false);
+            }
         }
 
         [DllImport("advapi32.dll", SetLastError = true)]

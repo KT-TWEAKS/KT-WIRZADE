@@ -4,20 +4,47 @@
       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
       xmlns:local="clr-namespace:KTWirzade.GUI.Views"
+      xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
+      xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
       mc:Ignorable="d" 
       d:DesignHeight="450" d:DesignWidth="800"
       Title="ProgressPageView">
 
+    <Page.Resources>
+        <!-- The fill resolves to ProgressBarBrush, which is re-tinted with the
+             selected playbook's dominant color while a playbook is applied. -->
+        <SolidColorBrush x:Key="ProgressFillBrush" Color="{DynamicResource ProgressBarColor}" />
+    </Page.Resources>
+
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="0*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <StackPanel>
-            <TextBlock Text="Amelioration in progress" Style="{DynamicResource Header}" Margin="0,0,0,15" />
-            <TextBlock Style="{DynamicResource InText}" Text="This process may take a while to complete." />
+            <TextBlock Text="Otimizacao em andamento" Style="{DynamicResource Header}" Margin="0,0,0,8" FontWeight="SemiBold" FontSize="16" />
+            <TextBlock Style="{DynamicResource InText}" Text="Este processo pode levar algum tempo. Nao feche o aplicativo." FontSize="13" Foreground="{DynamicResource TextSecondaryBrush}" />
         </StackPanel>
-        <ProgressBar Name="InstallationProgressBar" Margin="0,18,0,-35" Grid.Row="1" Foreground="#FF0078D6" Value="{Binding Progress}" />
-        <TextBox Name="textBox" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Style="{DynamicResource Output}" Padding="3,0,0,5" Margin="0,58,0,-290" Grid.Row="1" />
+
+        <Border Grid.Row="1" Margin="0,14,0,0" CornerRadius="6" Padding="12,10" Background="{DynamicResource NoticeBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
+            <StackPanel Orientation="Horizontal">
+                <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Info" TextBlock.Foreground="#71d4db" TextBlock.FontSize="16" Margin="0,0,8,0" />
+                <TextBlock FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="Mantenha o computador ligado e conectado a energia." />
+            </StackPanel>
+        </Border>
+
+        <StackPanel Grid.Row="2" Margin="0,10,0,0">
+            <Grid Margin="0,0,0,10">
+                <controls:ProgressBarDeterminate x:Name="InstallationProgressBar"
+                                                 BarHeight="8"
+                                                 CornerRadius="4"
+                                                 RectBorderThickness="0"
+                                                 RectFill="{StaticResource ProgressFillBrush}"
+                                                 AnimationDurationMs="280"
+                                                 Value="{Binding Progress}" />
+            </Grid>
+            <TextBox Name="textBox" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Style="{DynamicResource Output}" Padding="8,6,8,6" />
+        </StackPanel>
     </Grid>
 </Page>

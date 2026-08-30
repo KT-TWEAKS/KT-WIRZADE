@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Core;
 using KTWirzade.Shared.Tasks;
 using YamlDotNet.Serialization;
-//using IWshRuntimeLibrary;
 using File = System.IO.File;
 
 namespace KTWirzade.Shared.Actions
@@ -24,7 +23,7 @@ namespace KTWirzade.Shared.Actions
         [YamlMember(typeof(string), Alias = "description")]
         public string Description { get; set; }
         
-        [YamlMember(typeof(string), Alias = "weight")]
+        [YamlMember(typeof(int), Alias = "weight")]
         public int ProgressWeight { get; set; } = 1;
         public int GetProgressWeight() => ProgressWeight;
         public ErrorAction GetDefaultErrorAction() => Tasks.ErrorAction.Log;
@@ -45,22 +44,42 @@ namespace KTWirzade.Shared.Actions
         public async Task<bool> RunTask(Output.OutputWriter output)
         {
             RawPath = Environment.ExpandEnvironmentVariables(RawPath);
+            Destination = Environment.ExpandEnvironmentVariables(Destination);
             output.WriteLineSafe("Info", $"Creating shortcut from '{Destination}' to '{RawPath}'...");
             
-            if (File.Exists(this.RawPath))
-            {
-
-                //WshShell shell = new WshShell();
-                //var sc = (IWshShortcut)shell.CreateShortcut(Path.Combine(this.Destination, this.Name + ".lnk"));
-                //sc.Description = this.Description;
-                //sc.TargetPath = this.RawPath;
-                //sc.Save();
-            }
-            else
+            if (!File.Exists(this.RawPath))
             {
                 throw new FileNotFoundException($"File '{RawPath}' not found.");
             }
-            
+
+            if (!Directory.Exists(this.Destination))
+                Directory.CreateDirectory(this.Destination);
+
+            var lnkPath = Path.Combine(this.Destination, this.Name + ".lnk");
+
+            var shellType = Type.GetTypeFromProgID("WScript.Shell");
+            if (shellType == null)
+            {
+                throw new InvalidOperationException("WScript.Shell COM object is not available on this system.");
+            }
+
+            dynamic shell = Activator.CreateInstance(shellType);
+            try
+            {
+                dynamic shortcut = shell.CreateShortcut(lnkPath);
+                shortcut.TargetPath = this.RawPath;
+                if (!string.IsNullOrEmpty(this.Description))
+                    shortcut.Description = this.Description;
+                shortcut.WorkingDirectory = Path.GetDirectoryName(this.RawPath);
+                shortcut.Save();
+            }
+            finally
+            {
+                if (shell != null)
+                    System.Runtime.InteropServices.Marshal.ReleaseComObject(shell);
+            }
+
+            output.WriteLineSafe("Info", $"Shortcut created at '{lnkPath}'.");
             return true;
         }
     }
