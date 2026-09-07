@@ -15,8 +15,6 @@ jobs:
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
-        with:
-          msbuild-version: '17.0'
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@v4

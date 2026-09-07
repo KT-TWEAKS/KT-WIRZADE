@@ -32,8 +32,8 @@ namespace KTWirzade.GUI
             private PlaybookGUI _wizardPlaybook = new PlaybookGUI(new Playbook
             {
                 Name = "KT WIRZADE",
-                Version = "1.0",
-                Details = "KT WIRZADE v1.0 - Sistema de otimizacao e personalizacao do Windows. Modificado por kelvenapk (github.com/kelvenapk).",
+                Version = "1.0.1",
+                Details = "KT WIRZADE v1.0.1 - Sistema de otimização e personalização do Windows. Modificado por kelvenapk (github.com/kelvenapk).",
                 Username = "kelvenapk",
                 Website = "https://github.com/kelvenapk"
             })

@@ -5,7 +5,7 @@ Motor de execução de playbooks para otimização e personalização do Windows
 [![Build](https://github.com/KT-TWEAKS/KT-WIRZADE/actions/workflows/build.yml/badge.svg)](https://github.com/KT-TWEAKS/KT-WIRZADE/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Download**: [Releases](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/latest) · **Site**: [kt-wirzade-site.vercel.app](https://kt-wirzade-site.vercel.app) · **Playbooks**: [KT-TWEAKS-APBX](https://github.com/KT-TWEAKS/KT-TWEAKS-APBX)
+> **Download (EXE único)**: [Releases](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/latest) · **Site**: [kt-wirzade-site.vercel.app](https://kt-wirzade-site.vercel.app) · **Playbooks**: [KT-TWEAKS-APBX](https://github.com/KT-TWEAKS/KT-TWEAKS-APBX)
 
 ---
 

@@ -233,8 +233,13 @@ namespace KTWirzade.Shared.Updates
             if (assets == null || assets.Length == 0) return null;
 
             var preferred = assets.FirstOrDefault(a =>
-                a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) &&
+                a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
                 a.Name.Contains("win-x64"));
+
+            if (preferred != null) return preferred;
+
+            preferred = assets.FirstOrDefault(a =>
+                a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
 
             if (preferred != null) return preferred;
 
