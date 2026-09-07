@@ -26,6 +26,7 @@ O histórico existente de rollback permanece em `C:\ProgramData\AME\Rollbacks`.
 - Cada execução transmite explicitamente sua sessão de rollback. Escritas do histórico usam bloqueio entre processos e mesclagem por identificador.
 - Falhas durante a comunicação de execução encerram o histórico como falha.
 - Sessões IPC usam segredo completo de 256 bits, nomes de pipes derivados sem expor o segredo original e comparação de MAC sem saída antecipada.
+- Interface usa material acrílico com transparência e blur também no Windows 10, mantendo contraste nos temas claro e escuro.
 - Build e empacotamento verificam versão e recursos incorporados, gerando um único executável, manifesto e `SHA256SUMS.txt`.
 
 ## Compatibilidade e limites
@@ -36,4 +37,4 @@ Rollback não reinstala automaticamente apps/pacotes removidos nem desfaz comand
 
 A verificação de SHA-256 detecta corrupção e divergência em relação ao arquivo publicado pelo GitHub; não substitui uma assinatura Authenticode. O segredo IPC ainda é transmitido aos processos filhos por argumentos: isolamento contra outros processos da mesma conta exige análise adicional.
 
-Validação: compilação do motor/CLI/interface, suíte de regressão e inicialização isolada do executável único, sem DLLs ou configuração ao lado. Não foi realizada uma bateria de alterações destrutivas em VM. As fontes da estrutura local 2.0 não fazem parte desta release.
+Validação: compilação do motor/CLI/interface, suíte de regressão e inicialização isolada do executável único, sem DLLs ou configuração ao lado. Não foi realizada uma bateria de alterações destrutivas em VM.

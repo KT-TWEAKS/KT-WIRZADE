@@ -13,17 +13,17 @@
     <Color x:Key="TextPrimaryInverseColor">White</Color>
     <SolidColorBrush x:Key="TextPrimaryInverseBrush" Color="White" />
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#787878" />
-    <SolidColorBrush x:Key="PageBackground" Color="#f8f9fc" />
-    <SolidColorBrush x:Key="PageBorderBrush" Color="#e4e8ec" Opacity="1" />
+    <SolidColorBrush x:Key="PageBackground" Color="#BFF8F9FC" />
+    <SolidColorBrush x:Key="PageBorderBrush" Color="#99E4E8EC" />
     <SolidColorBrush x:Key="PageSubtextColor" Color="#191a1a" />
     <Color x:Key="PlaybookFadeColor">#151312</Color>
     <SolidColorBrush x:Key="PlaybookRectColor" Color="#7c3aed" />
     <Color x:Key="ProgressBarColor">#7c3aed</Color>
     <SolidColorBrush x:Key="ProgressBarBrush" Color="#7c3aed" />
-    <SolidColorBrush x:Key="ContentBoxBorderBrush" Color="#e3e5e8" />
-    <SolidColorBrush x:Key="FakeBackgroundBrush" Color="#ecf1f4" />
-    <SolidColorBrush x:Key="PrimaryBrush" Color="#eef4f7" Opacity="1" />
-    <SolidColorBrush x:Key="SecondaryBrush" Color="#d9dfe2" Opacity="1" />
+    <SolidColorBrush x:Key="ContentBoxBorderBrush" Color="#99E3E5E8" />
+    <SolidColorBrush x:Key="FakeBackgroundBrush" Color="#B3ECF1F4" />
+    <SolidColorBrush x:Key="PrimaryBrush" Color="#A6EEF4F7" />
+    <SolidColorBrush x:Key="SecondaryBrush" Color="#B3D9DFE2" />
     <SolidColorBrush x:Key="VerificationPopupBackgroundBrush" Color="#f8f9fd" />
     <SolidColorBrush x:Key="VerificationPopupBorderBrush" Color="#eaebef" Opacity="0.92" />
     <SolidColorBrush x:Key="VerificationPopupLineBrush" Color="#eaeaea" Opacity="0.92" />
@@ -31,7 +31,7 @@
     <SolidColorBrush x:Key="VerificationMaliciousBrush" Color="#fadfe3" Opacity="0.91" />
     <SolidColorBrush x:Key="VerificationUnverifiedBrush" Color="#fadfe3" Opacity="0.91" />
     <SolidColorBrush x:Key="ProgressBarBackground" Color="#d6d6d6" />
-    <SolidColorBrush x:Key="NoticeBoxBrush" Color="#f2f4f7" />
+    <SolidColorBrush x:Key="NoticeBoxBrush" Color="#C4F2F4F7" />
     <SolidColorBrush x:Key="WarningBoxBrush" Color="#fffbed" />
     <SolidColorBrush x:Key="SuccessBoxBrush" Color="#f3f7f2" />
     <SolidColorBrush x:Key="TextDropDownBackground" Color="#ffffff" />
@@ -100,7 +100,7 @@
     <BitmapImage x:Key="Web32" UriSource="/Icons/Light/web_32.png" />
     <BitmapImage x:Key="UsbDrive32" UriSource="/Icons/Light/FluentUsbStick20Regular.png" />
     <BitmapImage x:Key="KTWirzadeLogo" UriSource="/Icons/Light/kt_wirzade_logo_256.png" />
-    <SolidColorBrush x:Key="AboutBrush" Color="#eef4f7" Opacity="1" />
+    <SolidColorBrush x:Key="AboutBrush" Color="#B3EEF4F7" />
     <SolidColorBrush x:Key="TransparentButtonTextForeground" Color="#7c3aed" />
     <Rect x:Key="PageExcludeRect" X="197" Y="1" Height="1000" Width="1000" />
     <Thickness x:Key="UpdatesButtonTextMargin" Top="4" />

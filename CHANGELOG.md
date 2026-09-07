@@ -1,6 +1,6 @@
 # 1.0.1 — estabilidade e recuperação
 
-Veja [notas de atualização e compatibilidade](RELEASE-1.0.1.md). Correções de parser, filtros, downloads, rollback, IPC e atualizador; melhorias de interface e desempenho; executável único verificável.
+Veja [notas de atualização e compatibilidade](RELEASE-1.0.1.md). Correções de parser, filtros, downloads, rollback, IPC e atualizador; interface acrílica no Windows 10; melhorias de desempenho; executável único verificável.
 
 # KT WIRZADE - Changelog
 

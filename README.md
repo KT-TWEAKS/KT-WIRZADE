@@ -23,6 +23,7 @@ O KT WIRZADE interpreta arquivos de playbook (`.apbx`) que contêm definições 
 | **Bypass de versão** | Continuar com builds não suportadas (com aviso) |
 | **Offline Support** | Cache local com SHA-256 + indicador online/offline |
 | **Dashboard** | Quick Actions, rollback e updates |
+| **Visual acrílico** | Transparência e blur nos temas claro e escuro do Windows 10/11 |
 | **Multi-playbook** | Sidebar com rolagem ilimitada |
 | **Até 7 opções/página** | Checkbox, Radio e seletores com imagem |
 | **Auto-Update** | Verifica GitHub releases com release notes |

@@ -132,14 +132,7 @@ namespace KTWirzade.GUI.Controls
                 return;
             }
 
-            if (GlobalsGUI.WinVer >= 22000)
-            {
-                MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.Acrylic, CornerType);
-            }
-            else
-            {
-                MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.None, CornerType);
-            }
+            MaterialManager.SetWindowBackdrop(this, MaterialManager.BackdropType.Acrylic, CornerType);
         }
     }
 }

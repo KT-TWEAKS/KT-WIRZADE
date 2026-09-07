@@ -5,14 +5,7 @@ using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
 using KTWirzade.GUI;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using System.Threading;
 using System;
-using System.Collections.Generic;
-using System.Drawing;
 
 
 namespace KTWirzade.GUI.Utils
@@ -43,13 +36,36 @@ namespace KTWirzade.GUI.Utils
             RoundSmall
         }
 
-        private const int True = 1;
-
-        private const int False = 0;
-
-        private static int? Build;
-
         private static bool? _isVMwareVM;
+
+        private enum AccentState
+        {
+            Disabled = 0,
+            BlurBehind = 3,
+            AcrylicBlurBehind = 4
+        }
+
+        private enum WindowCompositionAttribute
+        {
+            AccentPolicy = 19
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct AccentPolicy
+        {
+            public AccentState State;
+            public int Flags;
+            public uint GradientColor;
+            public int AnimationId;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct WindowCompositionAttributeData
+        {
+            public WindowCompositionAttribute Attribute;
+            public IntPtr Data;
+            public int SizeOfData;
+        }
 
         public static bool IsVMwareVM
         {
@@ -88,6 +104,9 @@ namespace KTWirzade.GUI.Utils
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, DWMWINDOWATTRIBUTE dwAttribute, ref int pvAttribute, int cbAttribute);
+
+        [DllImport("user32.dll")]
+        private static extern int SetWindowCompositionAttribute(IntPtr hwnd, ref WindowCompositionAttributeData data);
 
         private static int SetWindowAttribute(IntPtr hwnd, DWMWINDOWATTRIBUTE attribute, int parameter)
         {
@@ -159,8 +178,7 @@ namespace KTWirzade.GUI.Utils
         {
             if (GlobalsGUI.WinVer < 22000)
             {
-                // No DWM backdrop/corner APIs before Windows 11 - fall back to a
-                // rounded window region so the app keeps its rounded identity.
+                ApplyWindows10Backdrop(window, micaType);
                 ApplyRoundedCornerRegion(window);
                 return;
             }
@@ -184,6 +202,54 @@ namespace KTWirzade.GUI.Utils
             }
             _ = ThemeWatcher.CurrentTheme;
             SetWindowAttribute(windowHandle, DWMWINDOWATTRIBUTE.DWMWA_USE_IMMERSIVE_DARK_MODE, 0);
+        }
+
+        /// <summary>
+        /// Windows 10 exposes acrylic through SetWindowCompositionAttribute rather
+        /// than the public Windows 11 backdrop attributes. The tint keeps text
+        /// readable while allowing the desktop behind the window to remain visible.
+        /// </summary>
+        private static void ApplyWindows10Backdrop(Window window, BackdropType backdropType)
+        {
+            IntPtr windowHandle = new WindowInteropHelper(window).Handle;
+            if (windowHandle == IntPtr.Zero)
+                return;
+
+            bool enabled = backdropType != BackdropType.None;
+            if (enabled)
+                window.Background = Brushes.Transparent;
+
+            var policy = new AccentPolicy
+            {
+                State = enabled
+                    ? (GlobalsGUI.WinVer >= 17134 ? AccentState.AcrylicBlurBehind : AccentState.BlurBehind)
+                    : AccentState.Disabled,
+                Flags = enabled ? 2 : 0,
+                // ACCENT_POLICY expects AABBGGRR. A 60% tint keeps the blur visible
+                // beneath the semi-transparent WPF surfaces.
+                GradientColor = ThemeWatcher.CurrentTheme == ThemeWatcher.WindowsTheme.Dark
+                    ? 0x99171514u
+                    : 0x99F7F4EEu,
+                AnimationId = 0
+            };
+
+            int size = Marshal.SizeOf<AccentPolicy>();
+            IntPtr policyPointer = Marshal.AllocHGlobal(size);
+            try
+            {
+                Marshal.StructureToPtr(policy, policyPointer, false);
+                var data = new WindowCompositionAttributeData
+                {
+                    Attribute = WindowCompositionAttribute.AccentPolicy,
+                    Data = policyPointer,
+                    SizeOfData = size
+                };
+                SetWindowCompositionAttribute(windowHandle, ref data);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(policyPointer);
+            }
         }
     }
 }
