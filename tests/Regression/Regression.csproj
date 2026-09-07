@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="KTWirzade.Shared">
+      <HintPath>../../KTWirzade.Shared/bin/x64/Release/KTWirzade.Shared.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>../../KTWirzade.Shared/bin/x64/Release/Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="YamlDotNet">
+      <HintPath>../../KTWirzade.Shared/bin/x64/Release/YamlDotNet.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>

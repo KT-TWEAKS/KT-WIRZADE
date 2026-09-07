@@ -59,9 +59,11 @@ namespace KTWirzade.Shared.Actions
 
         public async Task<bool> RunTask(Output.OutputWriter output)
         {
+            if (string.IsNullOrWhiteSpace(Git) && string.IsNullOrWhiteSpace(Url))
+                throw new ArgumentException("Url or Git must be specified on DownloadAction");
             if (Git != null && Url != null)
                 throw new ArgumentException("Cannot specify both Git and Url on DownloadAction");
-            if (Destination == null)
+            if (string.IsNullOrWhiteSpace(Destination))
                 throw new ArgumentException("Destination must be specified on DownloadAction");
             if (Git != null && Regex == null)
                 throw new ArgumentException("Regex must be specified with git on DownloadAction");

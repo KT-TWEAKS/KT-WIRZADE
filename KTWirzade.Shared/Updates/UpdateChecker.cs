@@ -12,10 +12,13 @@ namespace KTWirzade.Shared.Updates
 {
     public class GitHubRelease
     {
+        [JsonProperty("tag_name")]
         public string TagName { get; set; }
         public string Name { get; set; }
         public string Body { get; set; }
+        [JsonProperty("html_url")]
         public string HtmlUrl { get; set; }
+        [JsonProperty("published_at")]
         public DateTime PublishedAt { get; set; }
         public bool Prerelease { get; set; }
         public GitHubAsset[] Assets { get; set; } = Array.Empty<GitHubAsset>();
@@ -24,6 +27,7 @@ namespace KTWirzade.Shared.Updates
     public class GitHubAsset
     {
         public string Name { get; set; }
+        [JsonProperty("browser_download_url")]
         public string BrowserDownloadUrl { get; set; }
         public long Size { get; set; }
     }

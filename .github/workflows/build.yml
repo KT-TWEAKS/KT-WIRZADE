@@ -44,6 +44,14 @@ jobs:
         run: |
           msbuild KT-Wirzade.sln /t:Build /p:Configuration=Release /p:Platform=x64 /p:SolutionDir="$(pwd)\"
 
+      - name: Run safe regression checks
+        shell: pwsh
+        run: |
+          dotnet build tests/Regression/Regression.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & ./tests/Regression/bin/Release/net48/Regression.exe
+          exit $LASTEXITCODE
+
       - name: Sync fresh Shared deps and CLI.exe into GUI Resources
         shell: pwsh
         run: |
