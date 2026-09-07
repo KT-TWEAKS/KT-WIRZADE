@@ -274,7 +274,7 @@ namespace KTWirzade.GUI
                 }
                 if (!acquired)
                 {
-                    KTWirzade.GUI.MessageBox.Show(null, "Another instance of KT WIRZADE Beta was detected, a new instance will not be started.", "Warning", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Warning, null, null);
+                    KTWirzade.GUI.MessageBox.Show(null, "Outra instância do KT WIRZADE já está aberta.", "KT WIRZADE", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Warning, null, null);
                     Environment.Exit(-1);
                 }
                 else
@@ -878,7 +878,7 @@ namespace KTWirzade.GUI
                     hint = Environment.NewLine + Environment.NewLine +
                         "This error usually means this computer cannot load a UI dependency." + Environment.NewLine +
                         "1. Install .NET Framework 4.8: https://dotnet.microsoft.com/download/dotnet-framework/net48" + Environment.NewLine +
-                        "2. Re-extract the full KT WIRZADE zip (do not run the exe alone).";
+                        "2. Feche o aplicativo, limpe %TEMP%\\AME e execute novamente o EXE oficial.";
                 }
                 try
                 {
