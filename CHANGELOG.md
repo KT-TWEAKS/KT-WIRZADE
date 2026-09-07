@@ -1,3 +1,7 @@
+# 1.0.1 — estabilidade e recuperação
+
+Veja [notas de atualização e compatibilidade](RELEASE-1.0.1.md). Correções de parser, filtros, downloads, rollback, IPC e atualizador; melhorias de interface e desempenho; executável único verificável.
+
 # KT WIRZADE - Changelog
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.

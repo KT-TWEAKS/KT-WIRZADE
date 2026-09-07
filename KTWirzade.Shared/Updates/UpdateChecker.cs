@@ -12,10 +12,13 @@ namespace KTWirzade.Shared.Updates
 {
     public class GitHubRelease
     {
+        [JsonProperty("tag_name")]
         public string TagName { get; set; }
         public string Name { get; set; }
         public string Body { get; set; }
+        [JsonProperty("html_url")]
         public string HtmlUrl { get; set; }
+        [JsonProperty("published_at")]
         public DateTime PublishedAt { get; set; }
         public bool Prerelease { get; set; }
         public GitHubAsset[] Assets { get; set; } = Array.Empty<GitHubAsset>();
@@ -24,8 +27,11 @@ namespace KTWirzade.Shared.Updates
     public class GitHubAsset
     {
         public string Name { get; set; }
+        [JsonProperty("browser_download_url")]
         public string BrowserDownloadUrl { get; set; }
         public long Size { get; set; }
+        [JsonProperty("digest")]
+        public string Digest { get; set; }
     }
 
     public class UpdateInfo
@@ -147,7 +153,7 @@ namespace KTWirzade.Shared.Updates
                     info.PublishedAt = release.PublishedAt;
                     info.IsPrerelease = release.Prerelease;
                     info.Assets = (release.Assets ?? Array.Empty<GitHubAsset>())
-                        .Where(a => a.Name != null &&
+                        .Where(a => a != null && a.Name != null &&
                                     (a.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) ||
                                      a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase)))
                         .ToArray();
@@ -168,80 +174,58 @@ namespace KTWirzade.Shared.Updates
         {
             if (CurrentUpdateInfo == null || !CurrentUpdateInfo.UpdateAvailable)
                 await CheckForUpdatesAsync();
-
-            if (CurrentUpdateInfo == null || !CurrentUpdateInfo.UpdateAvailable)
-                return null;
-
-            var asset = FindBestAsset(CurrentUpdateInfo.Assets);
-            if (asset == null)
-                return null;
-
-            if (string.IsNullOrEmpty(targetPath))
-            {
-                var downloadsDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                    "Downloads");
-                Directory.CreateDirectory(downloadsDir);
-                targetPath = Path.Combine(downloadsDir, asset.Name);
-            }
-
+            var update = CurrentUpdateInfo;
+            if (update == null || !update.UpdateAvailable) return null;
+            var asset = FindBestAsset(update.Assets);
+            if (asset == null) return null;
             try
             {
+                ValidateAsset(asset);
+                if (string.IsNullOrEmpty(targetPath))
+                    targetPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", asset.Name);
+                using (var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromMinutes(10)))
                 using (var client = new HttpClient())
                 {
-                    client.Timeout = TimeSpan.FromMinutes(10);
                     client.DefaultRequestHeaders.UserAgent.ParseAdd("KT-WIRZADE-Updater/" + Globals.CurrentVersion);
-
-                    using (var response = await client.GetAsync(asset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead))
+                    using (var response = await client.GetAsync(asset.BrowserDownloadUrl, HttpCompletionOption.ResponseHeadersRead, timeout.Token))
                     {
                         response.EnsureSuccessStatusCode();
-                        var total = response.Content.Headers.ContentLength ?? asset.Size;
+                        if (response.RequestMessage.RequestUri.Scheme != Uri.UriSchemeHttps)
+                            throw new InvalidDataException("Update redirect must use HTTPS.");
                         using (var stream = await response.Content.ReadAsStreamAsync())
-                        using (var fileStream = File.Create(targetPath))
-                        {
-                            var buffer = new byte[8192];
-                            long received = 0;
-                            int read;
-
-                            while ((read = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                            {
-                                await fileStream.WriteAsync(buffer, 0, read);
-                                received += read;
-
-                                DownloadProgressChanged?.Invoke(null, new DownloadProgressChangedEventArgs
-                                {
-                                    Progress = new DownloadProgress
-                                    {
-                                        BytesReceived = received,
-                                        TotalBytes = total,
-                                        Status = "Baixando..."
-                                    }
-                                });
-                            }
-                        }
+                            await Helpers.AtomicDownload.SaveAsync(stream, targetPath, asset.Size, asset.Digest.Substring(7),
+                                received => ReportDownload(received, asset.Size, "Baixando..."), timeout.Token);
                     }
                 }
-
-                DownloadProgressChanged?.Invoke(null, new DownloadProgressChangedEventArgs
-                {
-                    Progress = new DownloadProgress
-                    {
-                        BytesReceived = asset.Size,
-                        TotalBytes = asset.Size,
-                        Status = "Concluido"
-                    }
-                });
-
+                ReportDownload(asset.Size, asset.Size, "Concluído e verificado");
                 return targetPath;
             }
             catch (Exception ex)
             {
-                DownloadProgressChanged?.Invoke(null, new DownloadProgressChangedEventArgs
-                {
-                    Progress = new DownloadProgress { Status = "Erro: " + ex.Message }
-                });
+                ReportDownload(0, asset.Size, "Erro: " + ex.Message);
                 return null;
             }
+        }
+
+        private static void ReportDownload(long received, long total, string status) =>
+            DownloadProgressChanged?.Invoke(null, new DownloadProgressChangedEventArgs
+            {
+                Progress = new DownloadProgress { BytesReceived = received, TotalBytes = total, Status = status }
+            });
+
+        public static void ValidateAsset(GitHubAsset asset)
+        {
+            if (asset == null || string.IsNullOrWhiteSpace(asset.Name) || asset.Name != Path.GetFileName(asset.Name) ||
+                asset.Name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || asset.Size <= 0)
+                throw new InvalidDataException("Invalid update filename or size.");
+            if (!Uri.TryCreate(asset.BrowserDownloadUrl, UriKind.Absolute, out var uri) ||
+                uri.Scheme != Uri.UriSchemeHttps || uri.Host != "github.com" || !uri.IsDefaultPort ||
+                !string.IsNullOrEmpty(uri.UserInfo) ||
+                !uri.AbsolutePath.StartsWith("/KT-TWEAKS/KT-WIRZADE/releases/download/", StringComparison.Ordinal))
+                throw new InvalidDataException("Update must come from the official GitHub repository.");
+            if (asset.Digest == null || !asset.Digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("No SHA-256 published for this update. Use the release page.");
+            Helpers.AtomicDownload.ValidateHash(asset.Digest.Substring(7));
         }
 
         private static GitHubAsset FindBestAsset(GitHubAsset[] assets)

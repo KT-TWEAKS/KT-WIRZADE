@@ -32,6 +32,7 @@ namespace KTWirzade.Shared.Parser
                     currentType = typeof(RunAction);
                     return true;
                 case "!powerShell:":
+                case "!powershell:":
                     currentType = typeof(PowerShellAction);
                     return true;
                 case "!shortcut:":
@@ -50,9 +51,11 @@ namespace KTWirzade.Shared.Parser
                     currentType = typeof(RegexFileAction);
                     return true;
                 case "!registryKey:":
+                case "!regKey:":
                     currentType = typeof(RegistryKeyAction);
                     return true;
                 case "!registryValue:":
+                case "!regValue:":
                     currentType = typeof(RegistryValueAction);
                     return true;
                 case "!appx:":

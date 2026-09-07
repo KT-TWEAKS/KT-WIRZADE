@@ -1,4 +1,4 @@
-# KT WIRZADE v1.0
+# KT WIRZADE v1.0.1
 
 Motor de execução de playbooks para otimização e personalização do Windows — versão customizada e melhorada do [AME Wizard](https://ameliorated.io).
 

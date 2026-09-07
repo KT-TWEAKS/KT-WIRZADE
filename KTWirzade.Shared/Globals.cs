@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -19,7 +19,7 @@ namespace KTWirzade.Shared
         // KTWirzade.GUI.csproj / KTWirzade.DevTool.csproj. UpdateChecker compares
         // this value against GitHub release tags, so a stale value here causes
         // permanent false "update available" prompts.
-        public const string CurrentVersion = "1.0.0";
+        public const string CurrentVersion = "1.0.1";
         public static readonly VersionNumber CurrentVersionNumber = VersionNumber.GetVersionNumber(CurrentVersion);
     }
     [Serializable]

@@ -62,6 +62,7 @@ licensing-site/
 kelvenapk-backup/
 
 # Artefatos de release (zips gerados para upload no GitHub Releases)
+artifacts/
 KT-WIRZADE-v*.zip
 
 # Reports and temp files

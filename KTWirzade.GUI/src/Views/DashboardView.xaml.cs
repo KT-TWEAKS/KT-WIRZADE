@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using KTWirzade.Shared.Cache;
 using KTWirzade.Shared.Updates;
 using KTWirzade.GUI.Utils;
@@ -11,6 +12,7 @@ namespace KTWirzade.GUI.Views
 {
     public partial class DashboardView : UserControl
     {
+        private bool _checkingUpdates;
         public DashboardView()
         {
             InitializeComponent();
@@ -82,8 +84,23 @@ namespace KTWirzade.GUI.Views
                 main.RollbackButton_OnClick(sender, e);
         }
 
+        private void QuickAction_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter && e.Key != Key.Space) return;
+            e.Handled = true;
+            switch ((sender as FrameworkElement)?.Tag as string)
+            {
+                case "load": QuickAction_LoadPlaybook(sender, e); break;
+                case "rollback": QuickAction_Rollback(sender, e); break;
+                case "updates": QuickAction_CheckUpdates(sender, e); break;
+            }
+        }
+
         private async void QuickAction_CheckUpdates(object sender, RoutedEventArgs e)
         {
+            if (_checkingUpdates) return;
+            _checkingUpdates = true;
+            Mouse.OverrideCursor = Cursors.Wait;
             try
             {
                 using var cts = new System.Threading.CancellationTokenSource(TimeSpan.FromSeconds(15));
@@ -140,6 +157,11 @@ namespace KTWirzade.GUI.Views
             catch (Exception ex)
             {
                 KTWirzade.GUI.MessageBox.Show(this, "Erro: " + ex.Message, "Erro");
+            }
+            finally
+            {
+                Mouse.OverrideCursor = null;
+                _checkingUpdates = false;
             }
         }
 

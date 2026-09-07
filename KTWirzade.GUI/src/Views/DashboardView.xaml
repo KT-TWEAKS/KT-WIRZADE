@@ -19,7 +19,7 @@
                     <wpf:SymbolIcon Symbol="Home" TextBlock.FontSize="22" Margin="0,0,12,0" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource ProgressBarBrush}" />
                     <StackPanel>
                         <TextBlock FontSize="20" FontWeight="Bold" Text="Bem-vindo ao KT WIRZADE" Foreground="{DynamicResource TextPrimaryBrush}" />
-                        <TextBlock Name="SubtitleText" FontSize="12" Margin="0,2,0,0" Foreground="{DynamicResource TextSecondaryBrush}" Text="Sistema de otimizacao e personalizacao do Windows" />
+                        <TextBlock Name="SubtitleText" FontSize="12" Margin="0,2,0,0" Foreground="{DynamicResource TextSecondaryBrush}" Text="Sistema de otimização e personalização do Windows" />
                   </StackPanel>
               </StackPanel>
           </StackPanel>
@@ -34,47 +34,47 @@
                     <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" FontSize="14" FontWeight="SemiBold" Text="Acoes Rapidas" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10" />
+                <TextBlock Grid.Row="0" FontSize="14" FontWeight="SemiBold" Text="Ações rápidas" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10" />
 
                 <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,16">
-                    <Border CornerRadius="8" Padding="16,14" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Margin="0,0,6,0" Cursor="Hand" MouseLeftButtonUp="QuickAction_LoadPlaybook">
+                    <Border Tag="load" Focusable="True" ToolTip="Carregar um arquivo APBX" CornerRadius="8" Padding="16,14" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Margin="0,0,6,0" Cursor="Hand" MouseLeftButtonUp="QuickAction_LoadPlaybook" KeyDown="QuickAction_KeyDown">
                         <StackPanel Orientation="Horizontal">
                             <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource StatusInfoSoftBrush}" Margin="0,0,12,0">
                                 <wpf:SymbolIcon Symbol="DocumentArrowDown" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource ProgressBarBrush}" />
                           </Border>
                             <StackPanel VerticalAlignment="Center">
                                 <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Carregar Playbook" />
-                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Text="Aplicar um .apbx ao sistema" />
+                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Abrir e revisar um arquivo .apbx" />
                           </StackPanel>
                       </StackPanel>
                   </Border>
 
-                    <Border CornerRadius="8" Padding="16,14" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Margin="6,0,6,0" Cursor="Hand" MouseLeftButtonUp="QuickAction_Rollback">
+                    <Border Tag="rollback" Focusable="True" ToolTip="Abrir sessões de recuperação" CornerRadius="8" Padding="16,14" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Margin="6,0,6,0" Cursor="Hand" MouseLeftButtonUp="QuickAction_Rollback" KeyDown="QuickAction_KeyDown">
                         <StackPanel Orientation="Horizontal">
                             <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource StatusWarningSoftBrush}" Margin="0,0,12,0">
                                 <wpf:SymbolIcon Symbol="ArrowUndo" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource StatusWarningBrush}" />
                           </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Reverter Alteracoes" />
-                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Text="Desfazer playbook anterior" />
+                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Recuperação" />
+                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Revisar e retomar rollbacks" />
                           </StackPanel>
                       </StackPanel>
                   </Border>
 
-                    <Border CornerRadius="8" Padding="16,14" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Margin="6,0,0,0" Cursor="Hand" MouseLeftButtonUp="QuickAction_CheckUpdates">
+                    <Border Tag="updates" Focusable="True" ToolTip="Verificar atualizações do aplicativo" CornerRadius="8" Padding="16,14" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Margin="6,0,0,0" Cursor="Hand" MouseLeftButtonUp="QuickAction_CheckUpdates" KeyDown="QuickAction_KeyDown">
                         <StackPanel Orientation="Horizontal">
                             <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource StatusSuccessSoftBrush}" Margin="0,0,12,0">
                                 <wpf:SymbolIcon Symbol="ArrowSync" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource StatusSuccessBrush}" />
                           </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Verificar Atualizacoes" />
-                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Text="Buscar versao mais recente" />
+                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Atualizações" />
+                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Buscar versão mais recente" />
                           </StackPanel>
                       </StackPanel>
                   </Border>
               </UniformGrid>
 
-                <TextBlock Grid.Row="2" FontSize="14" FontWeight="SemiBold" Text="Playbooks em Cache" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,10" />
+                <TextBlock Grid.Row="2" FontSize="14" FontWeight="SemiBold" Text="Playbooks disponíveis offline" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,10" />
 
                 <Border Grid.Row="3" CornerRadius="8" Padding="0" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" MinHeight="120">
                     <Grid>
