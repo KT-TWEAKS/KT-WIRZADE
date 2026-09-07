@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -92,27 +92,40 @@ namespace Interprocess
         /// </summary>
         public static void InitializeSession(string sessionSecret = null, string ownerSid = null)
         {
-            if (_sessionSecret != null && sessionSecret == null)
+            if (_sessionSecret != null)
+            {
+                if (sessionSecret == null)
+                    return;
+
+                if (!string.Equals(_sessionSecret, sessionSecret, StringComparison.Ordinal))
+                    throw new InvalidOperationException("IPC session is already initialized with a different secret.");
+
+                if (ownerSid != null && !string.Equals(_sessionOwnerSid, new SecurityIdentifier(ownerSid).Value, StringComparison.Ordinal))
+                    throw new InvalidOperationException("IPC session is already initialized for a different owner.");
+
                 return;
+            }
 
             if (sessionSecret != null)
             {
+                if (!System.Text.RegularExpressions.Regex.IsMatch(sessionSecret, "\\A[A-Za-z0-9_-]{43}\\z"))
+                    throw new ArgumentException("Invalid IPC session secret.");
                 _sessionSecret = sessionSecret;
             }
             else
             {
                 // Use cryptographically secure random bytes for the session secret
-                var bytes = new byte[16];
+                var bytes = new byte[32];
                 using (var rng = RandomNumberGenerator.Create())
                 {
                     rng.GetBytes(bytes);
                 }
-                _sessionSecret = Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").Substring(0, 16);
+                _sessionSecret = Convert.ToBase64String(bytes).Replace("+", "-").Replace("/", "_").TrimEnd('=');
             }
 
             if (ownerSid != null)
             {
-                _sessionOwnerSid = ownerSid;
+                _sessionOwnerSid = new SecurityIdentifier(ownerSid).Value;
             }
             else if (_sessionOwnerSid == null)
             {
@@ -122,9 +135,23 @@ namespace Interprocess
         }
 
         /// <summary>Command-line fragment that propagates the session identity to child nodes.</summary>
-        public static string BuildSessionArgs() => $" --Secret {_sessionSecret} --OwnerSid {_sessionOwnerSid}";
+        public static string BuildSessionArgs()
+        {
+            if (!HasSession)
+                InitializeSession();
 
-        private static string PipeNamespace => _sessionSecret == null ? PipePrefix : $"{PipePrefix}-{_sessionSecret}";
+            return $" --Secret {_sessionSecret} --OwnerSid {_sessionOwnerSid}";
+        }
+
+        private static string PipeNamespace
+        {
+            get
+            {
+                if (!HasSession) InitializeSession();
+                using var sha = SHA256.Create();
+                return PipePrefix + "-" + BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(_sessionSecret))).Replace("-", "");
+            }
+        }
         internal static string ReceiverPipeName(InternalLevel level) => $"{PipeNamespace}-{level}-Receiver";
         internal static string ResultReceiverPipeName(InternalLevel level) => $"{PipeNamespace}-{level}-ResultReceiver";
         internal static string VerificationPipeName(InternalLevel level) => $"{PipeNamespace}-{level}-VerificationReceiver";
@@ -1557,7 +1584,8 @@ namespace Interprocess
 
         internal static byte[] ComputeVerificationMac(Guid messageId, byte resultByte)
         {
-            using var hmac = new System.Security.Cryptography.HMACSHA256(Encoding.UTF8.GetBytes(_sessionSecret ?? string.Empty));
+            if (!HasSession) throw new InvalidOperationException("IPC session is not initialized.");
+            using var hmac = new System.Security.Cryptography.HMACSHA256(Encoding.UTF8.GetBytes(_sessionSecret));
             var data = new byte[17];
             Array.Copy(messageId.ToByteArray(), 0, data, 0, 16);
             data[16] = resultByte;
@@ -1640,7 +1668,11 @@ namespace Interprocess
                                 throw new UnauthorizedAccessException("Verification response was truncated.");
                         }
 
-                        if (!responseMac.SequenceEqual(ComputeVerificationMac(request.IdToVerify, verifiedByte[0])))
+                        var expectedMac = ComputeVerificationMac(request.IdToVerify, verifiedByte[0]);
+                        int macDifference = 0;
+                        for (int index = 0; index < responseMac.Length; index++)
+                            macDifference |= responseMac[index] ^ expectedMac[index];
+                        if (macDifference != 0)
                             throw new UnauthorizedAccessException("Verification response authentication failed.");
 
                         if (verifiedByte[0] != 1)

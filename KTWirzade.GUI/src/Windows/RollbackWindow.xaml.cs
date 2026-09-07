@@ -51,7 +51,7 @@ namespace KTWirzade.GUI.Windows
                     var session = Newtonsoft.Json.JsonConvert.DeserializeObject<RollbackSession>(json);
                     if (session == null) continue;
 
-                    var rolledBack = session.WasRolledBack || (session.Entries.Count > 0 && session.Entries.All(e => e.RollbackCompleted));
+                    var rolledBack = session.Entries.Count > 0 && RollbackManager.IsFullyReverted(session);
 
                     Sessions.Add(new RollbackSessionViewModel
                     {
@@ -59,7 +59,9 @@ namespace KTWirzade.GUI.Windows
                         PlaybookName = string.IsNullOrEmpty(session.PlaybookName) ? "(desconhecido)" : session.PlaybookName,
                         StartedAt = session.StartedAt,
                         ActionCount = session.Entries.Count,
-                        IsReverted = rolledBack
+                        IsReverted = rolledBack,
+                        PendingCount = session.Entries.Count(e => !e.RollbackCompleted),
+                        HasRollbackProgress = session.Entries.Any(e => e.RollbackCompleted)
                     });
                 }
                 catch
@@ -230,7 +232,7 @@ namespace KTWirzade.GUI.Windows
 
             var confirm = KTWirzade.GUI.MessageBox.Show(
                 this,
-                $"Reverter '{selected.PlaybookName}'?\n\nIsso irá desfazer {selected.ActionCount} ação(ões).\nEsta ação não pode ser desfeita.",
+                $"Reverter '{selected.PlaybookName}'?\n\nSerá feita uma tentativa de reverter {selected.PendingCount} ação(ões) pendente(s). Apps removidos e comandos podem não ser reversíveis.\nEsta ação não pode ser desfeita.",
                 "Confirmar Rollback",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -280,7 +282,9 @@ namespace KTWirzade.GUI.Windows
         public string DateDisplay => StartedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm");
         public int ActionCount { get; set; }
         public bool IsReverted { get; set; }
-        public string StatusDisplay => IsReverted ? "Revertido" : "Ativo";
+        public int PendingCount { get; set; }
+        public bool HasRollbackProgress { get; set; }
+        public string StatusDisplay => IsReverted ? "Revertido" : HasRollbackProgress ? $"Parcial ({PendingCount} pendentes)" : "Não revertido";
 
         public string RelativeDateDisplay
         {

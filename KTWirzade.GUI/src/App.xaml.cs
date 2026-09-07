@@ -95,6 +95,8 @@ namespace KTWirzade.GUI
                     System.Threading.Tasks.Task.Run((System.Action)RemoveKTWirzadeTask);
                 }
                 // Join the same IPC session (pipe namespace + DACL owner) as the root node.
+                if (string.IsNullOrWhiteSpace(interprocessData.Secret) || string.IsNullOrWhiteSpace(interprocessData.OwnerSid))
+                    throw new SecurityException("IPC child requires its parent session identity.");
                 InterLink.InitializeSession(interprocessData.Secret, interprocessData.OwnerSid);
                 await InterLink.InitializeConnection(interprocessData.Level, interprocessData.Mode, interprocessData.Host, interprocessData.Nodes?.Select((CommandLine.Interprocess.NodeData x) => (Level: x.Level, ProcessID: x.ProcessID)).ToArray() ?? null);
                 Environment.Exit(376);
@@ -177,7 +179,7 @@ namespace KTWirzade.GUI
                         "Failed to load a required UI component (" + assemblyName + ").\r\n\r\n" +
                         "Common causes:\r\n" +
                         "- Outdated .NET Framework: install .NET Framework 4.8 from https://dotnet.microsoft.com/download/dotnet-framework/net48\r\n" +
-                        "- Incomplete installation: re-extract the full KT WIRZADE zip instead of running the exe alone\r\n\r\n" +
+                        "- Runtime cache unavailable: close KT WIRZADE, clear %TEMP%\\AME and run the app again\r\n\r\n" +
                         "Details:\r\n" + ex,
                         "KT WIRZADE", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Hand);
                     Environment.Exit(-1);
@@ -200,7 +202,12 @@ namespace KTWirzade.GUI
 
             ConfigureCulture();
             PreflightCheckFramework();
-            // Extract FluentIcons to disk BEFORE any XAML — BAML needs LoadFrom context
+            // Register resolution before the first window is created. The two UI assemblies
+            // are unpacked to the private runtime directory so a single downloaded EXE does
+            // not leave DLLs beside itself.
+            if (!Directory.Exists(ActivePath))
+                Directory.CreateDirectory(ActivePath);
+            AppDomain.CurrentDomain.AssemblyResolve += CurrentDomain_AssemblyResolve;
             ExtractFluentIconsToDisk();
             string[] arguments = Environment.GetCommandLineArgs();
             if (arguments.Length == 3 && arguments[1] == "--apply-package")
@@ -596,14 +603,18 @@ namespace KTWirzade.GUI
         private static async System.Threading.Tasks.Task PrepareItems(string pbDir)
         {
             List<Task<IDragItem>> tasks = new List<Task<IDragItem>>();
-            List<string> apbxFiles = (Directory.Exists(pbDir) ? Directory.GetFiles(pbDir, "*.apbx").ToList() : new List<string>());
+            List<string> apbxFiles = (Directory.Exists(pbDir) ? Directory.EnumerateFiles(pbDir, "*.apbx").ToList() : new List<string>());
+            // Metadata parsing is I/O and CPU heavy. A small bounded pool keeps startup
+            // responsive on systems with many cached playbooks or mounted images.
+            using var loadGate = new SemaphoreSlim(Math.Max(2, Math.Min(4, Environment.ProcessorCount)));
             foreach (string apbx in apbxFiles)
             {
-                tasks.Add(System.Threading.Tasks.Task.Run((Func<Task<IDragItem>>)(async () => await LoadPlaybook(apbx))));
+                tasks.Add(LoadItemBounded(async () => await LoadPlaybook(apbx), loadGate));
             }
             foreach (IDragItem iso in GlobalsGUI.Current.Items.Where((IDragItem x) => x.FilePath != null))
             {
-                tasks.Add(System.Threading.Tasks.Task.Run((Func<Task<IDragItem>>)(async () => await LoadISO(iso.FilePath))));
+                var isoPath = iso.FilePath;
+                tasks.Add(LoadItemBounded(async () => await LoadISO(isoPath), loadGate));
             }
             if (GlobalsGUI.Current.Playbook != null)
             {
@@ -615,9 +626,10 @@ namespace KTWirzade.GUI
                 GlobalsGUI.Current.ISO.Selected = true;
                 GlobalsGUI.Current.ISO.SidebarInitialHeight = 37;
             }
-            for (int i = 0; i < tasks.Count; i++)
+            IDragItem[] loadedItems = await System.Threading.Tasks.Task.WhenAll(tasks);
+            for (int i = 0; i < loadedItems.Length; i++)
             {
-                IDragItem item = await tasks[i];
+                IDragItem item = loadedItems[i];
                 if (item == null) continue;
                 PlaybookGUI pb = item as PlaybookGUI;
                 if (pb != null)
@@ -671,6 +683,13 @@ namespace KTWirzade.GUI
                     GlobalsGUI.Current.ISO = iso2;
                 }
             }
+        }
+
+        private static async Task<IDragItem> LoadItemBounded(Func<Task<IDragItem>> loader, SemaphoreSlim gate)
+        {
+            await gate.WaitAsync();
+            try { return await loader(); }
+            finally { gate.Release(); }
         }
 
         [InterprocessMethod(Level.Administrator)]
@@ -1032,32 +1051,43 @@ namespace KTWirzade.GUI
         }
 
         /// <summary>
-        /// Extracts FluentIcons.Common.dll and FluentIcons.Wpf.dll to the APPLICATION BASE DIRECTORY
-        /// (same folder as the exe) before any XAML is parsed.
+        /// Extracts FluentIcons.Common.dll and FluentIcons.Wpf.dll to the private runtime
+        /// directory before any window XAML is parsed.
         /// 
         /// WHY: Baml2006SchemaContext.ResolveBamlType does NOT fire AppDomain.AssemblyResolve.
         /// It uses CLR probing: GAC → app base directory → probe subdirs.
         /// For single-exe, FluentIcons is only in embedded resources — BAML can't find it.
         /// Non-single works because FluentIcons.dll sits next to the exe (app base probing).
         /// 
-        /// This method replicates that: extract FluentIcons beside the exe so BAML's own
-        /// probing finds them naturally, exactly like the non-single distribution.
+        /// Preloading from the runtime directory makes the assemblies available to the BAML
+        /// loader without creating sidecar files next to the distributed executable.
         /// </summary>
         private static void ExtractFluentIconsToDisk()
         {
             try
             {
                 var asm = Assembly.GetExecutingAssembly();
-                // PRIMARY: extract to app base directory (beside the exe) — where BAML probes
-                string dir = Path.GetDirectoryName(asm.Location);
+                string dir = ActivePath;
                 if (string.IsNullOrEmpty(dir)) return;
+                if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
                 foreach (string resSuffix in new[] { "FluentIcons.Common.dll", "FluentIcons.WPF.dll" })
                 {
                     string resName = "KTWirzade.GUI.Resources." + resSuffix;
                     string diskName = resSuffix.Replace("WPF", "Wpf");
                     string outPath = Path.Combine(dir, diskName);
-                    if (File.Exists(outPath)) continue;
+                    if (File.Exists(outPath))
+                    {
+                        try
+                        {
+                            Assembly.LoadFrom(outPath);
+                            continue;
+                        }
+                        catch
+                        {
+                            File.Delete(outPath);
+                        }
+                    }
                     foreach (var rn in asm.GetManifestResourceNames())
                     {
                         if (rn.Equals(resName, StringComparison.OrdinalIgnoreCase))
@@ -1068,6 +1098,7 @@ namespace KTWirzade.GUI
                                 {
                                     using (var fs = new FileStream(outPath, FileMode.Create, FileAccess.Write))
                                         stream.CopyTo(fs);
+                                    Assembly.LoadFrom(outPath);
                                 }
                             }
                             break;

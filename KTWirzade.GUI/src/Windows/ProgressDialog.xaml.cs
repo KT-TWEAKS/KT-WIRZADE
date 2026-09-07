@@ -268,7 +268,7 @@ public partial class ProgressDialog : AcrylicWindow
                         Playbook playbook = GlobalsGUI.Current.Playbook;
                         playbook.Options = playbook.Options?.Where(x => !x.StartsWith("none-") || !int.TryParse(x.Substring(5), out _)).ToList();
 
-                        RollbackManager.BeginSession(playbook.Name);
+                        var rollbackSessionId = RollbackManager.BeginSession(playbook.Name).SessionId;
 
                         string[] allOptions = playbook.FeaturePages == null
                             ? Array.Empty<string>()
@@ -279,6 +279,7 @@ public partial class ProgressDialog : AcrylicWindow
 
                         string[] selectedOptions = playbook.Options?.ToArray();
 
+                        errorsOccurred = true; // A thrown IPC call must close the journal as failed.
                         errorsOccurred = await ExecuteAsync<bool>(
                             (Expression<Func<Task<bool>>>)(() => AmeliorationUtil.RunPlaybook(
                                 playbookPath,
@@ -294,7 +295,7 @@ public partial class ProgressDialog : AcrylicWindow
                                 logFolder,
                                 progress,
                                 reporter,
-                                AmeliorationUtil.UseKernelDriver)),
+                                AmeliorationUtil.UseKernelDriver, rollbackSessionId)),
                             false, -1);
                     }
                     finally

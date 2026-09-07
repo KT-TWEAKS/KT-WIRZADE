@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -46,6 +46,8 @@ namespace KTWirzade.Shared.Actions
         public string Url { get; set; } = null;
         [YamlMember(typeof(string), Alias = "git")]
         public string Git { get; set; } = null;
+        [YamlMember(typeof(string), Alias = "hash")]
+        public string Hash { get; set; } = null;
         [YamlMember(typeof(string), Alias = "regex")]
         public string Regex { get; set; } = null;
         public string ErrorString() => $"DownloadAction failed to download '{Path.GetFileName(Destination)}'.";
@@ -68,6 +70,7 @@ namespace KTWirzade.Shared.Actions
             if (Git != null && Regex == null)
                 throw new ArgumentException("Regex must be specified with git on DownloadAction");
 
+            Helpers.AtomicDownload.ValidateHash(Hash);
             var dir = AmeliorationUtil.ISO ? $@"{AmeliorationUtil.WimPath}\ProgramData\KTWirzade\OOBE\Playbook\Executables" : AmeliorationUtil.Playbook.Path + "\\Executables";
 
             Destination = Environment.ExpandEnvironmentVariables(Destination);
@@ -80,10 +83,10 @@ namespace KTWirzade.Shared.Actions
             
             if (File.Exists(realDestination))
             {
-                if (Overwrite)
-                    File.Delete(realDestination);
-                else
+                if (!Overwrite)
                 {
+                    if (Hash != null && !Helpers.AtomicDownload.HashFile(realDestination).Equals(Hash, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException("Existing download does not match its expected SHA-256.");
                     output.WriteLineSafe("Info", $"File '{Path.GetFileName(Destination)}' already exists, skipping download. Use 'overwrite: true' to overwrite.");
                     HasFinished = true;
                     return true;
@@ -108,7 +111,8 @@ namespace KTWirzade.Shared.Actions
             using var httpClient = new HttpProgressClient();
             httpClient.Client.DefaultRequestHeaders.UserAgent.ParseAdd("curl/7.55.1");
 
-            await httpClient.StartDownload(url, destination, 300000);
+            httpClient.ExpectedHash = Hash;
+            await httpClient.StartDownload(url, destination);
         }
         private async Task DownloadGit(Output.OutputWriter output, string git, string destination)
         {
@@ -123,7 +127,7 @@ namespace KTWirzade.Shared.Actions
             using (var httpClient = new HttpProgressClient())
             {
                 string downloadUrl = null;
-                long size = 55000000;
+                long? size = null;
 
                 try
                 {
@@ -143,7 +147,7 @@ namespace KTWirzade.Shared.Actions
                             downloadUrl = asset["browser_download_url"]?.ToString();
 
                             if (asset["size"] != null)
-                                long.TryParse(asset["size"].ToString(), out size);
+                                { if (long.TryParse(asset["size"].ToString(), out var assetSize)) size = assetSize; }
                         }
                         else
                         {
@@ -160,6 +164,7 @@ namespace KTWirzade.Shared.Actions
                     throw new Exception("Download link unavailable.");
 
                 // TODO: Add proper progress reporting and figure out how to reliably fetch the file size universally.
+                httpClient.ExpectedHash = Hash;
                 await httpClient.StartDownload(downloadUrl, destination, size);
             }
         }
@@ -170,6 +175,7 @@ namespace KTWirzade.Shared.Actions
             private string _destinationFilePath;
 
             public HttpClient Client;
+            public string ExpectedHash { get; set; }
 
             public delegate void ProgressChangedHandler(long? totalFileSize, long totalBytesDownloaded, double? progressPercentage);
 
@@ -223,40 +229,10 @@ namespace KTWirzade.Shared.Actions
 
             private async Task<string> ProcessContentStream(long? totalDownloadSize, Stream contentStream)
             {
-                var totalBytesRead = 0L;
-                var readCount = 0L;
-                var buffer = new byte[8192];
-                var isMoreToRead = true;
-
-                using (var md5 = MD5.Create())
-                {
-                    using (var fileStream = new FileStream(_destinationFilePath, FileMode.Create, FileAccess.Write, FileShare.None, 8192, true))
-                    {
-                        do
-                        {
-                            var bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length);
-                            if (bytesRead == 0)
-                            {
-                                isMoreToRead = false;
-                                TriggerProgressChanged(totalDownloadSize, totalBytesRead);
-                                continue;
-                            }
-                            md5.TransformBlock(buffer, 0, bytesRead, buffer, 0);
-
-                            await fileStream.WriteAsync(buffer, 0, bytesRead);
-
-                            totalBytesRead += bytesRead;
-                            readCount += 1;
-
-                            if (readCount % 50 == 0)
-                                TriggerProgressChanged(totalDownloadSize, totalBytesRead);
-                        } while (isMoreToRead);
-
-                    }
-
-                    md5.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-                    return BitConverter.ToString(md5.Hash).Replace("-", "").ToUpper();
-                }
+                using (var timeout = new System.Threading.CancellationTokenSource(TimeSpan.FromMinutes(10)))
+                    return await Helpers.AtomicDownload.SaveAsync(contentStream, _destinationFilePath,
+                        totalDownloadSize, ExpectedHash,
+                        received => TriggerProgressChanged(totalDownloadSize, received), timeout.Token);
             }
 
             private void TriggerProgressChanged(long? totalDownloadSize, long totalBytesRead)

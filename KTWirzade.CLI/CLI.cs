@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -42,6 +42,8 @@ namespace KTWirzade.CLI
                 
                 Directory.SetCurrentDirectory(Path.GetDirectoryName(Win32.ProcessEx.GetCurrentProcessFileLocation())!);
                 // Join the same IPC session (pipe namespace + DACL owner) as the root node.
+                if (string.IsNullOrWhiteSpace(interprocessData.Secret) || string.IsNullOrWhiteSpace(interprocessData.OwnerSid))
+                    throw new SecurityException("IPC child requires its parent session identity.");
                 InterLink.InitializeSession(interprocessData.Secret, interprocessData.OwnerSid);
                 await InterLink.InitializeConnection(interprocessData.Level, interprocessData.Mode, interprocessData.Host, interprocessData.Nodes?.Select(x => (Level: x.Level, ProcessID: x.ProcessID)).ToArray() ?? null);
                 Environment.Exit(376);
@@ -328,14 +330,14 @@ namespace KTWirzade.CLI
             {
                 // Open a named rollback session so CLI runs are revertible and closed
                 // properly (otherwise entries land in an eternal "Manual" session).
-                KTWirzade.Shared.Rollback.RollbackManager.BeginSession(AmeliorationUtil.Playbook.Name);
+                var rollbackSessionId = KTWirzade.Shared.Rollback.RollbackManager.BeginSession(AmeliorationUtil.Playbook.Name).SessionId;
 
                 using (var reporter = new InterLink.InterMessageReporter(statusText => { status = statusText.TrimEnd('.') + "..."; }))
                 {
                     using (var progress = new InterLink.InterProgress(async value => { Console.WriteLine(value + "% " + status + "..."); }))
                     {
                         errorsOccurred = await InterLink.ExecuteAsync(() => AmeliorationUtil.RunPlaybook(AmeliorationUtil.Playbook.Path, true, false, null, null, null, AmeliorationUtil.Playbook.Name, AmeliorationUtil.Playbook.Version, options.ToArray(),
-                            allOptions, Environment.CurrentDirectory, progress, reporter, AmeliorationUtil.UseKernelDriver));
+                            allOptions, Environment.CurrentDirectory, progress, reporter, AmeliorationUtil.UseKernelDriver, rollbackSessionId));
                     }
                 }
             }

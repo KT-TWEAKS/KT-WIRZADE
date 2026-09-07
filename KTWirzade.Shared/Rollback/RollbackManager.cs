@@ -67,17 +67,19 @@ namespace KTWirzade.Shared.Rollback
 
         public static string GetSessionDir(string sessionId)
         {
-            return Path.Combine(BaseDir, sessionId);
+            if (!Guid.TryParseExact(sessionId, "D", out var id))
+                throw new ArgumentException("Invalid rollback session ID.", nameof(sessionId));
+            return Path.Combine(BaseDir, id.ToString("D"));
         }
 
         public static string GetSessionFile(string sessionId)
         {
-            return Path.Combine(BaseDir, sessionId, "session.json");
+            return Path.Combine(GetSessionDir(sessionId), "session.json");
         }
 
         public static string GetSessionBackupDir(string sessionId)
         {
-            return Path.Combine(BaseDir, sessionId, "files");
+            return Path.Combine(GetSessionDir(sessionId), "files");
         }
 
         public static IEnumerable<RollbackSession> ListSessions()
@@ -131,56 +133,51 @@ namespace KTWirzade.Shared.Rollback
             return session;
         }
 
+        public static void AttachSession(string sessionId)
+        {
+            CurrentSession = sessionId == null ? null : LoadSession(sessionId)
+                ?? throw new InvalidDataException("Rollback session was not found.");
+            if (CurrentSession?.CompletedAt != null)
+                throw new InvalidOperationException("Rollback session is already closed.");
+        }
+
         public static void EndSession(bool wasSuccessful)
         {
-            if (CurrentSession == null)
-            {
-                var active = FindActiveSession();
-                if (active == null) return;
-                CurrentSession = active;
-            }
-            else
-            {
-                // Actions run in a separate TrustedInstaller process that writes LogEntry data
-                // straight into the session.json on disk, while this process' in-memory session
-                // still holds an empty Entries list. Merging from disk here prevents the final
-                // save from wiping everything the child recorded.
-                // Merge is done by entry Id (union), not by count: both processes may have
-                // appended entries since the last save, and count comparison would discard
-                // the child's records whenever the parent happened to hold more entries.
-                try
-                {
-                    RollbackSession onDisk = null;
-                    for (int retry = 0; retry < 3; retry++)
-                    {
-                        try
-                        {
-                            onDisk = LoadSession(CurrentSession.SessionId);
-                            break;
-                        }
-                        catch { Thread.Sleep(100 * (retry + 1)); }
-                    }
-                    if (onDisk != null)
-                    {
-                        var known = new HashSet<string>(CurrentSession.Entries.Select(e => e.Id));
-                        foreach (var e in onDisk.Entries)
-                        {
-                            if (known.Add(e.Id))
-                                CurrentSession.Entries.Add(e);
-                        }
-                        CurrentSession.Entries = CurrentSession.Entries.OrderBy(e => e.Timestamp).ToList();
-                    }
-                }
-                catch (Exception)
-                {
-                    // Keep the in-memory copy if the disk copy cannot be read after retries.
-                }
-            }
-
+            if (CurrentSession == null) return;
             CurrentSession.WasSuccessful = wasSuccessful;
             CurrentSession.CompletedAt = DateTime.UtcNow;
             SaveSession();
             CurrentSession = null;
+        }
+
+        public static bool IsFullyReverted(RollbackSession session) =>
+            session != null && session.Entries != null && session.Entries.Count > 0 && session.Entries.All(e => e.RollbackCompleted);
+
+        public static void MergeSessionEntries(RollbackSession target, RollbackSession existing)
+        {
+            if (existing == null) return;
+            if (target.SessionId != existing.SessionId)
+                throw new InvalidDataException("Cannot merge different rollback sessions.");
+            var known = target.Entries.ToDictionary(e => e.Id);
+            foreach (var entry in existing.Entries)
+            {
+                if (!known.TryGetValue(entry.Id, out var local))
+                {
+                    target.Entries.Add(entry);
+                    known.Add(entry.Id, entry);
+                }
+                else if (entry.RollbackCompleted)
+                {
+                    local.RollbackCompleted = true;
+                    local.RollbackTimestamp = entry.RollbackTimestamp;
+                }
+            }
+            target.Entries = target.Entries.OrderBy(e => e.Timestamp).ToList();
+            if (target.CompletedAt == null && existing.CompletedAt != null)
+            {
+                target.CompletedAt = existing.CompletedAt;
+                target.WasSuccessful = existing.WasSuccessful;
+            }
         }
 
         /// <summary>
@@ -192,10 +189,10 @@ namespace KTWirzade.Shared.Rollback
         {
             Wrap.ExecuteSafe(() =>
             {
-                var session = CurrentSession ?? FindActiveSession();
+                var session = CurrentSession;
                 if (session == null)
                 {
-                    session = BeginSession("Manual");
+                    return; // ISO and other unbound operations must not join another execution.
                 }
                 CurrentSession = session;
 
@@ -213,7 +210,7 @@ namespace KTWirzade.Shared.Rollback
         {
             try
             {
-                var session = CurrentSession ?? FindActiveSession();
+                var session = CurrentSession;
                 if (session == null || string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
                     return null;
 
@@ -254,7 +251,7 @@ namespace KTWirzade.Shared.Rollback
         {
             try
             {
-                var session = CurrentSession ?? FindActiveSession();
+                var session = CurrentSession;
                 if (session == null || string.IsNullOrEmpty(keyPath))
                     return null;
 
@@ -274,21 +271,6 @@ namespace KTWirzade.Shared.Rollback
                     p.WaitForExit(10000);
                 }
                 return File.Exists(dest) ? dest : null;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
-        private static RollbackSession FindActiveSession()
-        {
-            try
-            {
-                return RollbackPaths.ListSessions()
-                    .Where(s => s.CompletedAt == null)
-                    .OrderByDescending(s => s.StartedAt)
-                    .FirstOrDefault();
             }
             catch (Exception)
             {
@@ -478,7 +460,10 @@ namespace KTWirzade.Shared.Rollback
             var dir = RollbackPaths.GetSessionDir(sessionId);
             Directory.CreateDirectory(dir);
             var target = RollbackPaths.GetSessionFile(sessionId);
-            var temp = target + "." + System.Diagnostics.Process.GetCurrentProcess().Id + ".tmp";
+            using var journalLock = AcquireJournalLock(Path.Combine(dir, "journal.lock"));
+            MergeSessionEntries(session, LoadSession(sessionId));
+            session.WasRolledBack = IsFullyReverted(session);
+            var temp = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
 
             File.WriteAllText(temp, JsonConvert.SerializeObject(session, Formatting.Indented));
 
@@ -505,13 +490,23 @@ namespace KTWirzade.Shared.Rollback
             }
         }
 
+        public static FileStream AcquireJournalLock(string path)
+        {
+            var started = System.Diagnostics.Stopwatch.StartNew();
+            while (true)
+            {
+                try { return new FileStream(path, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None); }
+                catch (IOException) when (started.Elapsed < TimeSpan.FromSeconds(10)) { Thread.Sleep(50); }
+            }
+        }
+
         public static RollbackSession LoadSession(string sessionId)
         {
             var file = RollbackPaths.GetSessionFile(sessionId);
             if (!File.Exists(file))
                 return null;
 
-            using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            using var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
             using var sr = new StreamReader(fs);
             var content = sr.ReadToEnd();
             return JsonConvert.DeserializeObject<RollbackSession>(content);
@@ -519,16 +514,20 @@ namespace KTWirzade.Shared.Rollback
 
         public static RollbackResult RollbackSession(string sessionId)
         {
+            using var operationLock = AcquireJournalLock(Path.Combine(RollbackPaths.GetSessionDir(sessionId), "rollback.lock"));
             var session = LoadSession(sessionId);
             if (session == null)
                 return new RollbackResult { Success = false, Error = "Sessao nao encontrada." };
 
-            if (session.WasRolledBack)
+            if (session.CompletedAt == null)
+                return new RollbackResult { Success = false, Error = "A sessão ainda está em execução. Aguarde a conclusão." };
+            if (IsFullyReverted(session))
                 return new RollbackResult { Success = true, Message = "Sessao ja foi revertida anteriormente." };
 
             int succeeded = 0;
             int failed = 0;
             int skipped = 0;
+            int pending = 0;
             var errors = new List<string>();
 
             bool hiveMounted = false;
@@ -562,7 +561,8 @@ namespace KTWirzade.Shared.Rollback
                     }
                     else
                     {
-                        skipped++;
+                        pending++;
+                        errors.Add($"[{entry.ActionType}] {entry.Target}: não foi possível reverter; backup indisponível ou operação não suportada.");
                     }
                 }
                 catch (Exception ex)
@@ -578,18 +578,19 @@ namespace KTWirzade.Shared.Rollback
                 }
             }
 
-            session.WasRolledBack = failed == 0;
+            session.WasRolledBack = failed == 0 && IsFullyReverted(session);
             WriteSessionFile(sessionId, session);
 
             return new RollbackResult
             {
-                Success = failed == 0,
+                Success = session.WasRolledBack,
                 TotalEntries = session.Entries.Count,
                 Succeeded = succeeded,
                 Failed = failed,
                 Skipped = skipped,
+                Pending = pending + failed,
                 Error = errors.Count > 0 ? string.Join("\n", errors) : null,
-                Message = $"Rollback: {succeeded} revertidos, {failed} erros, {skipped} ignorados"
+                Message = $"Rollback: {succeeded} revertidos, {failed} erros, {pending} não revertidos, {skipped} já concluídos"
             };
             }
             finally
@@ -1425,5 +1426,6 @@ namespace KTWirzade.Shared.Rollback
         public int Succeeded { get; set; }
         public int Failed { get; set; }
         public int Skipped { get; set; }
+        public int Pending { get; set; }
     }
 }

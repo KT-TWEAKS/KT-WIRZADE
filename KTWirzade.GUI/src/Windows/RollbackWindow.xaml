@@ -60,7 +60,7 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="120" />
                         <ColumnDefinition Width="55" />
-                        <ColumnDefinition Width="70" />
+                        <ColumnDefinition Width="135" />
                         <ColumnDefinition Width="34" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" Text="Playbook" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextSecondaryBrush}" />
@@ -102,7 +102,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="120" />
                                 <ColumnDefinition Width="55" />
-                                <ColumnDefinition Width="70" />
+                                <ColumnDefinition Width="135" />
                                 <ColumnDefinition Width="34" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="{Binding PlaybookName}" VerticalAlignment="Center" FontSize="12" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource TextPrimaryBrush}" ToolTip="{Binding SessionId}" />
@@ -119,7 +119,7 @@
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
-                                <TextBlock Text="{Binding StatusDisplay}" FontSize="10.5" HorizontalAlignment="Center">
+                                <TextBlock Text="{Binding StatusDisplay}" TextWrapping="Wrap" MaxWidth="115" FontSize="10.5" HorizontalAlignment="Center">
                                     <TextBlock.Style>
                                         <Style TargetType="TextBlock">
                                             <Setter Property="Foreground" Value="{DynamicResource ProgressBarBrush}" />

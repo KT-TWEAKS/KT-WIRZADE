@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -103,29 +103,33 @@ namespace KTWirzade.Shared
         
         [CanBeNull]
         public static List<ITaskAction> ParseActions(string configPath, [CanBeNull] string isoBuild, [CanBeNull] string isoUpdateBuild, global::System.Runtime.InteropServices.Architecture? isoArch, List<string> options, string file, [CanBeNull] Playbook upgradingFrom)
+            => ParseActions(configPath, isoBuild, isoUpdateBuild, isoArch, options, file, upgradingFrom,
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase));
+
+        private static List<ITaskAction> ParseActions(string configPath, string isoBuild, string isoUpdateBuild,
+            global::System.Runtime.InteropServices.Architecture? isoArch, List<string> options, string file,
+            Playbook upgradingFrom, HashSet<string> activeIncludes)
         {
+            var includePath = Helpers.PlaybookValidation.ResolveInclude(configPath, file);
+            Helpers.PlaybookValidation.EnterInclude(includePath, activeIncludes);
             var returnExceptionMessage = string.Empty;
             try
             {
-                if (!File.Exists(Path.Combine(configPath, file)))
-                    return null;
+                if (!File.Exists(includePath))
+                    throw new FileNotFoundException("Could not find YAML file: " + file);
                 
-                var configData = File.ReadAllText(Path.Combine(configPath, file));
+                var configData = File.ReadAllText(includePath);
                 var task = PlaybookParser.Deserializer.Deserialize<UninstallTask>(configData);
+                if (task == null || task.Actions == null || task.Tasks == null)
+                    throw new InvalidDataException("Empty or invalid YAML task: " + file);
 
                 //if (task.ISO == ISOSetting.Only && task.OOBE == OOBESetting.Only)
                 //    throw new SerializationException($"Cannot have both ISO and OOBE set to only on task.");
                 
                 if ((!IsApplicable(upgradingFrom, task.OnUpgrade, task.OnUpgradeVersions, task.PreviousOption ?? task.Option) || 
-                        !IsApplicableOption(task.Option, Playbook.Options) || !IsApplicableArch(task.Arch, ISO ? isoArch?.ToString() : null)) ||
-                    (task.Builds != null && (
-                        !task.Builds.Where(build => !build.StartsWith("!")).Any(build => IsApplicableWindowsVersion(build, ISO, isoBuild, isoUpdateBuild))
-                        ||
-                        task.Builds.Where(build => build.StartsWith("!")).Any(build => !IsApplicableWindowsVersion(build, ISO, isoBuild, isoUpdateBuild)))) ||
-                    (task.Options != null && (
-                        !task.Options.Where(option => !option.StartsWith("!")).Any(option => IsApplicableOption(option, Playbook.Options))
-                        ||
-                        task.Options.Where(option => option.StartsWith("!")).Any(option => !IsApplicableOption(option, Playbook.Options)))) ||
+                        !IsApplicableOption(task.Option, options) || !IsApplicableArch(task.Arch, ISO ? isoArch?.ToString() : null)) ||
+                    !Helpers.PlaybookValidation.MatchesFilters(task.Builds, build => IsApplicableWindowsVersion(build, ISO, isoBuild, isoUpdateBuild)) ||
+                    !Helpers.PlaybookValidation.MatchesFilters(task.Options, option => IsApplicableOption(option, options)) ||
                     ((!LiveISO && task.OOBE == OOBESetting.Only && (!ISO || task.ISO != ISOSetting.Only)) || (LiveISO && (task.OOBE == OOBESetting.False || (task.OOBE == null && task.ISO == ISOSetting.True)))) ||
                     ((!ISO && task.ISO == ISOSetting.Only && (!LiveISO || task.OOBE != OOBESetting.Only)) || (ISO && task.ISO == ISOSetting.False)))
                 {
@@ -137,6 +141,8 @@ namespace KTWirzade.Shared
                 // ReSharper disable once PossibleInvalidCastExceptionInForeachLoop
                 foreach (Tasks.TaskAction taskAction in task.Actions)
                 {
+                    if (taskAction == null)
+                        throw new InvalidDataException("Null YAML action in " + file);
                     var isoCompatibilityError = taskAction.ISO != ISOSetting.False ? taskAction.IsISOCompatible() : null;
                     if (isoCompatibilityError != null)
                         throw new SerializationException(isoCompatibilityError);
@@ -146,14 +152,8 @@ namespace KTWirzade.Shared
                     
                     if ((!IsApplicable(upgradingFrom, taskAction.OnUpgrade, taskAction.OnUpgradeVersions, taskAction.PreviousOption ?? taskAction.Option) || 
                             !IsApplicableOption(taskAction.Option, options) || !IsApplicableArch(taskAction.Arch, ISO ? isoArch?.ToString() : null)) ||
-                        (taskAction.Builds != null && (
-                            !taskAction.Builds.Where(build => !build.StartsWith("!")).Any(build => IsApplicableWindowsVersion(build, ISO, isoBuild, isoUpdateBuild))
-                            ||
-                            taskAction.Builds.Where(build => build.StartsWith("!")).Any(build => !IsApplicableWindowsVersion(build, ISO, isoBuild, isoUpdateBuild)))) ||
-                        (taskAction.Options != null && (
-                            !taskAction.Options.Where(option => !option.StartsWith("!")).Any(option => IsApplicableOption(option, Playbook.Options))
-                            ||
-                            taskAction.Options.Where(option => option.StartsWith("!")).Any(option => !IsApplicableOption(option, Playbook.Options)))) ||
+                        !Helpers.PlaybookValidation.MatchesFilters(taskAction.Builds, build => IsApplicableWindowsVersion(build, ISO, isoBuild, isoUpdateBuild)) ||
+                        !Helpers.PlaybookValidation.MatchesFilters(taskAction.Options, option => IsApplicableOption(option, options)) ||
                         ((!LiveISO && taskAction.OOBE == OOBESetting.Only && (!ISO || taskAction.ISO != ISOSetting.Only)) || (LiveISO && (taskAction.OOBE == OOBESetting.False || (taskAction.OOBE == null && taskAction.ISO == ISOSetting.True)))) ||
                         ((!ISO && taskAction.ISO == ISOSetting.Only && (!LiveISO || taskAction.OOBE != OOBESetting.Only)) || (ISO && taskAction.ISO == ISOSetting.False)))
                     {
@@ -166,7 +166,7 @@ namespace KTWirzade.Shared
                             throw new FileNotFoundException("Could not find YAML file: " + taskTaskAction.Path);
                         try
                         {
-                            list.AddRange(ParseActions(configPath, isoBuild, isoUpdateBuild, isoArch, options, taskTaskAction.Path, upgradingFrom) ?? new List<ITaskAction>());
+                            list.AddRange(ParseActions(configPath, isoBuild, isoUpdateBuild, isoArch, options, taskTaskAction.Path, upgradingFrom, activeIncludes) ?? new List<ITaskAction>());
                         }
                         catch (Exception e)
                         {
@@ -188,7 +188,7 @@ namespace KTWirzade.Shared
                         throw new FileNotFoundException("Could not find YAML file: " + childTask);
                     try
                     {
-                        list.AddRange(ParseActions(configPath, isoBuild, isoUpdateBuild, isoArch, options, childTask, upgradingFrom) ?? new List<ITaskAction>());
+                        list.AddRange(ParseActions(configPath, isoBuild, isoUpdateBuild, isoArch, options, childTask, upgradingFrom, activeIncludes) ?? new List<ITaskAction>());
                     }
                     catch (Exception e)
                     {
@@ -217,6 +217,10 @@ namespace KTWirzade.Shared
                     Log.EnqueueExceptionSafe(e, ("YAML", faultyText.Value));
                     throw new SerializationException(FilterYAMLMessage(e).TrimEnd('.') + $" in {Path.GetFileName(file)}:{Environment.NewLine}{faultyText.Value}");
                 }
+            }
+            finally
+            {
+                activeIncludes.Remove(includePath);
             }
         }
         
@@ -298,6 +302,8 @@ namespace KTWirzade.Shared
         public static async Task<bool> DoActions(List<ITaskAction> actions, string logFolder, Action<int> progressReport)
         {
             bool errorOccurred = false;
+            try
+            {
             foreach (ITaskAction action in actions)
             {
                 var actionName = action.GetType().ToString().Split('.').Last();
@@ -341,8 +347,8 @@ namespace KTWirzade.Shared
                                 {
                                     errorString = errorHandlingException.Message;
                                     Thread.Sleep(50);
-                                    i += 2;
-                                    if (i == 10)
+                                    i = Math.Min(i + 2, 10);
+                                    if (i >= 10)
                                     {
                                         if (errorHandlingException.Action == TaskAction.ExitCodeAction.Retry)
                                         {
@@ -387,6 +393,7 @@ namespace KTWirzade.Shared
                         
                         if (action.GetStatus(writer) == UninstallTaskStatus.Completed)
                             break;
+                        if (!retryAllowed) { i = 10; break; }
                     } while (i < 10);
                     
                     if (actionFailedAfterRetries && !((Tasks.TaskAction)action).IgnoreErrors)
@@ -423,10 +430,10 @@ namespace KTWirzade.Shared
                 }
                 
                 debugSw.Stop();
-                KTWirzade.Shared.DebugLog.DebugLogger.LogActionEnd(actionName, i == 10 ? -1 : 0, debugSw.ElapsedMilliseconds, i >= 10 ? errorString : null);
+                KTWirzade.Shared.DebugLog.DebugLogger.LogActionEnd(actionName, i >= 10 ? -1 : 0, debugSw.ElapsedMilliseconds, i >= 10 ? errorString : null);
                 
                 progressReport(action.GetProgressWeight());
-                if (i == 10)
+                if (i >= 10)
                 {
                     if (!((Tasks.TaskAction)action).IgnoreErrors)
                     {
@@ -446,7 +453,8 @@ namespace KTWirzade.Shared
                 }
             }
 
-            ProcessPrivilege.ResetTokens();
+            }
+            finally { ProcessPrivilege.ResetTokens(); }
             return errorOccurred;
         }
 
@@ -642,12 +650,13 @@ namespace KTWirzade.Shared
         [InterprocessMethod(Level.TrustedInstaller)]
         public static async Task<bool> RunPlaybook(string playbookPath, bool verified, bool autoLogon, [CanBeNull] string username, [CanBeNull] string password, [CanBeNull] string adminPassword,
             string playbookName, string playbookVersion, string[] options, string[] allOptions, string logFolder, InterLink.InterProgress progress, [CanBeNull] InterLink.InterMessageReporter statusReporter,
-            bool useKernelDriver) => await RunPlaybook(playbookPath, false, false, false, verified, autoLogon, username, password, adminPassword, false, null, null, null, null, null, playbookName, playbookVersion, options, allOptions, logFolder, progress, statusReporter, useKernelDriver);
+            bool useKernelDriver, string rollbackSessionId) => await RunPlaybook(playbookPath, false, false, false, verified, autoLogon, username, password, adminPassword, false, null, null, null, null, null, playbookName, playbookVersion, options, allOptions, logFolder, progress, statusReporter, useKernelDriver, rollbackSessionId);
 
         
         [InterprocessMethod(Level.TrustedInstaller)]
-        public static async Task<bool> RunPlaybook(string playbookPath, bool networkDrivers, bool graphicsDrivers, bool systemDrivers, bool verified, bool autoLogon, [CanBeNull] string username, [CanBeNull] string password, [CanBeNull] string adminPassword, bool esd, string isoDest, [CanBeNull] string isoPath, [CanBeNull] string isoBuild, [CanBeNull] string isoUpdateBuild, global::System.Runtime.InteropServices.Architecture? isoArch, string playbookName, string playbookVersion, string[] options, string[] allOptions, string logFolder, InterLink.InterProgress progress, [CanBeNull] InterLink.InterMessageReporter statusReporter, bool useKernelDriver)
+        public static async Task<bool> RunPlaybook(string playbookPath, bool networkDrivers, bool graphicsDrivers, bool systemDrivers, bool verified, bool autoLogon, [CanBeNull] string username, [CanBeNull] string password, [CanBeNull] string adminPassword, bool esd, string isoDest, [CanBeNull] string isoPath, [CanBeNull] string isoBuild, [CanBeNull] string isoUpdateBuild, global::System.Runtime.InteropServices.Architecture? isoArch, string playbookName, string playbookVersion, string[] options, string[] allOptions, string logFolder, InterLink.InterProgress progress, [CanBeNull] InterLink.InterMessageReporter statusReporter, bool useKernelDriver, string rollbackSessionId)
         {
+            Rollback.RollbackManager.AttachSession(rollbackSessionId);
             Log.LogFileOverride = Path.Combine(logFolder, "Log.yml");
             Log.MetadataSource = new PlaybookMetadata(options, playbookName, playbookVersion);
             KTWirzade.Shared.DebugLog.DebugLogger.Enable(logFolder);

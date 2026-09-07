@@ -54,6 +54,7 @@ internal static class Program
             RejectDownload(new DownloadAction { Url = " ", Destination = "unused.bin" }, "blank download source");
             RejectDownload(new DownloadAction { Url = "https://example.invalid/a", Git = "https://example.invalid/b", Destination = "unused.bin" }, "ambiguous download source");
             RejectDownload(new DownloadAction { Url = "https://example.invalid/a", Destination = " " }, "blank download destination");
+            ReliabilityTests.Run(Check);
             Console.WriteLine(passed + " regression checks passed. No playbook was executed.");
             return 0;
         }
