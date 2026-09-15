@@ -1,0 +1,129 @@
+<Window x:Class="KTWirzade.GUI.Windows.ApplyPackageDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:KTWirzade.GUI.Windows"
+        mc:Ignorable="d"
+        xmlns:controls="clr-namespace:KTWirzade.GUI.Controls" 
+        xmlns:gui="clr-namespace:KTWirzade.GUI" 
+        xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf" 
+        WindowStartupLocation="CenterOwner"
+        RenderTransformOrigin="0.5,0.5" Title="Pacote" Background="#96b0cc" 
+        Topmost="True" ResizeMode="NoResize" WindowStyle="None" WindowState="Maximized" 
+        AllowsTransparency="False" Cursor="None" xmlns:windows="clr-namespace:KTWirzade.GUI.Windows">
+    <Grid>
+        <Image Name="Wallpaper" Source="/Icons/OOBEWallpaper.jpg" Stretch="UniformToFill" HorizontalAlignment="Center" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="NearestNeighbor">
+            <UIElement.Effect>
+                <BlurEffect Radius="30" KernelType="Gaussian" RenderingBias="Performance" />
+            </UIElement.Effect>
+        </Image>
+        <Rectangle Opacity="0.6">
+            <Shape.Fill>
+                <SolidColorBrush Color="#fff" />
+            </Shape.Fill>
+        </Rectangle>
+        <Grid Name="WindowGrid" RenderTransformOrigin="0.5,0.5">
+            <UIElement.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform CenterX="0" x:Name="WindowTransform" />
+                </TransformGroup>
+            </UIElement.RenderTransform>
+            <Border Name="ShadowBorder" Background="#FF00FFFF" MaxHeight="584" MaxWidth="855" CornerRadius="8" BorderThickness="1">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#c2c6c8" Opacity="0.7" />
+                </Border.BorderBrush>
+                <UIElement.Effect>
+                    <DropShadowEffect ShadowDepth="0" BlurRadius="50" RenderingBias="Quality" Direction="270" Opacity="0.2" />
+                </UIElement.Effect>
+                <UIElement.Clip>
+                    <CombinedGeometry GeometryCombineMode="Exclude">
+                        <CombinedGeometry.Geometry1>
+                            <RectangleGeometry Rect="-100,-100,1055,784" />
+                        </CombinedGeometry.Geometry1>
+                        <CombinedGeometry.Geometry2>
+                            <RectangleGeometry RadiusX="8" RadiusY="8" Rect="0,0,855,584" />
+                        </CombinedGeometry.Geometry2>
+                    </CombinedGeometry>
+                </UIElement.Clip>
+            </Border>
+            <Border MaxHeight="584" MaxWidth="855" CornerRadius="8" BorderThickness="1">
+                <Border.Background>
+                    <SolidColorBrush x:Name="FadeBrush" Color="White" Opacity="0.8" />
+                </Border.Background>
+                <FrameworkElement.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <EventTrigger.Actions>
+                            <BeginStoryboard>
+                                <Storyboard RepeatBehavior="Forever">
+                                    <DoubleAnimationUsingKeyFrames RepeatBehavior="Forever" Storyboard.TargetName="FadeBrush" Storyboard.TargetProperty="Opacity" Duration="0:0:5">
+                                        <DoubleKeyFrameCollection>
+                                            <EasingDoubleKeyFrame Value="0.8" KeyTime="0:0:0">
+                                                <EasingDoubleKeyFrame.EasingFunction>
+                                                    <SineEase EasingMode="EaseInOut" />
+                                                </EasingDoubleKeyFrame.EasingFunction>
+                                            </EasingDoubleKeyFrame>
+                                            <EasingDoubleKeyFrame Value="0.6" KeyTime="0:0:2.5">
+                                                <EasingDoubleKeyFrame.EasingFunction>
+                                                    <SineEase EasingMode="EaseInOut" />
+                                                </EasingDoubleKeyFrame.EasingFunction>
+                                            </EasingDoubleKeyFrame>
+                                            <EasingDoubleKeyFrame Value="0.8" KeyTime="0:0:5">
+                                                <EasingDoubleKeyFrame.EasingFunction>
+                                                    <SineEase EasingMode="EaseInOut" />
+                                                </EasingDoubleKeyFrame.EasingFunction>
+                                            </EasingDoubleKeyFrame>
+                                        </DoubleKeyFrameCollection>
+                                    </DoubleAnimationUsingKeyFrames>
+                                </Storyboard>
+                            </BeginStoryboard>
+                        </EventTrigger.Actions>
+                    </EventTrigger>
+                </FrameworkElement.Triggers>
+                <Grid HorizontalAlignment="Center">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="395" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid VerticalAlignment="Center">
+                        <Image Source="/Icons/clipboard_blue_gradient_256.png" Style="{DynamicResource QualityImage}" Width="232" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Image Name="CheckImage" Source="/Icons/checkmark_green_gradient_128.png" Width="102" Visibility="Hidden" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,36,-9">
+                            <UIElement.Effect>
+                                <DropShadowEffect Opacity="0.4" BlurRadius="20" ShadowDepth="0" />
+                            </UIElement.Effect>
+                        </Image>
+                        <Image Name="ErrorImage" Source="/Icons/warning_circle_yellow_gradient_128.png" Width="102" Visibility="Hidden" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,36,-9">
+                            <UIElement.Effect>
+                                <DropShadowEffect Opacity="0.4" BlurRadius="20" ShadowDepth="0" />
+                            </UIElement.Effect>
+                        </Image>
+                    </Grid>
+                    <Grid Column="1" Height="485" VerticalAlignment="Center" UseLayoutRounding="True" Margin="0,0,26,0" Width="432">
+                        <Border Name="PageBackgroundBorder" Opacity="1" CornerRadius="9,9,9,9" Margin="0,0,0,0">
+                            <Border.Background>
+                                <SolidColorBrush Color="White" Opacity="0.5" />
+                            </Border.Background>
+                        </Border>
+                        <Border Name="PageGrid" BorderBrush="{DynamicResource PageBorderBrush}" BorderThickness="1,1,1,1" Background="#00FFFFFF" CornerRadius="8,8,8,8" Padding="29,31,29,0" />
+                        <Grid Margin="29,31,29,0">
+                            <Grid>
+                                <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
+                                    <TextBlock FontSize="16" FontWeight="Bold" Text="Preparar sistema" />
+                                    <TextBlock Name="EnsureText" Text="Garante que a instalacao esteja em condicoes adequadas para usar este playbook. Pode incluir um downgrade dos requisitos de versao do Windows e desativa alguns servicos." FontSize="13" Width="350" HorizontalAlignment="Left" TextWrapping="Wrap" Margin="0,14,0,0" />
+                                    <StackPanel Margin="0,108,0,0" Grid.Column="1" HorizontalAlignment="Left">
+                                        <TextBlock Name="StatusText" FontWeight="Bold" Margin="0,2,0,3" FontSize="15" Text="Extraindo pacote de servico..." />
+                                        <controls:ProgressBarDeterminate x:Name="ProgressBar" Width="362" HorizontalAlignment="Left" />
+                                        <TextBlock Name="FinishText" Visibility="Collapsed" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,-2,0,0" Text="Reiniciar assim que possivel" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <Grid Name="RestartGrid">
+                                    <TextBlock Name="RestartTextCheck" VerticalAlignment="Bottom" Opacity="1" HorizontalAlignment="Left" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Width="240" TextWrapping="Wrap" Margin="-1,0,15,20" Text="O sistema sera reiniciado automaticamente apos a conclusao do processo." />
+                                </Grid>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

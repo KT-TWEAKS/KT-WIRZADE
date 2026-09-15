@@ -1,0 +1,51 @@
+<UserControl x:Class="KTWirzade.GUI.Views.FinishPageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:KTWirzade.GUI.Views"
+             xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="80" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <TextBlock Text="Processo concluido" Style="{DynamicResource BlueHeaderText}" FontSize="18" FontWeight="SemiBold" />
+            <Grid Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Border Width="44" Height="44" CornerRadius="22" Margin="0,0,14,0" VerticalAlignment="Center">
+                    <Border.Background>
+                        <SolidColorBrush Color="#354d4c" Opacity="0.5" />
+                    </Border.Background>
+                    <Image Name="VersionIcon" Source="/Icons/green_check_symbol.png" Width="22" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                </Border>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock Name="RebootText" Style="{DynamicResource InText}" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" Text="O playbook foi concluido com sucesso." />
+                    <TextBlock FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,4,0,0" Text="Reinicie o computador para aplicar todas as alteracoes." />
+                </StackPanel>
+            </Grid>
+            <Border Grid.Row="2" Margin="0,16,0,0" CornerRadius="6" Padding="12,10" Background="{DynamicResource SuccessBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
+                <StackPanel Orientation="Horizontal">
+                    <wpf:SymbolIcon wpf:SymbolIcon.Symbol="CheckmarkCircle" TextBlock.Foreground="#3da35a" TextBlock.FontSize="18" Margin="0,0,8,0" />
+                    <TextBlock FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="Todas as configuracoes foram aplicadas com sucesso." />
+                </StackPanel>
+            </Border>
+            <TextBlock Grid.Row="3" Margin="0,12,0,0" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" TextAlignment="Center" FontStyle="Italic">
+                Modificado por kelvenapk - github.com/kelvenapk
+            </TextBlock>
+        </Grid>
+        <TextBlock VerticalAlignment="Bottom" Margin="10,0,-10,10" Grid.Row="1" Style="{DynamicResource InText}">Clique no botao <Bold>Reboot</Bold> abaixo para finalizar.</TextBlock>
+    </Grid>
+</UserControl>

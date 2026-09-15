@@ -1,0 +1,7 @@
+<Project>
+  <Target Name="RemoveConflictingRuntimeInformation" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <ReferencePath Remove="%(ReferencePath.Identity)" Condition="$([System.String]::new('%(ReferencePath.Identity)').Contains('System.Runtime.InteropServices.RuntimeInformation')) AND $([System.String]::new('%(ReferencePath.Identity)').Contains('system.runtime.interopservices.runtimeinformation')) AND !$([System.String]::new('%(ReferencePath.Identity)').Contains('Facades'))" />
+    </ItemGroup>
+  </Target>
+</Project>

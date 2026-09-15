@@ -1,0 +1,37 @@
+name: KT WIRZADE Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    permissions:
+      contents: read
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build and package
+        shell: pwsh
+        run: ./scripts/build-release.ps1
+
+      - name: Upload verified release package
+        uses: actions/upload-artifact@v4
+        with:
+          name: KT-WIRZADE-v1.0.1-win-x64
+          path: |
+            artifacts/KT-WIRZADE-v1.0.1-win-x64.exe
+            artifacts/KT-WIRZADE-v1.0.1-manifest.json
+            artifacts/SHA256SUMS.txt
+          if-no-files-found: error
+
+      # Release publication is intentionally manual because the organization
+      # disables write permissions for GITHUB_TOKEN-based workflows.

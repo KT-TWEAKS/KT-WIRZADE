@@ -1,0 +1,81 @@
+<UserControl x:Class="KTWirzade.GUI.Controls.VerificationButton"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:KTWirzade.GUI.Controls"
+             xmlns:fluent="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid>
+        <Button Name="Button" Margin="0,6,0,0" Style="{DynamicResource TopButtonTransparent}" IsEnabled="False" Padding="7,0,9,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <fluent:SymbolIcon x:Name="StatusIcon" TextBlock.Foreground="{DynamicResource ButtonTextPrimaryBrush}" fluent:SymbolIcon.Symbol="Shield" TextBlock.FontSize="21" FrameworkElement.Margin="0,0,6,0" RenderOptions.BitmapScalingMode="Fant">
+                    <!--Unknown connection ID: 2-->
+                </fluent:SymbolIcon>
+                <TextBlock Name="StatusText" Grid.Column="1" Foreground="{DynamicResource ButtonTextPrimaryBrush}" Margin="{DynamicResource VerifiedButtonTextMargin}" Text="Selecionar" />
+            </Grid>
+        </Button>
+        <Popup Name="Popup" IsHitTestVisible="True" UseLayoutRounding="True" HorizontalOffset="-89" Width="206" Height="162" AllowsTransparency="True" IsOpen="False" StaysOpen="False" Opened="Popup_OnOpened">
+            <Popup.PopupAnimation>
+                <PopupAnimation>Fade</PopupAnimation>
+            </Popup.PopupAnimation>
+            <Grid>
+                <Border Name="Border" UseLayoutRounding="True" Background="#00FFFFFF" BorderThickness="1" VerticalAlignment="Top" Margin="15,0,15,15" CornerRadius="11" BorderBrush="{DynamicResource VerificationPopupBorderBrush}">
+                    <StackPanel ClipToBounds="True">
+                        <Border Name="Mains" Height="85" Background="{DynamicResource VerificationPopupBackgroundBrush}" CornerRadius="10,10,0,0">
+                            <StackPanel>
+                                <TextBlock Name="PopupHeader" Style="{DynamicResource InText}" VerticalAlignment="Top" FontSize="13" HorizontalAlignment="Center" Text="Playbook verificado" Margin="0,7,0,10" />
+                                <Line SnapsToDevicePixels="True" X1="8" X2="167" StrokeThickness="1" Stroke="{DynamicResource VerificationPopupLineBrush}" />
+                                <TextBlock Name="PopupText" FontSize="11" Margin="5,9,5,0" Height="63" VerticalAlignment="Top" Text="Este playbook foi verificado pelo KT WIRZADE como sendo de um desenvolvedor confiavel." TextWrapping="Wrap" TextAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Button Name="PopupButton" Style="{DynamicResource VerificationDropButton}" Height="37" Background="{DynamicResource VerificationVerifiedBrush}" Click="PopupButton_OnClick">
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
+                                <Image Name="PopupButtonImage" RenderOptions.BitmapScalingMode="Fant" UseLayoutRounding="True" Source="{DynamicResource Web32}" Height="17" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,2,9,0" />
+                                <TextBlock Name="PopupButtonText" UseLayoutRounding="True" Foreground="{DynamicResource ButtonTextPrimaryBrush}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,0,0,0" FontSize="13" Text="Visitar site" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+                <Border Name="ShadowBorder" UseLayoutRounding="True" Background="#00FFFFFF" BorderBrush="#00FFFFFF" BorderThickness="1" VerticalAlignment="Top" Margin="15,0,15,15" CornerRadius="11">
+                    <UIElement.Effect>
+                        <DropShadowEffect x:Name="Shadow" Direction="270" Opacity="0.12" BlurRadius="15" Color="Black" />
+                    </UIElement.Effect>
+                    <UIElement.Clip>
+                        <CombinedGeometry GeometryCombineMode="Exclude">
+                            <CombinedGeometry.Geometry1>
+                                <RectangleGeometry Rect="-15,0,206,162" />
+                            </CombinedGeometry.Geometry1>
+                            <CombinedGeometry.Geometry2>
+                                <RectangleGeometry RadiusX="11" RadiusY="11" Rect="0,0,176,147" />
+                            </CombinedGeometry.Geometry2>
+                        </CombinedGeometry>
+                    </UIElement.Clip>
+                    <StackPanel>
+                        <Border Background="#f8f9fd" CornerRadius="10,10,0,0">
+                            <StackPanel>
+                                <TextBlock VerticalAlignment="Top" FontSize="13" HorizontalAlignment="Center" Text="Playbook verificado" Margin="0,7,0,10" />
+                                <Line SnapsToDevicePixels="True" X1="8" X2="167" StrokeThickness="1" Stroke="#eaeaea" />
+                                <TextBlock Margin="5,9,5,0" Height="63" VerticalAlignment="Top" Text="Este playbook foi verificado pelo KT WIRZADE como sendo de um desenvolvedor confiavel." TextWrapping="Wrap" TextAlignment="Center" />
+                            </StackPanel>
+                        </Border>
+                        <Border BorderBrush="#d8dcdf" BorderThickness="0,1,0,0" Height="37" CornerRadius="0,0,10,10">
+                            <Border.Background>
+                                <SolidColorBrush Color="#e7f3fb" Opacity="0.92" />
+                            </Border.Background>
+                            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Orientation="Horizontal">
+                                <Image RenderOptions.BitmapScalingMode="Fant" UseLayoutRounding="True" Source="{DynamicResource Web64}" Height="17" VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,2,9,0" />
+                                <TextBlock UseLayoutRounding="True" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,-1,0,0" FontSize="14" Text="Visitar site" />
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Popup>
+    </Grid>
+</UserControl>

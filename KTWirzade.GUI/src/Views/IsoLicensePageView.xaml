@@ -1,0 +1,96 @@
+<UserControl x:Class="KTWirzade.GUI.Views.IsoLicensePageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:local="clr-namespace:KTWirzade.GUI.Views"
+             xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
+             xmlns:gui="clr-namespace:KTWirzade.GUI"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+
+    <StackPanel Margin="0,0,0,-13">
+        <StackPanel Margin="0,0,0,0" MinHeight="70">
+            <TextBlock Style="{DynamicResource Header}" Margin="0,0,0,13" TextTrimming="WordEllipsis" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" Text="{Binding ISO.Title}" />
+            <TextBlock HorizontalAlignment="Left" FontSize="13" Text="Por favor, aceite os termos de licenca nesta pagina" Foreground="{DynamicResource PageSubtextColor}" />
+            <controls:TextDropDownBox x:Name="CoreDropDown" Click="CoreDropDown_OnClick" MaxHeight="238" ThumbHeight="50" Margin="0,25,0,15" Title="KT WIRZADE Core">
+                <controls:TextDropDownBox.Contents>
+                    <StackPanel Margin="0,0,0,0" CanHorizontallyScroll="False" Height="357">
+                        <TextBlock FontWeight="Bold" UseLayoutRounding="True" RenderOptions.ClearTypeHint="Enabled" Text="MIT License" TextWrapping="Wrap" />
+                        <TextBlock />
+                        <TextBlock Margin="0,2,0,0" TextWrapping="Wrap" Text="Copyright (c) 2026 KT WIRZADE" />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" Text="Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the &quot;Software&quot;), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:" />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" Text="The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" Text="THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE." />
+                  </StackPanel>
+              </controls:TextDropDownBox.Contents>
+          </controls:TextDropDownBox>
+            <controls:TextDropDownBox x:Name="GUIDropDown" Click="GUIDropDown_OnClick" MaxHeight="238" Title="KT WIRZADE GUI">
+                <controls:TextDropDownBox.Contents>
+                    <StackPanel Margin="0,0,0,0" CanHorizontallyScroll="False" Height="1006">
+                        <TextBlock FontWeight="Bold" UseLayoutRounding="True" RenderOptions.ClearTypeHint="Enabled" Text="CONTRATO DE LICENCA DE USO (EULA)" TextWrapping="Wrap" />
+                        <TextBlock />
+                        <TextBlock Margin="0,2,0,0" Text="POR FAVOR, LEIA ESTE CONTRATO DE LICENCA DE USO (&quot;CONTRATO&quot;) ANTES DE USAR OS COMPONENTES DA INTERFACE GRAFICA (GUI) DO SOFTWARE KT WIRZADE (&quot;SOFTWARE&quot;) FORNECIDO PELO PROJETO KT WIRZADE. AO USAR O SOFTWARE, VOCE CONCORDA EM CUMPRIR OS TERMOS DESTE CONTRATO. SE VOCE NAO CONCORDAR, NAO USE O SOFTWARE." TextWrapping="Wrap" />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="CONCESSAO DE LICENCA" />
+                        <TextBlock TextWrapping="Wrap" Text="O KT WIRZADE concede a voce uma licenca nao exclusiva e nao transferivel para usar os componentes GUI do Software apenas para fins pessoais ou comerciais, sujeito aos termos deste Contrato." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="PROPRIEDADE" />
+                        <TextBlock TextWrapping="Wrap" Text="O Software e de propriedade do projeto KT WIRZADE e licenciado sob MIT. Todos os direitos nao expressamente concedidos a voce sao reservados." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="RESTRICOES" />
+                        <TextBlock TextWrapping="Wrap" Text="Voce nao pode modificar, vender ou sublicenciar os componentes GUI do Software exceto quando expressamente permitido pelo KT WIRZADE por escrito. Voce nao pode fazer engenharia reversa, descompilar ou desmontar os componentes GUI do Software." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="ISENCAO DE GARANTIAS" />
+                        <TextBlock TextWrapping="Wrap" Text="OS COMPONENTES GUI DO SOFTWARE SAO FORNECIDOS &quot;NO ESTADO&quot; SEM GARANTIA DE QUALQUER TIPO, EXPRESSA OU IMPLICITA, INCLUINDO, MAS NAO SE LIMITANDO A, GARANTIAS IMPLICITAS DE COMERCIABILIDADE E ADEQUACAO A UM PROPOSITO ESPECIFICO." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="LIMITACAO DE RESPONSABILIDADE" />
+                        <TextBlock TextWrapping="Wrap" Text="EM NENHUM CASO O KT WIRZADE SERA RESPONSAVEL POR QUAISQUER DANOS DIRETOS, INDIRETOS, INCIDENTAIS, ESPECIAIS OU CONSEQUENCIAIS DECORRENTES DO USO OU IMPOSSIBILIDADE DE USO DOS COMPONENTES GUI DO SOFTWARE, MESMO QUE O KT WIRZADE TENHA SIDO AVISADO DA POSSIBILIDADE DE TAIS DANOS." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="TERMINO" />
+                        <TextBlock TextWrapping="Wrap" Text="Este Contrato sera terminado imediatamente sem aviso previo do KT WIRZADE se voce nao cumprir qualquer disposicao deste Contrato. Apos o termino, voce deve cessar imediatamente todo o uso dos componentes GUI do Software e destruir todas as copias em sua posse." />
+                        <TextBlock />
+                        <TextBlock TextWrapping="Wrap" FontSize="13" Text="DIVERSOS" />
+                        <TextBlock TextWrapping="Wrap" Text="Este Contrato representa o acordo integral entre voce e o KT WIRZADE em relacao aos componentes GUI do Software e substitui todas as comunicacoes e propostas anteriores ou contemporaneas, orais ou escritas. Se qualquer disposicao deste Contrato for considerada inexequivel por qualquer motivo, ela sera reformada apenas na medida do necessario para torna-la exequivel, sem afetar as demais disposicoes." />
+                        <TextBlock />
+                        <TextBlock Margin="0,4,0,0" TextWrapping="Wrap" Text="AO USAR OS COMPONENTES GUI DO SOFTWARE, VOCE RECONHECE QUE LEU ESTE CONTRATO, COMPREENDEU-O E CONCORDA EM CUMPRIR SEUS TERMOS E CONDICOES." />
+                  </StackPanel>
+              </controls:TextDropDownBox.Contents>
+          </controls:TextDropDownBox>
+      </StackPanel>
+        <Popup Name="Popup" UseLayoutRounding="True" Width="700" Height="490" VerticalOffset="-490" IsOpen="False" StaysOpen="True" PopupAnimation="Fade" AllowsTransparency="True" PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}" MouseLeftButtonDown="FocusWindow">
+            <Border UseLayoutRounding="True" Padding="132,126,133,128" CornerRadius="{DynamicResource PopupCornerRadius}" Background="#44000000">
+                <Border UseLayoutRounding="True" Width="365" Height="176" CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource LicensePopupBorder}" Background="{DynamicResource LicensePopupBackground}">
+                    <UIElement.Effect>
+                        <DropShadowEffect ShadowDepth="0" BlurRadius="40" Opacity="0.27" />
+                  </UIElement.Effect>
+                    <StackPanel>
+                        <StackPanel Margin="27,18,85,0" Height="105">
+                            <TextBlock FontSize="16" FontWeight="Bold" Text="Aceitar o contrato de licenca?" />
+                            <TextBlock FontSize="13" Margin="0,21,0,25" Text="Eu li e concordo com os termos do contrato de licenca." TextWrapping="Wrap" />
+                      </StackPanel>
+                        <Border Margin="0,2,0,0" UseLayoutRounding="True" CornerRadius="0,0,7,7" BorderBrush="{DynamicResource LicensePopupSeparatorBrush}" Height="47" Background="{DynamicResource LicensePopupLowerBrush}" BorderThickness="0,1,0,0">
+                            <StackPanel UseLayoutRounding="True" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,2,13,0">
+                                <Button UseLayoutRounding="True" Style="{DynamicResource BlueButton}" Margin="0,0,13,0" Click="AgreeButton_OnClick">
+                                    <TextBlock Text="Aceitar" Foreground="#FFFFFFFF" FontSize="11" Margin="0" />
+                              </Button>
+                                <Button UseLayoutRounding="True" Padding="0" Width="78" Style="{DynamicResource SpecialButton}" Click="DisagreeButton_OnClick">
+                                    <TextBlock Text="Recusar" Margin="0,1,0,0" FontSize="11" />
+                              </Button>
+                          </StackPanel>
+                      </Border>
+                  </StackPanel>
+              </Border>
+          </Border>
+      </Popup>
+  </StackPanel>
+</UserControl>
+
+
+
+
+
+
