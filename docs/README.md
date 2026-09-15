@@ -10,3 +10,6 @@ O registro de APBX verificados é mantido no projeto de licenciamento da organiz
 
 A release pública deve conter apenas arquivos necessários para usuários e contribuidores; validações internas ficam no repositório privado.
 
+
+A release pública contém apenas arquivos necessários para usuários e contribuidores; materiais internos ficam separados.
+
