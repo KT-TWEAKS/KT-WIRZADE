@@ -29,6 +29,7 @@ jobs:
             artifacts/KT-WIRZADE-v1.0.1-manifest.json
             artifacts/SHA256SUMS.txt
           if-no-files-found: error
+          retention-days: 7
 
       # Release publication is intentionally manual because the organization
       # disables write permissions for GITHUB_TOKEN-based workflows.
