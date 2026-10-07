@@ -1,0 +1,21 @@
+# False positives: XAML theme resource identifiers and bitmap paths; fingerprint-specific ignores.
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/DarkResources.xaml:generic-api-key:75
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/DarkResources.xaml:generic-api-key:76
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/DarkResources.xaml:generic-api-key:79
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/DarkResources.xaml:generic-api-key:84
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/DarkResources.xaml:generic-api-key:94
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/LightResources.xaml:generic-api-key:75
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/LightResources.xaml:generic-api-key:76
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/LightResources.xaml:generic-api-key:79
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/LightResources.xaml:generic-api-key:84
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows10/LightResources.xaml:generic-api-key:94
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/DarkResources.xaml:generic-api-key:76
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/DarkResources.xaml:generic-api-key:77
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/DarkResources.xaml:generic-api-key:80
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/DarkResources.xaml:generic-api-key:85
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/DarkResources.xaml:generic-api-key:95
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/LightResources.xaml:generic-api-key:75
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/LightResources.xaml:generic-api-key:76
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/LightResources.xaml:generic-api-key:79
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/LightResources.xaml:generic-api-key:84
+dbe47d23831687c2b7a606651c5ea439830943dc:KTWirzade.GUI/src/Themes/Windows11/LightResources.xaml:generic-api-key:94
