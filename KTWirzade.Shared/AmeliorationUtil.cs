@@ -484,7 +484,7 @@ namespace KTWirzade.Shared
                 if (e.InnerException == null)
                     throw;
 
-                throw new XmlException(e.Message.TrimEnd('.') + ": " + e.InnerException.Message);
+                throw new XmlException(e.Message.TrimEnd('.') + ": " + e.InnerException.Message, e);
             }
 
             pb.Path = actualDir;

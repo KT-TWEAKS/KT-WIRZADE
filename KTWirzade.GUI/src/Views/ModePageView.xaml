@@ -117,7 +117,7 @@
                                                 <TextBlock Name="UsernameTextUsername" FontSize="14" Text="" VerticalAlignment="Top" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                             <TextBox Name="UsernameBox" OverridesDefaultStyle="True" UseLayoutRounding="True" FontSize="15" HorizontalAlignment="Left" CaretBrush="{DynamicResource TextPrimaryBrush}" MaxLines="1" Foreground="{DynamicResource TextPrimaryBrush}" MaxLength="64" Margin="0,14,0,0" Tag="Username" Opacity="1" Template="{DynamicResource InputBox}" KeyDown="InputBox_OnKeyDown" PreviewMouseLeftButtonDown="FocusWindow" TextChanged="UsernameBox_OnTextChanged" />
-                                            <TextBlock Name="InvalidUsername" Visibility="Hidden" Margin="0,2,0,0" Foreground="#FFFF0000" FontSize="11" Opacity="0.7" Text="Nome de usuário inválido." />
+                                            <TextBlock Name="InvalidUsername" Visibility="Hidden" Margin="0,2,0,0" Foreground="{DynamicResource StatusErrorBrush}" FontSize="11" Text="Nome de usuário inválido." />
                                         </StackPanel>
                                     </Grid>
                                     <TextBlock Name="BottomLineBlock" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="0,12,0,0" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" TextTrimming="CharacterEllipsis" Text="Seus dados não são afetados. Use este nome para entrar." />
@@ -139,7 +139,7 @@
                                     <StackPanel Grid.Column="1" VerticalAlignment="Top" UseLayoutRounding="True" Margin="0,0,0,0">
                                         <TextBlock Name="UserText" FontSize="14" Text="Desconhecido" VerticalAlignment="Top" TextTrimming="CharacterEllipsis" />
                                         <PasswordBox Name="PasswordBox" OverridesDefaultStyle="True" UseLayoutRounding="True" FontSize="15" FontWeight="Bold" HorizontalAlignment="Left" CaretBrush="{DynamicResource TextPrimaryBrush}" PasswordChar="●" Foreground="{DynamicResource TextPrimaryBrush}" MaxLength="255" Margin="0,16,0,0" Opacity="1" Template="{DynamicResource PasswordBox}" KeyDown="InputBox_OnKeyDown" PreviewMouseLeftButtonDown="FocusWindow" PasswordChanged="PasswordBox_OnPasswordChanged" />
-                                        <TextBlock Name="BlankPassword" Visibility="Hidden" Margin="0,2,0,0" Foreground="#FFFF0000" FontSize="11" Opacity="0.7" Text="A senha não pode estar vazia." />
+                                        <TextBlock Name="BlankPassword" Visibility="Hidden" Margin="0,2,0,0" Foreground="{DynamicResource StatusErrorBrush}" FontSize="11" Text="A senha não pode estar vazia." />
                                     </StackPanel>
                                 </Grid>
                                 <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
@@ -163,7 +163,7 @@
                                     <StackPanel Grid.Column="1" VerticalAlignment="Top" UseLayoutRounding="True" Margin="0,0,0,0">
                                         <TextBlock Name="AdminUserText" FontSize="14" Text="Administrador" TextTrimming="CharacterEllipsis" VerticalAlignment="Top" />
                                         <PasswordBox Name="AdminPasswordBox" OverridesDefaultStyle="True" UseLayoutRounding="True" FontSize="15" FontWeight="Bold" HorizontalAlignment="Left" CaretBrush="{DynamicResource TextPrimaryBrush}" PasswordChar="●" Foreground="{DynamicResource TextPrimaryBrush}" MaxLength="255" Margin="0,16,0,0" Opacity="1" Template="{DynamicResource PasswordBox}" PreviewMouseLeftButtonDown="FocusWindow" PasswordChanged="PasswordBox_OnPasswordChanged" />
-                                        <TextBlock Name="AdminBlankPassword" Visibility="Hidden" Margin="0,2,0,0" Foreground="#FFFF0000" FontSize="11" Opacity="0.7" Text="A senha não pode estar vazia." />
+                                        <TextBlock Name="AdminBlankPassword" Visibility="Hidden" Margin="0,2,0,0" Foreground="{DynamicResource StatusErrorBrush}" FontSize="11" Text="A senha não pode estar vazia." />
                                     </StackPanel>
                                 </Grid>
                             </StackPanel>

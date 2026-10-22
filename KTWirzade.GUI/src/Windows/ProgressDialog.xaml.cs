@@ -21,6 +21,7 @@ using static Core.Log;
 using static Core.Win32;
 using static Interprocess.InterLink;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -115,7 +116,7 @@ public partial class ProgressDialog : AcrylicWindow
             }
 
             string playbookPath = Path.Combine(App.ActivePath, "Playbooks", GlobalsGUI.Current.Playbook.FileNameWithoutExtension);
-            string timestamp = DateTime.Now.ToString("yyyy-MM-dd (h.mm tt)").Replace(" )", ")");
+            string timestamp = DateTime.Now.ToString("yyyy-MM-dd (h.mm tt)", CultureInfo.InvariantCulture).Replace(" )", ")");
             string folderName = "[" + timestamp + "] " + RemoveInvalidFilePathCharacters((GlobalsGUI.Current.Playbook).Name, "~");
             logFolder = Path.Combine(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Logs"), folderName);
             Directory.CreateDirectory(logFolder);
@@ -590,23 +591,48 @@ public partial class ProgressDialog : AcrylicWindow
             DragMove();
     }
 
-    private async void CloseButton_Click(object sender, RoutedEventArgs e)
+    private bool _closeConfirmed;
+
+    // Shared "playbook still running, really close?" confirmation used by both the
+    // close button and OnClosing (Alt+F4 / programmatic Close). Sets _closeConfirmed
+    // so a single user decision never prompts twice.
+    private bool ConfirmCloseWhileRunning()
     {
-        if (_playbookRunning)
+        if (!_playbookRunning)
         {
-            var result = KTWirzade.GUI.MessageBox.Show(
-                this,
-                "O playbook ainda esta em execucao. Tem certeza que deseja fechar?",
-                "Confirmar",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-            if (result != MessageBoxResult.Yes)
-                return;
+            return true;
         }
+        var result = KTWirzade.GUI.MessageBox.Show(
+            this,
+            "O playbook ainda esta em execucao. Tem certeza que deseja fechar?",
+            "Confirmar",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+        if (result != MessageBoxResult.Yes)
+        {
+            return false;
+        }
+        _closeConfirmed = true;
+        return true;
+    }
+
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        if (!_closeConfirmed && !ConfirmCloseWhileRunning())
+        {
+            e.Cancel = true;
+        }
+        base.OnClosing(e);
+    }
+
+    private void CloseButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ConfirmCloseWhileRunning())
+            return;
         CloseWindow(progressscale);
     }
 
-    private async void ShowLogs_OnClick(object sender, RoutedEventArgs e)
+    private void ShowLogs_OnClick(object sender, RoutedEventArgs e)
     {
         if (Directory.Exists(logFolder))
         {
@@ -620,38 +646,40 @@ public partial class ProgressDialog : AcrylicWindow
                 try
                 {
                     ShowLogsButton.IsEnabled = false;
-                    await Task.Run(() =>
+                    // NOTE: OpenFileDialog requires an STA (UI) thread; run the modal loop
+                    // directly on the UI thread instead of inside Task.Run.
+                    bool flag;
+                    do
                     {
-                        bool flag;
-                        do
+                        flag = false;
+                        Microsoft.Win32.OpenFileDialog openFileDialog = new()
                         {
-                            flag = false;
-                            Microsoft.Win32.OpenFileDialog openFileDialog = new()
+                            DefaultExt = ".txt",
+                            InitialDirectory = logFolder,
+                            Filter = "Text Files|*.txt;*.log;*.yml|All Files|*",
+                            Multiselect = true
+                        };
+                        bool? result = openFileDialog.ShowDialog(this);
+                        if (result.HasValue && result.Value && openFileDialog.FileNames.LastOrDefault() != null)
+                        {
+                            try
                             {
-                                DefaultExt = ".txt",
-                                InitialDirectory = logFolder,
-                                Filter = "Text Files|*.txt;*.log;*.yml|All Files|*",
-                                Multiselect = true
-                            };
-                            bool? result = openFileDialog.ShowDialog();
-                            if (result.HasValue && result.Value && openFileDialog.FileNames.LastOrDefault() != null)
-                            {
-                                try
-                                {
-                                    flag = true;
-                                    System.Diagnostics.Process.Start("notepad.exe", "\"" + openFileDialog.FileNames.LastOrDefault() + "\"");
-                                }
-                                catch (Exception) { }
+                                flag = true;
+                                System.Diagnostics.Process.Start("notepad.exe", "\"" + openFileDialog.FileNames.LastOrDefault() + "\"");
                             }
+                            catch (Exception) { }
                         }
-                        while (flag);
-                    });
-                    ShowLogsButton.IsEnabled = true;
+                    }
+                    while (flag);
                 }
                 catch (Exception)
                 {
                     ShowLogsButton.IsEnabled = false;
                     MessageBox.Show(typeof(ProgressDialog), "Error opening log directory: " + ex.Message, "Information");
+                }
+                finally
+                {
+                    ShowLogsButton.IsEnabled = true;
                 }
                 return;
             }

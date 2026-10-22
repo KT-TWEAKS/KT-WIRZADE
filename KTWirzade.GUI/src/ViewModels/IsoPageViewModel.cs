@@ -34,12 +34,15 @@ namespace KTWirzade.GUI.ViewModels
 
         public override ViewModelBase GetNextPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            // ISO navigation is driven directly by the IsoPageView code-behind; this
+            // fallback returns null (previously threw) so a stray Next click cannot
+            // crash through the global exception handler.
+            return null;
         }
 
         public override ViewModelBase GetPreviousPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public override bool HasPreviousPage()

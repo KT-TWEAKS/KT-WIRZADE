@@ -11,7 +11,7 @@
     <SolidColorBrush x:Key="UsbItemBackgroundBrush" Color="{DynamicResource ButtonTextPrimaryColor}" Opacity="0.04375" />
     <Color x:Key="TextPrimaryInverseColor">White</Color>
     <SolidColorBrush x:Key="TextPrimaryInverseBrush" Color="White" />
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#787878" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5F5F5F" />
     <SolidColorBrush x:Key="PageBackground" Color="White" Opacity="0.86" />
     <SolidColorBrush x:Key="PageBorderBrush" Color="#bfc6cd" Opacity="0.5" />
     <SolidColorBrush x:Key="PageSubtextColor" Color="#191a1a" />

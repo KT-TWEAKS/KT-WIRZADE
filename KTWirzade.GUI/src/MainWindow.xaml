@@ -28,29 +28,6 @@
     </UIElement.RenderTransform>
     <FrameworkElement.Resources>
         <ResourceDictionary>
-            <Style x:Key="SidebarScrollBar" TargetType="{x:Type ScrollBar}">
-                <Setter Property="Width" Value="6" />
-                <Setter Property="Background" Value="Transparent" />
-                <Setter Property="Template">
-                    <Setter.Value>
-                        <ControlTemplate TargetType="{x:Type ScrollBar}">
-                            <Grid Background="Transparent">
-                                <Track x:Name="PART_Track" IsDirectionReversed="True">
-                                    <Track.Thumb>
-                                        <Thumb>
-                                            <Thumb.Template>
-                                                <ControlTemplate TargetType="{x:Type Thumb}">
-                                                    <Border Background="{DynamicResource TextSecondaryBrush}" CornerRadius="3" Opacity="0.4" Margin="1,0" />
-                                                </ControlTemplate>
-                                            </Thumb.Template>
-                                        </Thumb>
-                                    </Track.Thumb>
-                                </Track>
-                            </Grid>
-                        </ControlTemplate>
-                    </Setter.Value>
-                </Setter>
-            </Style>
             <Style x:Key="baseStyle" TargetType="{x:Type Control}">
                 <Setter Property="FontSize" Value="12" />
             </Style>
@@ -134,22 +111,46 @@
         </Rectangle>
         <DockPanel Name="TitleBar" Dock="Top" Height="46">
             <Image Style="{StaticResource QualityImage}" Margin="18, 2,0,0" Source="/Icons/ICO.ico" Width="18" Height="18" />
-            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,46" DockPanel.Dock="Right" VerticalAlignment="Top" Command="{Binding CloseButtonCommand}" Visibility="{Binding CloseButtonVisibility}" IsEnabled="{Binding CloseButtonActive}" />
+            <!-- Height/margin override the shared CloseButton style (29px, flush top) so the
+                 close button matches the 36px top-button row (TopButtonOpaque spans 8..44). -->
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,46" DockPanel.Dock="Right" VerticalAlignment="Top" Height="36" Margin="0,8,0,0" AutomationProperties.Name="Fechar janela" Command="{Binding CloseButtonCommand}" Visibility="{Binding CloseButtonVisibility}" IsEnabled="{Binding CloseButtonActive}" />
             <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" Margin="0,1,16,0">
-                <Border Name="LanguageSelector" VerticalAlignment="Center" Margin="0,0,9,0" Padding="8,3" CornerRadius="3" Cursor="Hand" MouseLeftButtonDown="LanguageSelector_Click">
+                <Border Name="LanguageSelector" VerticalAlignment="Center" Margin="0,0,9,0" Padding="8,3" CornerRadius="3" Cursor="Hand" Focusable="True" ToolTip="Alterar idioma" AutomationProperties.Name="Alterar idioma" KeyDown="HeaderControl_KeyDown" MouseLeftButtonDown="LanguageSelector_Click">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                            <Style.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <StackPanel Orientation="Horizontal">
                         <fluent:SymbolIcon Symbol="Globe" FontSize="11" Margin="0,0,6,0" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource ButtonTextPrimaryBrush}" />
                         <TextBlock Name="LanguageText" FontSize="11" VerticalAlignment="Center" Text="PT" TextBlock.Foreground="{DynamicResource ButtonTextPrimaryBrush}" />
                    </StackPanel>
                </Border>
-                <Border Name="NetworkIndicator" VerticalAlignment="Center" Margin="0,0,9,0" Padding="8,3" CornerRadius="3" Cursor="Hand" MouseLeftButtonDown="NetworkIndicator_Click">
+                <Border Name="NetworkIndicator" VerticalAlignment="Center" Margin="0,0,9,0" Padding="8,3" CornerRadius="3" Cursor="Hand" Focusable="True" ToolTip="Verificar conexão de rede" AutomationProperties.Name="Verificar conexão de rede" KeyDown="HeaderControl_KeyDown" MouseLeftButtonDown="NetworkIndicator_Click">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Background" Value="{DynamicResource StatusSuccessSoftBrush}" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="BorderBrush" Value="Transparent" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsOnline}" Value="False">
                                     <Setter Property="Background" Value="{DynamicResource StatusWarningSoftBrush}" />
                                 </DataTrigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
+                                </Trigger>
+                                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
+                                </Trigger>
                             </Style.Triggers>
                         </Style>
                    </Border.Style>
@@ -215,7 +216,18 @@
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type gui:IDragItem}">
                                     <Grid Margin="0,0,0,12">
-                                        <Border Name="PlaybookContainer" Opacity="0" Height="86.5" Width="177.5" BorderThickness="0" HorizontalAlignment="Center" CornerRadius="6" IsHitTestVisible="{Binding Path=ItemClickable}" MouseLeftButtonDown="SelectItem">
+                                        <Border Name="PlaybookContainer" Opacity="0" Height="86.5" Width="177.5" HorizontalAlignment="Center" CornerRadius="6" Focusable="True" IsHitTestVisible="{Binding Path=ItemClickable}" MouseLeftButtonDown="SelectItem" KeyDown="PlaybookContainer_KeyDown">
+                                            <Border.Style>
+                                                <Style TargetType="{x:Type Border}">
+                                                    <Setter Property="BorderThickness" Value="1" />
+                                                    <Setter Property="BorderBrush" Value="Transparent" />
+                                                    <Style.Triggers>
+                                                        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                                            <Setter Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
+                                                        </Trigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
                                             <UIElement.Clip>
                                                 <RectangleGeometry RadiusX="6" RadiusY="6" Rect="0,0,177.5,86.5" />
                                             </UIElement.Clip>
@@ -223,7 +235,7 @@
                                                 <SolidColorBrush x:Name="FadeColor" Color="{DynamicResource PlaybookFadeColor}" Opacity="{Binding FadeOpacity}" />
                                             </Border.Background>
                                             <Grid>
-                                                <Button Name="RemovePlaybookButton" Opacity="0" Style="{DynamicResource RemovePlaybookButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,3,0" IsEnabled="{Binding Path=DataContext.RemovePlaybookButtonActive, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Click="RemoveItemButton_OnClick" />
+                                                <Button Name="RemovePlaybookButton" Opacity="0.65" ToolTip="Ocultar este APBX da interface" AutomationProperties.Name="Ocultar APBX da interface" Style="{DynamicResource RemovePlaybookButton}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,8,3,0" IsEnabled="{Binding Path=DataContext.RemovePlaybookButtonActive, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Click="RemoveItemButton_OnClick" />
                                                 <Rectangle Grid.Column="0" Width="3" Margin="0,25,0,0" Fill="{DynamicResource PlaybookRectColor}" StrokeThickness="0" HorizontalAlignment="Left" VerticalAlignment="Top" RadiusX="3" RadiusY="1" Height="{Binding SidebarInitialHeight}" />
                                                 <Grid Margin="12,12,12,5" UseLayoutRounding="True">
                                                     <Grid.ColumnDefinitions>
@@ -266,7 +278,7 @@
                                                         <BeginStoryboard>
                                                             <Storyboard>
                                                                 <DoubleAnimation Duration="0:0:0.15" Storyboard.TargetName="FadeColor" Storyboard.TargetProperty="Opacity" To="{Binding Path=FadeOpacity}" />
-                                                                <DoubleAnimation Duration="0:0:0.07" To="0" Storyboard.TargetName="RemovePlaybookButton" Storyboard.TargetProperty="Opacity" />
+                                                                <DoubleAnimation Duration="0:0:0.07" To="0.65" Storyboard.TargetName="RemovePlaybookButton" Storyboard.TargetProperty="Opacity" />
                                                             </Storyboard>
                                                         </BeginStoryboard>
                                                     </EventTrigger.Actions>
@@ -285,7 +297,7 @@
                 </ScrollViewer>
                 <Grid Column="1">
                     <Border Background="{DynamicResource PageBackground}" Opacity="1" CornerRadius="8,0,0,0" />
-                    <Border Name="ViewModelBorder" CornerRadius="7,0,0,0" BorderThickness="1,1,0,0" BorderBrush="{DynamicResource PageBorderBrush}" Background="#00FFFFFF">
+                    <Border Name="ViewModelBorder" CornerRadius="8,0,0,0" BorderThickness="1,1,0,0" BorderBrush="{DynamicResource PageBorderBrush}" Background="#00FFFFFF">
                         <ContentControl SnapsToDevicePixels="True" UseLayoutRounding="True" Margin="26,20,30,24" Grid.Row="0">
                             <ContentControl.Content>
                                 <Binding Path="CurrentViewModel" NotifyOnTargetUpdated="True" />
@@ -331,19 +343,19 @@
                                 <Button Name="DashboardButton" Visibility="Visible" MinWidth="90" IsEnabled="True" Margin="5,4,2,4" Style="{DynamicResource BasicButton}" Click="DashboardButton_OnClick" ToolTip="Voltar ao Dashboard">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="-3,0">
                                         <fluent:SymbolIcon Symbol="Home" FontSize="11" Margin="0,0,6,0" />
-                                        <TextBlock Text="Início" />
+                                        <TextBlock Name="DashboardButtonText" Text="Início" />
                                   </StackPanel>
                               </Button>
                                 <Button Name="AboutButton" Visibility="Visible" MinWidth="75" IsEnabled="True" Margin="2,4,2,4" Style="{DynamicResource BasicButton}" Click="AboutButton_OnClick">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="-3,0">
                                         <Image Height="10" Style="{StaticResource QualityImage}" Source="{DynamicResource ExternalLink32}" Margin="0,0,6,0" />
-                                        <TextBlock Text="Sobre" />
+                                        <TextBlock Name="AboutButtonText" Text="Sobre" />
                                  </StackPanel>
                              </Button>
                                 <Button Name="RollbackButton" Visibility="Visible" MinWidth="75" IsEnabled="True" Margin="2,4,5,4" Style="{DynamicResource BasicButton}" Click="RollbackButton_OnClick" ToolTip="Reverter alteracoes de playbooks anteriores">
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="-3,0">
                                         <fluent:SymbolIcon Symbol="ArrowUndo" FontSize="11" Margin="0,0,6,0" />
-                                        <TextBlock Text="Rollback" />
+                                        <TextBlock Name="RollbackButtonText" Text="Rollback" />
                                 </StackPanel>
                             </Button>
                          </StackPanel>

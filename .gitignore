@@ -33,6 +33,15 @@ Logs/
 *.tmp
 *.orig
 
+# Pacotes grandes do dia-a-dia (fixtures de teste, downloads casuais) - nao sao
+# fonte do produto. O imager UEFI tracked e re-incluido explicitamente abaixo.
+*.apbx
+*.iso
+*.img
+*.wim
+*.swm
+!KTWirzade.Shared/Properties/uefi-ntfs-ame.img
+
 # Residuo do layout antigo de extracao (WizardFiles) - nao e referenciado
 # pelo csproj nem pelo build.bat; os recursos ficam em Resources/ na raiz.
 KTWirzade.GUI/src/Resources/WizardFiles/

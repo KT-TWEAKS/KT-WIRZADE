@@ -25,11 +25,8 @@
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
-                <Border Width="44" Height="44" CornerRadius="22" Margin="0,0,14,0" VerticalAlignment="Center">
-                    <Border.Background>
-                        <SolidColorBrush Color="#433519" Opacity="0.6" />
-                    </Border.Background>
-                    <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Warning" TextBlock.Foreground="#fce100" TextBlock.FontSize="22" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                <Border Width="44" Height="44" CornerRadius="22" Margin="0,0,14,0" VerticalAlignment="Center" Background="{DynamicResource WarningBoxBrush}">
+                    <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Warning" TextBlock.Foreground="{DynamicResource YellowInfoCircleFill}" TextBlock.FontSize="22" VerticalAlignment="Center" HorizontalAlignment="Center" />
                 </Border>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
                     <TextBlock Name="RebootText" Style="{DynamicResource InText}" FontSize="14" Foreground="{DynamicResource TextPrimaryBrush}" Text="O playbook foi concluido com erros." />

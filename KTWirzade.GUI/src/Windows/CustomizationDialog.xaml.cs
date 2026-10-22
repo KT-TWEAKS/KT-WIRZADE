@@ -430,8 +430,74 @@ namespace KTWirzade.GUI.Windows
             Close();
         }
 
+        #region Pre-Apply validation
+
+        private static readonly System.Text.RegularExpressions.Regex AccentColorRegex =
+            new System.Text.RegularExpressions.Regex("^#?[0-9A-Fa-f]{6}$");
+
+        /// <summary>
+        /// Lightweight validation: checked fields that would produce an invalid
+        /// override are highlighted with the theme error brush and Apply is
+        /// blocked until they are fixed or unchecked.
+        /// </summary>
+        private bool ValidateInputs()
+        {
+            TextBox firstInvalid = null;
+            firstInvalid = MarkValidity(firstInvalid, _usernameCheckBox, _usernameTextBox,
+                _usernameTextBox != null && !string.IsNullOrWhiteSpace(_usernameTextBox.Text));
+            firstInvalid = MarkValidity(firstInvalid, _computerNameCheckBox, _computerNameTextBox,
+                _computerNameTextBox != null && !string.IsNullOrWhiteSpace(_computerNameTextBox.Text));
+            firstInvalid = MarkValidity(firstInvalid, _accentColorCheckBox, _accentColorTextBox,
+                _accentColorTextBox != null && AccentColorRegex.IsMatch(_accentColorTextBox.Text?.Trim() ?? ""));
+
+            if (firstInvalid != null)
+            {
+                firstInvalid.Focus();
+                firstInvalid.SelectAll();
+                return false;
+            }
+            return true;
+        }
+
+        private TextBox MarkValidity(TextBox firstInvalid, CheckBox checkBox, TextBox textBox, bool isValid)
+        {
+            if (checkBox == null || textBox == null || checkBox.IsChecked != true)
+            {
+                return firstInvalid; // field not offered -> nothing to validate
+            }
+            if (isValid)
+            {
+                textBox.ClearValue(TextBox.BorderBrushProperty);
+                return firstInvalid;
+            }
+            if (TryFindResource("StatusErrorBrush") is System.Windows.Media.Brush errorBrush)
+            {
+                textBox.BorderBrush = errorBrush;
+            }
+            // Clear the highlight as soon as the user edits the field again.
+            textBox.TextChanged -= InvalidFieldTextChanged;
+            textBox.TextChanged += InvalidFieldTextChanged;
+            return firstInvalid ?? textBox;
+        }
+
+        private static void InvalidFieldTextChanged(object sender, TextChangedEventArgs e)
+        {
+            TextBox textBox = (TextBox)sender;
+            textBox.TextChanged -= InvalidFieldTextChanged;
+            textBox.ClearValue(TextBox.BorderBrushProperty);
+        }
+
+        #endregion
+
         private void ApplyButton_Click(object sender, RoutedEventArgs e)
         {
+            // Block Apply while a checked field would produce an invalid override
+            // (empty username/computer name, malformed accent color).
+            if (!ValidateInputs())
+            {
+                return;
+            }
+
             Choices = new UserCustomizationChoices();
 
             // Username

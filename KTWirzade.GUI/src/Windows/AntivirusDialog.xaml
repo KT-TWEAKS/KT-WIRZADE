@@ -10,7 +10,7 @@
         Height="584" Width="855" Style="{DynamicResource Window}" 
         WindowStartupLocation="CenterOwner"
         RenderTransformOrigin="0.5,0.5" 
-        Title="Desativar antivirus" 
+        Title="Desativar antivírus" 
         CornerType="Round" 
         MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}" 
         MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}">
@@ -39,8 +39,8 @@
         </Rectangle>
         <DockPanel Name="TitleBar" Dock="Top" Height="40" VerticalAlignment="Top">
             <Image Style="{StaticResource QualityImage}" Margin="8, 6,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="21" Height="21" />
-            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
-            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Width="770" Text="Desativar antivirus" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" VerticalAlignment="Top" IsCancel="True" Click="CloseButton_Click" />
+            <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Width="770" Text="Desativar antivírus" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
         </DockPanel>
         <Grid Row="1">
             <Grid.ColumnDefinitions>
@@ -95,7 +95,7 @@
             </Grid>
             <Grid Column="1" Height="501" VerticalAlignment="Top">
                 <Border Background="{DynamicResource PageBackground}" CornerRadius="9,0,0,9" />
-                <Border Name="PageContainer" BorderBrush="{DynamicResource PageBorderBrush}" BorderThickness="1,1,0,1" Background="#00FFFFFF" CornerRadius="8,0,0,8" Padding="29,31,29,0">
+                <Border Name="PageContainer" BorderBrush="{DynamicResource PageBorderBrush}" BorderThickness="1,1,0,1" Background="{DynamicResource PageBackground}" CornerRadius="8,0,0,8" Padding="29,31,29,0">
                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
                         <TextBlock FontSize="16" FontWeight="Bold" Text="Desativar antivirus de terceiros" />
                         <TextBlock Name="ToStartText" FontSize="13" TextWrapping="Wrap" Margin="0,14,0,22" />

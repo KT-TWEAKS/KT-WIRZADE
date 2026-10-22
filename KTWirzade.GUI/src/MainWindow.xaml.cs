@@ -28,6 +28,7 @@ using KTWirzade.Shared.I18n;
 using KTWirzade.Shared.Rollback;
 using KTWirzade.GUI.Windows;
 using KTWirzade.Shared;
+using KTWirzade.Shared.Updates;
 using static Core.Log;
 using static Core.Win32;
 
@@ -62,6 +63,14 @@ namespace KTWirzade.GUI
         public static volatile bool HasLoaded;
 
         private static BitmapImage scaledISOImage;
+
+        // Singleton dialogs: UpdateCheckDialog fires a network request on Loaded, so
+        // re-clicking the buttons must re-activate the open window, not spawn copies.
+        private AboutWindow _aboutWindow;
+
+        private RollbackWindow _rollbackWindow;
+
+        private UpdateCheckDialog _updateCheckDialog;
 
         internal MainWindowViewModel CurrentMainWindow => (MainWindowViewModel)base.DataContext;
 
@@ -266,6 +275,36 @@ namespace KTWirzade.GUI
 
         public void AddItem(IDragItem item)
         {
+            if (item is PlaybookGUI newPlaybook)
+            {
+                int existingIndex = GlobalsGUI.Current.Items.FindPlaybookIndex(existing =>
+                    string.Equals(existing.FileNameWithoutExtension, newPlaybook.FileNameWithoutExtension, StringComparison.OrdinalIgnoreCase) ||
+                    AreSamePlaybook(existing, newPlaybook));
+                if (existingIndex >= 0)
+                {
+                    if (ActiveItemIndex >= 0 && ActiveItemIndex < GlobalsGUI.Current.Items.Count && ActiveItemIndex != existingIndex)
+                    {
+                        GlobalsGUI.Current.Items[ActiveItemIndex].Selected = false;
+                        GlobalsGUI.Current.Items[ActiveItemIndex].SidebarInitialHeight = 37;
+                    }
+                    if (GlobalsGUI.Current.Items[existingIndex] is PlaybookGUI oldPlaybook)
+                    {
+                        oldPlaybook.Selected = false;
+                    }
+                    GlobalsGUI.Current.Items[existingIndex] = newPlaybook;
+                    GlobalsGUI.Current.Playbook = newPlaybook;
+                    newPlaybook.SidebarInitialHeight = 37;
+                    newPlaybook.Selected = true;
+                    ActiveItemIndex = existingIndex;
+                    if (newPlaybook.VerificationStatus == PlaybookGUI.VerificationLevel.Malicious)
+                    {
+                        VerificationButton.Open();
+                    }
+                    App.NotifyPlaybookInventoryChanged();
+                    return;
+                }
+            }
+
             GlobalsGUI.Current.Items.Add(item);
             if (item is PlaybookGUI)
             {
@@ -330,13 +369,36 @@ namespace KTWirzade.GUI
             }
         }
 
+        private static bool AreSamePlaybook(PlaybookGUI left, PlaybookGUI right)
+        {
+            if (left == null || right == null) return false;
+            if (left.UniqueId.HasValue && right.UniqueId.HasValue)
+            {
+                return left.UniqueId.Value == right.UniqueId.Value;
+            }
+
+            if (string.IsNullOrWhiteSpace(left.Name) && string.IsNullOrWhiteSpace(left.Username) &&
+                string.IsNullOrWhiteSpace(right.Name) && string.IsNullOrWhiteSpace(right.Username))
+            {
+                return string.Equals(left.FileNameWithoutExtension, right.FileNameWithoutExtension, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(left.Name, right.Name, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(left.Username, right.Username, StringComparison.OrdinalIgnoreCase);
+        }
+
         private async void RemoveItemButton_OnClick(object sender, RoutedEventArgs e)
         {
             try
             {
-                if ((IDragItem)((FrameworkElement)sender).DataContext is ISO iso)
+                IDragItem item = (IDragItem)((FrameworkElement)sender).DataContext;
+                if (item is PlaybookGUI playbook)
                 {
-                    iso.Watcher?.Dispose();
+                    // Hiding a playbook from the sidebar must not delete its local APBX.
+                    WizardConfig.HidePlaybook(playbook);
+                }
+                else if (item is ISO iso)
+                {
                     if (iso.ProgressVisibility == Visibility.Visible)
                     {
                         if (MessageBox.Show(this, "Cancel ISO download?", "Warning", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
@@ -351,7 +413,7 @@ namespace KTWirzade.GUI
                         await InterLink.ExecuteSafeAsync((Expression<System.Action>)(() => RemoveISOFile(fileName)), true, -1);
                     }
                 }
-                GlobalsGUI.Current.Items.Remove((IDragItem)((FrameworkElement)sender).DataContext);
+                GlobalsGUI.Current.Items.Remove(item);
             }
             catch (Exception ex)
             {
@@ -385,13 +447,15 @@ namespace KTWirzade.GUI
         {
             if (e.OldItems == null || e.OldItems.Count == 0) return;
             IDragItem item = (IDragItem)e.OldItems[0];
-            if (item is PlaybookGUI pb)
-            {
-                await RemovePlaybook(pb);
-            }
-            else if (item is ISO iso)
+            if (item is ISO iso)
             {
                 await RemoveISO(iso);
+            }
+            else if (item is PlaybookGUI)
+            {
+                // APBX collection removals can also be internal replacement flows.
+                // User initiated sidebar hiding is persisted by RemoveItemButton_OnClick.
+                App.NotifyPlaybookInventoryChanged();
             }
             if (GlobalsGUI.Current.Items.Count > 0)
             {
@@ -475,22 +539,6 @@ namespace KTWirzade.GUI
             }
         }
 
-        private static async System.Threading.Tasks.Task RemovePlaybook(PlaybookGUI pb)
-        {
-            if (!(((Playbook)pb).Path != "Ignore"))
-            {
-                return;
-            }
-            try
-            {
-                await InterLink.ExecuteAsync(() => App.RemovePlaybookAdmin(pb.FileNameWithoutExtension + ".apbx"), false, -1);
-            }
-            catch (Exception ex)
-            {
-                //MessageBox.Show(null, "Error while removing Playbook files: " + ex.Message, "Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
-        }
-
         private static async System.Threading.Tasks.Task RemoveISO(ISO iso)
         {
             if (iso.Watcher != null)
@@ -500,6 +548,27 @@ namespace KTWirzade.GUI
                 iso.Watcher = null;
             }
             await System.Threading.Tasks.Task.CompletedTask;
+        }
+
+        private void PlaybookContainer_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter && e.Key != Key.Space) return;
+            e.Handled = true;
+            SelectItem(sender, e);
+        }
+
+        private void HeaderControl_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Enter && e.Key != Key.Space) return;
+            e.Handled = true;
+            if (ReferenceEquals(sender, LanguageSelector))
+            {
+                LanguageSelector_Click(sender, e);
+            }
+            else if (ReferenceEquals(sender, NetworkIndicator))
+            {
+                NetworkIndicator_Click(sender, e);
+            }
         }
 
         private async void SelectItem(object sender, RoutedEventArgs e)
@@ -912,6 +981,7 @@ namespace KTWirzade.GUI
             DragBox.SetResourceReference(StyleProperty, "DragBoxMain");
             if (pb != null)
             {
+                WizardConfig.RestorePlaybook(pb);
                 pb.Checked = true;
                 AddItem(pb);
                 DragBox.RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
@@ -939,6 +1009,41 @@ namespace KTWirzade.GUI
             DragBox.Visibility = Visibility.Visible;
         }
 
+        public void FocusPlaybook(PlaybookGUI playbook)
+        {
+            if (playbook == null) return;
+            int index = GlobalsGUI.Current.Items.FindPlaybookIndex(item => ReferenceEquals(item, playbook));
+            if (index < 0) return;
+
+            if (index != ActiveItemIndex)
+            {
+                Border container = FindVisualChildren<Border>(PlaybookSidebarItems)
+                    .FirstOrDefault(item => item.Name == "PlaybookContainer" && ReferenceEquals(item.DataContext, playbook));
+                if (container != null)
+                {
+                    SelectItem(container, new RoutedEventArgs());
+                    return;
+                }
+
+                if (ActiveItemIndex >= 0 && ActiveItemIndex < GlobalsGUI.Current.Items.Count)
+                {
+                    GlobalsGUI.Current.Items[ActiveItemIndex].Selected = false;
+                    GlobalsGUI.Current.Items[ActiveItemIndex].SidebarInitialHeight = 0;
+                }
+                ActiveItemIndex = index;
+                playbook.Selected = true;
+                playbook.SidebarInitialHeight = 37;
+                GlobalsGUI.Current.Playbook = playbook;
+            }
+            else
+            {
+                // The Dashboard can be open while this playbook is already selected.
+                // Reassign the page so the local APBX action still returns to it.
+                GlobalsGUI.Current.Playbook = playbook;
+                CurrentMainWindow.CurrentViewModel = playbook.CurrentPage;
+            }
+        }
+
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -960,14 +1065,14 @@ namespace KTWirzade.GUI
             catch (Exception)
             {
             }
+            KTWirzade.Shared.I18n.LanguageManager.Initialize();
             base.DataContext = new MainWindowViewModel();
             InitializeComponent();
             GlobalsGUI.SetMainWindow(this);
-            KTWirzade.Shared.I18n.LanguageManager.Initialize();
             UpdateLanguageDisplay();
-            CurrentViewModel.MainNextButtonCommand = new GlobalsGUI.CommandHandler(() => NextButton_OnClick(), () => true);
-            CurrentViewModel.MainPreviousButtonCommand = new GlobalsGUI.CommandHandler(() => PreviousButton_OnClick(), () => true);
-            CurrentViewModel.MainPulseNextButtonCommand = new GlobalsGUI.CommandHandler(() => NextButton_OnClick(), () => true);
+            CurrentViewModel.MainNextButtonCommand = new GlobalsGUI.CommandHandler(() => NextButton_OnClick(), () => CurrentMainWindow != null && CurrentMainWindow.NextButtonActive);
+            CurrentViewModel.MainPreviousButtonCommand = new GlobalsGUI.CommandHandler(() => PreviousButton_OnClick(), () => CurrentMainWindow != null && CurrentMainWindow.PreviousButtonActive);
+            CurrentViewModel.MainPulseNextButtonCommand = new GlobalsGUI.CommandHandler(() => NextButton_OnClick(), () => CurrentMainWindow != null && CurrentMainWindow.NextButtonActive);
             CurrentViewModel.MainCancelButtonCommand = new GlobalsGUI.CommandHandler(() => CancelButton_OnClick(), () => true);
             CurrentViewModel.MainCloseButtonCommand = new GlobalsGUI.CommandHandler(() => CancelButton_OnClick(), () => true);
             CurrentMainWindow.PropertyChanged += delegate (object _e, PropertyChangedEventArgs _a)
@@ -1005,9 +1110,14 @@ namespace KTWirzade.GUI
             };
             PlaybookSidebarItems.ItemsSource = GlobalsGUI.Current.Items;
             CurrentDispatcher = Dispatcher.CurrentDispatcher;
+            // Subscribe unconditionally: PreparationCompleted fires at the end of startup and
+            // this window may be created afterwards (late WelcomeWindow Continue click).
+            // Subscribing only inside the event left the handler unregistered in that case,
+            // silently breaking ISO removal. Idempotent (-= before +=) so a re-run is safe.
+            GlobalsGUI.Current.Items.CollectionChanged -= ItemsOnCollectionChanged;
+            GlobalsGUI.Current.Items.CollectionChanged += ItemsOnCollectionChanged;
             App.PreparationCompleted += delegate
             {
-                GlobalsGUI.Current.Items.CollectionChanged += ItemsOnCollectionChanged;
                 foreach (IDragItem current in GlobalsGUI.Current.Items.Where((IDragItem x) => !x.Checked).ToList())
                 {
                     GlobalsGUI.Current.Items.Remove(current);
@@ -1096,14 +1206,26 @@ namespace KTWirzade.GUI
 
         private void AboutButton_OnClick(object sender, RoutedEventArgs e)
         {
-            var about = new AboutWindow();
-            about.Show(this);
+            if (_aboutWindow != null && _aboutWindow.IsLoaded)
+            {
+                _aboutWindow.Activate();
+                return;
+            }
+            _aboutWindow = new AboutWindow();
+            _aboutWindow.Closed += (s, args) => { if (ReferenceEquals(_aboutWindow, s)) _aboutWindow = null; };
+            _aboutWindow.Show(this);
         }
 
         public void RollbackButton_OnClick(object sender, RoutedEventArgs e)
         {
-            var rollback = new RollbackWindow();
-            rollback.Show(this);
+            if (_rollbackWindow != null && _rollbackWindow.IsLoaded)
+            {
+                _rollbackWindow.Activate();
+                return;
+            }
+            _rollbackWindow = new RollbackWindow();
+            _rollbackWindow.Closed += (s, args) => { if (ReferenceEquals(_rollbackWindow, s)) _rollbackWindow = null; };
+            _rollbackWindow.Show(this);
         }
 
         private void DashboardButton_OnClick(object sender, RoutedEventArgs e)
@@ -1115,7 +1237,7 @@ namespace KTWirzade.GUI
         {
             var dotNetStatusText = (TextBlock)FindName("NetworkText");
             if (dotNetStatusText != null)
-                dotNetStatusText.Text = "Verificando...";
+                dotNetStatusText.Text = KTWirzade.Shared.I18n.LanguageManager.T("Status.Checking", "Verificando...");
 
             try
             {
@@ -1149,6 +1271,17 @@ namespace KTWirzade.GUI
             var text = (TextBlock)FindName("LanguageText");
             if (text != null)
                 text.Text = KTWirzade.Shared.I18n.LanguageManager.CurrentLanguage.ToCode().ToUpper();
+
+            // Footer buttons: keep labels in sync with the selected language (existing keys).
+            var dashboardText = (TextBlock)FindName("DashboardButtonText");
+            if (dashboardText != null)
+                dashboardText.Text = KTWirzade.Shared.I18n.LanguageManager.T("Button.Dashboard", "Início");
+            var aboutText = (TextBlock)FindName("AboutButtonText");
+            if (aboutText != null)
+                aboutText.Text = KTWirzade.Shared.I18n.LanguageManager.T("Button.About", "Sobre");
+            var rollbackText = (TextBlock)FindName("RollbackButtonText");
+            if (rollbackText != null)
+                rollbackText.Text = KTWirzade.Shared.I18n.LanguageManager.T("Button.Rollback", "Rollback");
         }
 
         public void NextButton_OnClick()
@@ -1185,10 +1318,27 @@ namespace KTWirzade.GUI
             }
         }
 
+        /// <summary>
+        /// Opens the singleton UpdateCheckDialog. The title-bar button, the dashboard
+        /// quick action and the startup prompt all funnel through here so the update
+        /// dialog is never duplicated. <paramref name="preloaded"/> renders instantly
+        /// from a caller-fetched UpdateInfo (skips the dialog's own web request).
+        /// </summary>
+        public void ShowUpdatesDialog(UpdateInfo preloaded = null)
+        {
+            if (_updateCheckDialog != null && _updateCheckDialog.IsLoaded)
+            {
+                _updateCheckDialog.Activate();
+                return;
+            }
+            _updateCheckDialog = new UpdateCheckDialog(preloaded);
+            _updateCheckDialog.Closed += (s, args) => { if (ReferenceEquals(_updateCheckDialog, s)) _updateCheckDialog = null; };
+            _updateCheckDialog.Show(this);
+        }
+
         private void UpdatesButton_OnClick(object sender, RoutedEventArgs e)
         {
-            var updateDialog = new UpdateCheckDialog();
-            updateDialog.Show(this);
+            ShowUpdatesDialog();
         }
 
         private void ItemImage_OnLoaded(object sender, RoutedEventArgs e)

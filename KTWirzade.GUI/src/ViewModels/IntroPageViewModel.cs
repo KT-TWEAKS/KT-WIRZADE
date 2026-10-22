@@ -35,7 +35,8 @@ namespace KTWirzade.GUI.ViewModels
 
         public override ViewModelBase GetPreviousPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            // First page of the flow: nothing before it.
+            return null;
         }
 
         public override bool HasPreviousPage()

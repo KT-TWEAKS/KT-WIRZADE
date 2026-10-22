@@ -405,7 +405,7 @@
         <Setter Property="FrameworkElement.UseLayoutRounding" Value="True" />
         <Setter Property="FrameworkElement.OverridesDefaultStyle" Value="True" />
         <Setter Property="BorderBrush" Value="#3e3f40" />
-        <Setter Property="Foreground" Value="#393a3b" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="Background" Value="#373738" />
         <Setter Property="UIElement.Opacity" Value="1" />
         <Setter Property="Template">
@@ -456,7 +456,7 @@
                         <Storyboard>
                             <ColorAnimation Duration="0:0:0.035" To="#424344" Storyboard.TargetProperty="Background.Color" />
                             <ColorAnimation Duration="0:0:0.035" To="#444546" Storyboard.TargetProperty="BorderBrush.Color" />
-                            <ColorAnimation Duration="0:0:0.035" To="#404041" Storyboard.TargetProperty="Foreground.Color" />
+                            <ColorAnimation Duration="0:0:0.035" To="#f5f5f7" Storyboard.TargetProperty="Foreground.Color" />
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger.Actions>
@@ -468,7 +468,7 @@
                         <Storyboard>
                             <ColorAnimation Duration="0:0:0.035" To="#373738" Storyboard.TargetProperty="Background.Color" />
                             <ColorAnimation Duration="0:0:0.035" To="#3e3f40" Storyboard.TargetProperty="BorderBrush.Color" />
-                            <ColorAnimation Duration="0:0:0.035" To="#393a3b" Storyboard.TargetProperty="Foreground.Color" />
+                            <ColorAnimation Duration="0:0:0.035" To="#d5d6dd" Storyboard.TargetProperty="Foreground.Color" />
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger.Actions>
@@ -1607,11 +1607,11 @@
         <Setter Property="Background" Value="#121212" />
         <Setter Property="Foreground" Value="#FFFFFF" />
     </Style>
-    <Style x:Key="InText" TargetType="{x:Type TextBlock}">
-        <Setter Property="Foreground" Value="#FFFFFF" />
-    </Style>
     <Style x:Key="BlueHeaderText" TargetType="{x:Type TextBlock}">
         <Setter Property="Foreground" Value="#98D5FF" />
+    </Style>
+    <Style x:Key="InText" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="#FFFFFF" />
     </Style>
     <Style x:Key="TopBorder" TargetType="{x:Type Border}">
         <Setter Property="BorderBrush" Value="#363535" />
@@ -1624,8 +1624,8 @@
         <Setter Property="BorderBrush" Value="#4C4C4C" />
     </Style>
     <Style x:Key="OverAllControls" TargetType="{x:Type Control}">
-        <Setter Property="Foreground" Value="#FFFFFF" />
-        <Setter Property="BorderBrush" Value="#4C4C4C" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
     </Style>
     <Style x:Key="{x:Type Window}" BasedOn="{StaticResource OverAllControls}" TargetType="{x:Type Window}" />
     <Style x:Key="{x:Type Label}" BasedOn="{StaticResource OverAllControls}" TargetType="{x:Type Label}" />
@@ -1633,7 +1633,7 @@
     <Style x:Key="{x:Type ListView}" BasedOn="{StaticResource OverAllControls}" TargetType="{x:Type ListView}" />
     <Style x:Key="YesNoButton" TargetType="{x:Type Button}">
         <Setter Property="Background" Value="#4C4C4C" />
-        <Setter Property="Foreground" Value="#ffffff" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Margin" Value="2" />

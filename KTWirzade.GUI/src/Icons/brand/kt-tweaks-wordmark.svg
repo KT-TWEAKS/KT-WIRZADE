@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1240" height="320" viewBox="0 0 1240 320">
+  <defs>
+    <linearGradient id="violet" x1="80" y1="35" x2="250" y2="250" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#51317F"/>
+      <stop offset="1" stop-color="#8050C7"/>
+    </linearGradient>
+  </defs>
+  <rect x="32" y="32" width="256" height="256" rx="60" fill="url(#violet)"/>
+  <text x="160" y="197" fill="#FFFFFF" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="116" font-weight="700" letter-spacing="-7" text-anchor="middle">KT</text>
+  <rect x="128" y="222" width="64" height="8" rx="4" fill="#F0645A"/>
+  <text x="344" y="153" fill="#25212B" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="92" font-weight="700" letter-spacing="-1.5">KT</text>
+  <text x="478" y="153" fill="#7046AA" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="92" font-weight="650" letter-spacing="3.5">TWEAKS</text>
+  <rect x="350" y="184" width="52" height="6" rx="3" fill="#F0645A"/>
+  <text x="350" y="242" fill="#6E6975" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="24" font-weight="600" letter-spacing="5">ENHANCE. BUILD. OPTIMIZE.</text>
+</svg>

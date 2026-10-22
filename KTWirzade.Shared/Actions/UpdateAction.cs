@@ -34,7 +34,7 @@ namespace KTWirzade.Shared.Actions
                 return UninstallTaskStatus.InProgress;
             }
 
-            return ExitCode == null ? UninstallTaskStatus.ToDo : UninstallTaskStatus.Completed;
+            return ExitCode == 0 ? UninstallTaskStatus.Completed : UninstallTaskStatus.ToDo;
         }
 
         public async Task<bool> RunTask(Output.OutputWriter output)
@@ -45,19 +45,31 @@ namespace KTWirzade.Shared.Actions
                 return false;
             }
             InProgress = true;
-            
-            output.WriteLineSafe("Info", $"Removing update package '{PackageName}'...");
-            
-            CmdAction removeUpdate = new CmdAction()
+            try
             {
-                Command = @$"DISM.exe /Online /Remove-Package /PackageName:{PackageName} /quiet /norestart"
-            };
+                output.WriteLineSafe("Info", $"Removing update package '{PackageName}'...");
 
-            removeUpdate.RunTaskOnMainThread(output);
+                CmdAction removeUpdate = new CmdAction()
+                {
+                    Command = @$"DISM.exe /Online /Remove-Package /PackageName:{PackageName} /quiet /norestart",
+                    Wait = true,
+                    // "!0" matches any non-zero exit code; CmdAction then throws
+                    // ErrorHandlingException, the engine's failure signal for exit codes.
+                    HandleExitCodes = new Dictionary<string, Tasks.TaskAction.ExitCodeAction>
+                    {
+                        { "!0", Tasks.TaskAction.ExitCodeAction.Error }
+                    }
+                };
 
-            InProgress = false;
-            return true;
-            
+                removeUpdate.RunTaskOnMainThread(output);
+
+                ExitCode = 0;
+                return true;
+            }
+            finally
+            {
+                InProgress = false;
+            }
         }
     }
 }

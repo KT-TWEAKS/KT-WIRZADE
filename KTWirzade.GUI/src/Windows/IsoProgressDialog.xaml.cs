@@ -19,6 +19,7 @@ using static Core.Win32;
 using static Interprocess.InterLink;
 using static KTWirzade.Shared.Playbook.FeaturePage;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
@@ -106,7 +107,7 @@ namespace KTWirzade.GUI.Windows
                     return;
                 }
                 string playbookPath = Path.Combine(App.ActivePath, "Playbooks", GlobalsGUI.Current.ISO.SelectedPlaybook.FileNameWithoutExtension);
-                string timestamp = DateTime.Now.ToString("yyyy-MM-dd (h.mm tt)").Replace(" )", ")");
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd (h.mm tt)", CultureInfo.InvariantCulture).Replace(" )", ")");
                 string folderName = "[" + timestamp + "] " + RemoveInvalidFilePathCharacters(((Playbook)GlobalsGUI.Current.ISO.SelectedPlaybook).Name, "~");
                 logFolder = Path.Combine(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Logs"), folderName);
                 Directory.CreateDirectory(logFolder);
@@ -336,7 +337,7 @@ namespace KTWirzade.GUI.Windows
             CloseWindow(progressscale);
         }
 
-        private async void ShowLogs_OnClick(object sender, RoutedEventArgs e)
+        private void ShowLogs_OnClick(object sender, RoutedEventArgs e)
         {
             if (Directory.Exists(logFolder))
             {
@@ -350,40 +351,42 @@ namespace KTWirzade.GUI.Windows
                     try
                     {
                         ShowLogsButton.IsEnabled = false;
-                        await Task.Run(delegate
+                        // NOTE: OpenFileDialog requires an STA (UI) thread; run the modal loop
+                        // directly on the UI thread instead of inside Task.Run.
+                        bool flag;
+                        do
                         {
-                            bool flag;
-                            do
+                            flag = false;
+                            Microsoft.Win32.OpenFileDialog openFileDialog = new()
                             {
-                                flag = false;
-                                Microsoft.Win32.OpenFileDialog openFileDialog = new()
+                                DefaultExt = ".txt",
+                                InitialDirectory = logFolder,
+                                Filter = "Text Files|*.txt;*.log;*.yml|All Files|*",
+                                Multiselect = true
+                            };
+                            bool? flag2 = openFileDialog.ShowDialog(this);
+                            if (flag2.HasValue && flag2.Value && openFileDialog.FileNames.LastOrDefault() != null)
+                            {
+                                try
                                 {
-                                    DefaultExt = ".txt",
-                                    InitialDirectory = logFolder,
-                                    Filter = "Text Files|*.txt;*.log;*.yml|All Files|*",
-                                    Multiselect = true
-                                };
-                                bool? flag2 = openFileDialog.ShowDialog();
-                                if (flag2.HasValue && flag2.Value && openFileDialog.FileNames.LastOrDefault() != null)
+                                    flag = true;
+                                    System.Diagnostics.Process.Start("notepad.exe", "\"" + openFileDialog.FileNames.LastOrDefault() + "\"");
+                                }
+                                catch (Exception)
                                 {
-                                    try
-                                    {
-                                        flag = true;
-                                        System.Diagnostics.Process.Start("notepad.exe", "\"" + openFileDialog.FileNames.LastOrDefault() + "\"");
-                                    }
-                                    catch (Exception)
-                                    {
-                                    }
                                 }
                             }
-                            while (flag);
-                        });
-                        ShowLogsButton.IsEnabled = true;
+                        }
+                        while (flag);
                     }
                     catch (Exception)
                     {
                         ShowLogsButton.IsEnabled = false;
                         MessageBox.Show(typeof(IsoProgressDialog), "Error opening log directory: " + ex.Message, "Information");
+                    }
+                    finally
+                    {
+                        ShowLogsButton.IsEnabled = true;
                     }
                     return;
                 }

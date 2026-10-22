@@ -14,17 +14,18 @@ namespace KTWirzade.GUI.ViewModels
     {
         public override ViewModelBase GetNextPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            // The About window is a standalone dialog: it is not part of the page flow.
+            return null;
         }
 
         public override ViewModelBase GetPreviousPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public override bool HasPreviousPage()
         {
-            throw new NotImplementedException();
+            return false;
         }
     }
 }

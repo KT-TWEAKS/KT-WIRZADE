@@ -36,7 +36,7 @@ namespace KTWirzade.Shared.Actions
 
         public UninstallTaskStatus GetStatus(Output.OutputWriter output) =>
             InputLanguage.InstalledInputLanguages.Cast<InputLanguage>()
-                .Any(c => c.Culture.IetfLanguageTag == this.Tag)
+                .Any(c => c.Culture.IetfLanguageTag == this.Tag || c.Culture.Name == this.Tag)
                 ? UninstallTaskStatus.Completed
                 : UninstallTaskStatus.ToDo;
 

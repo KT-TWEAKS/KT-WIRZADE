@@ -15,6 +15,9 @@ using System.Threading;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Text;
+using Newtonsoft.Json;
+using KTWirzade.GUI;
 
 
 namespace KTWirzade.GUI.Utils
@@ -53,6 +56,18 @@ namespace KTWirzade.GUI.Utils
 
             // Version the user chose to ignore when prompted about an update.
             public ConfigObject<string> SkippedUpdateVersion { get; set; } = new ConfigObject<string>(null, "SkippedUpdateVersion");
+
+            // Update channel: "stable" (default) or "prerelease". Optional element, so
+            // older config files without it keep loading with the default above.
+            public ConfigObject<string> UpdateChannel { get; set; } = new ConfigObject<string>("stable", "UpdateChannel");
+
+            // Automatic update check on startup (default: enabled). Same optional-element
+            // backward compatibility as the fields above.
+            public ConfigObject<bool> AutoCheckUpdates { get; set; } = new ConfigObject<bool>(value: true, "AutoCheckUpdates");
+
+            // Keep sidebar visibility separate from the on-disk APBX inventory.
+            // The JSON string keeps this state backward-compatible with older XML configs.
+            public ConfigObject<string> ApbxUiState { get; set; } = new ConfigObject<string>(null, "ApbxUiState");
 
             public Config()
             {
@@ -238,9 +253,51 @@ namespace KTWirzade.GUI.Utils
             }
         }
 
+        public sealed class HiddenPlaybookEntry
+        {
+            public string Identity { get; set; }
+            public string FileName { get; set; }
+            public string Name { get; set; }
+            public string Username { get; set; }
+            public Guid? UniqueId { get; set; }
+            public DateTime HiddenAtUtc { get; set; }
+
+            [JsonIgnore]
+            public string DisplayName => string.IsNullOrWhiteSpace(Username) ? Name : $"{Username} — {Name}";
+        }
+
+        public sealed class ApbxRemovalEntry
+        {
+            public string Identity { get; set; }
+            public string FileName { get; set; }
+            public string Name { get; set; }
+            public string Username { get; set; }
+            public Guid? UniqueId { get; set; }
+            public DateTime RemovedAtUtc { get; set; }
+            public string Reason { get; set; }
+
+            [JsonIgnore]
+            public string DisplayName => string.IsNullOrWhiteSpace(Username) ? (Name ?? FileName) : $"{Username} — {Name}";
+
+            [JsonIgnore]
+            public string RemovedAtDisplay => RemovedAtUtc.ToLocalTime().ToString("g", CultureInfo.CurrentCulture);
+        }
+
+        private sealed class ApbxUiStateData
+        {
+            public List<HiddenPlaybookEntry> HiddenPlaybooks { get; set; } = new List<HiddenPlaybookEntry>();
+            public List<ApbxRemovalEntry> RemovedPlaybooks { get; set; } = new List<ApbxRemovalEntry>();
+        }
+
         public static readonly string ConfigPath = Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\ktwirzade.conf");
 
         private static Thread _configThread = null;
+
+        private static readonly object _apbxUiStateLock = new object();
+
+        private static string _apbxUiStateCorruptJson;
+
+        private static bool _apbxUiStateBackupFailed;
 
         private static CancellationTokenSource _configThreadCancel = null;
 
@@ -249,6 +306,308 @@ namespace KTWirzade.GUI.Utils
         private static object _lockObject = new object();
 
         public static Config Current { get; set; } = null;
+
+        private static ApbxUiStateData ReadApbxUiState()
+        {
+            lock (_apbxUiStateLock)
+            {
+                string json = Current?.ApbxUiState?.Get();
+                if (string.IsNullOrWhiteSpace(json)) return new ApbxUiStateData();
+                if (string.Equals(json, _apbxUiStateCorruptJson, StringComparison.Ordinal))
+                {
+                    return new ApbxUiStateData();
+                }
+                try
+                {
+                    ApbxUiStateData state = JsonConvert.DeserializeObject<ApbxUiStateData>(json) ?? new ApbxUiStateData();
+                    if (state.HiddenPlaybooks == null) state.HiddenPlaybooks = new List<HiddenPlaybookEntry>();
+                    if (state.RemovedPlaybooks == null) state.RemovedPlaybooks = new List<ApbxRemovalEntry>();
+                    state.HiddenPlaybooks.RemoveAll(entry => entry == null);
+                    state.RemovedPlaybooks.RemoveAll(entry => entry == null);
+                    return state;
+                }
+                catch (Exception ex)
+                {
+                    Log.EnqueueExceptionSafe(ex, "Could not read APBX visibility history.", Array.Empty<(string, object)>());
+                    _apbxUiStateCorruptJson = json;
+                    try
+                    {
+                        string backupPath = ConfigPath + ".apbx-ui-state-corrupt." + DateTime.UtcNow.ToString("yyyyMMddHHmmssfff", CultureInfo.InvariantCulture) + ".bak";
+                        Directory.CreateDirectory(Path.GetDirectoryName(ConfigPath));
+                        File.WriteAllText(backupPath, json, new UTF8Encoding(false));
+                        _apbxUiStateBackupFailed = false;
+                    }
+                    catch (Exception backupException)
+                    {
+                        _apbxUiStateBackupFailed = true;
+                        Log.EnqueueExceptionSafe(backupException, "Could not preserve the damaged APBX visibility history; updates will be kept in memory only.", Array.Empty<(string, object)>());
+                    }
+                    return new ApbxUiStateData();
+                }
+            }
+        }
+
+        private static void WriteApbxUiState(ApbxUiStateData state)
+        {
+            lock (_apbxUiStateLock)
+            {
+                if (Current?.ApbxUiState == null) return;
+                if (_apbxUiStateBackupFailed && string.Equals(Current.ApbxUiState.Get(), _apbxUiStateCorruptJson, StringComparison.Ordinal))
+                {
+                    return;
+                }
+                Current.ApbxUiState.Set(JsonConvert.SerializeObject(state));
+                _apbxUiStateCorruptJson = null;
+                _apbxUiStateBackupFailed = false;
+            }
+        }
+
+        private static string GetPlaybookIdentity(PlaybookGUI playbook)
+        {
+            if (playbook.UniqueId.HasValue)
+            {
+                return "id:" + playbook.UniqueId.Value.ToString("N");
+            }
+
+            if (string.IsNullOrWhiteSpace(playbook.Username) && string.IsNullOrWhiteSpace(playbook.Name))
+            {
+                return "file:" + GetPlaybookFileName(playbook).ToUpperInvariant();
+            }
+
+            return "name:" + (playbook.Username ?? string.Empty).Trim().ToUpperInvariant() + "|" +
+                (playbook.Name ?? string.Empty).Trim().ToUpperInvariant();
+        }
+
+        private static string GetPlaybookFileName(PlaybookGUI playbook) => playbook.FileNameWithoutExtension + ".apbx";
+
+        public static bool IsPlaybookHidden(PlaybookGUI playbook)
+        {
+            if (playbook == null) return false;
+            string identity = GetPlaybookIdentity(playbook);
+            string fileName = GetPlaybookFileName(playbook);
+            return ReadApbxUiState().HiddenPlaybooks.Any(entry =>
+                string.Equals(entry.Identity, identity, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(entry.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public static bool IsPlaybookFileHidden(string filePath)
+        {
+            string fileName = Path.GetFileName(filePath);
+            return ReadApbxUiState().HiddenPlaybooks.Any(entry =>
+                string.Equals(entry.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public static List<HiddenPlaybookEntry> GetHiddenPlaybooks() =>
+            ReadApbxUiState().HiddenPlaybooks.OrderByDescending(entry => entry.HiddenAtUtc).ToList();
+
+        public static List<ApbxRemovalEntry> GetRemovedPlaybooks() =>
+            ReadApbxUiState().RemovedPlaybooks.OrderByDescending(entry => entry.RemovedAtUtc).ToList();
+
+        public static void HidePlaybook(PlaybookGUI playbook)
+        {
+            if (playbook == null) return;
+            ApbxUiStateData state = ReadApbxUiState();
+            string identity = GetPlaybookIdentity(playbook);
+            string fileName = GetPlaybookFileName(playbook);
+            if (state.HiddenPlaybooks.Any(entry =>
+                string.Equals(entry.Identity, identity, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(entry.FileName, fileName, StringComparison.OrdinalIgnoreCase))) return;
+
+            state.HiddenPlaybooks.Add(new HiddenPlaybookEntry
+            {
+                Identity = identity,
+                FileName = fileName,
+                Name = playbook.Name,
+                Username = playbook.Username,
+                UniqueId = playbook.UniqueId,
+                HiddenAtUtc = DateTime.UtcNow
+            });
+            WriteApbxUiState(state);
+        }
+
+        public static void RestorePlaybook(HiddenPlaybookEntry hidden)
+        {
+            if (hidden == null) return;
+            ApbxUiStateData state = ReadApbxUiState();
+            state.HiddenPlaybooks.RemoveAll(entry =>
+                (!string.IsNullOrWhiteSpace(hidden.Identity) && string.Equals(entry.Identity, hidden.Identity, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(hidden.FileName) && string.Equals(entry.FileName, hidden.FileName, StringComparison.OrdinalIgnoreCase)));
+            WriteApbxUiState(state);
+        }
+
+        public static void RestorePlaybook(PlaybookGUI playbook)
+        {
+            if (playbook == null) return;
+            ApbxUiStateData state = ReadApbxUiState();
+            string identity = GetPlaybookIdentity(playbook);
+            string fileName = GetPlaybookFileName(playbook);
+            int removed = state.HiddenPlaybooks.RemoveAll(entry =>
+                string.Equals(entry.Identity, identity, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(entry.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+            if (removed > 0) WriteApbxUiState(state);
+        }
+
+        public static void RefreshHiddenPlaybook(PlaybookGUI playbook, string physicalFileName = null)
+        {
+            if (playbook == null) return;
+            ApbxUiStateData state = ReadApbxUiState();
+            string identity = GetPlaybookIdentity(playbook);
+            string fileName = Path.GetFileName(physicalFileName ?? GetPlaybookFileName(playbook));
+            HiddenPlaybookEntry hidden = state.HiddenPlaybooks.FirstOrDefault(entry =>
+                string.Equals(entry.Identity, identity, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(entry.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+            if (hidden == null) return;
+
+            if (string.Equals(hidden.Identity, identity, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(hidden.FileName, fileName, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(hidden.Name, playbook.Name, StringComparison.Ordinal) &&
+                string.Equals(hidden.Username, playbook.Username, StringComparison.Ordinal) &&
+                hidden.UniqueId == playbook.UniqueId) return;
+
+            hidden.Identity = identity;
+            hidden.FileName = fileName;
+            hidden.Name = playbook.Name;
+            hidden.Username = playbook.Username;
+            hidden.UniqueId = playbook.UniqueId;
+            WriteApbxUiState(state);
+        }
+
+        public static void RecordPlaybookRemoved(PlaybookGUI playbook, string fileName, string reason)
+        {
+            ApbxUiStateData state = ReadApbxUiState();
+            string identity = playbook == null ? null : GetPlaybookIdentity(playbook);
+            string normalizedFileName = Path.GetFileName(fileName ?? (playbook == null ? string.Empty : GetPlaybookFileName(playbook)));
+            HiddenPlaybookEntry hidden = state.HiddenPlaybooks.FirstOrDefault(entry =>
+                string.Equals(entry.FileName, normalizedFileName, StringComparison.OrdinalIgnoreCase) ||
+                (identity != null && string.Equals(entry.Identity, identity, StringComparison.OrdinalIgnoreCase)));
+
+            state.HiddenPlaybooks.RemoveAll(entry =>
+                string.Equals(entry.FileName, normalizedFileName, StringComparison.OrdinalIgnoreCase) ||
+                (identity != null && string.Equals(entry.Identity, identity, StringComparison.OrdinalIgnoreCase)));
+
+            string name = playbook?.Name ?? hidden?.Name;
+            string username = playbook?.Username ?? hidden?.Username;
+            Guid? uniqueId = playbook?.UniqueId ?? hidden?.UniqueId;
+            if (!string.IsNullOrWhiteSpace(normalizedFileName))
+            {
+                state.RemovedPlaybooks.RemoveAll(entry =>
+                    string.Equals(entry.FileName, normalizedFileName, StringComparison.OrdinalIgnoreCase));
+                state.RemovedPlaybooks.Insert(0, new ApbxRemovalEntry
+                {
+                    Identity = identity ?? hidden?.Identity,
+                    FileName = normalizedFileName,
+                    Name = name,
+                    Username = username,
+                    UniqueId = uniqueId,
+                    RemovedAtUtc = DateTime.UtcNow,
+                    Reason = reason
+                });
+                if (state.RemovedPlaybooks.Count > 100)
+                {
+                    state.RemovedPlaybooks = state.RemovedPlaybooks.Take(100).ToList();
+                }
+            }
+
+            WriteApbxUiState(state);
+        }
+
+        public static void RecordMissingHiddenPlaybooks(string playbookDirectory)
+        {
+            ApbxUiStateData state = ReadApbxUiState();
+            List<HiddenPlaybookEntry> missing = state.HiddenPlaybooks
+                .Where(entry => string.IsNullOrWhiteSpace(entry.FileName) ||
+                    !File.Exists(Path.Combine(playbookDirectory, Path.GetFileName(entry.FileName))))
+                .ToList();
+            foreach (HiddenPlaybookEntry entry in missing)
+            {
+                RecordPlaybookRemoved(null, entry.FileName, "Arquivo APBX não encontrado no computador");
+            }
+        }
+
+        // ---- Persisted update settings ------------------------------------
+        // All helpers are exception-safe (never throw, fall back to defaults) and
+        // persist through ConfigObject<T>.Set, which wakes the config thread exactly
+        // like WriteApbxUiState/HidePlaybook do.
+
+        /// <summary>"stable" (default) or "prerelease"; anything else falls back to "stable".</summary>
+        public static string GetUpdateChannel()
+        {
+            try
+            {
+                string channel = Current?.UpdateChannel?.Get();
+                return string.Equals(channel, "prerelease", StringComparison.OrdinalIgnoreCase) ? "prerelease" : "stable";
+            }
+            catch (Exception ex)
+            {
+                Log.EnqueueExceptionSafe(ex, "Could not read the update channel; falling back to stable.", Array.Empty<(string, object)>());
+                return "stable";
+            }
+        }
+
+        public static void SetUpdateChannel(string channel)
+        {
+            try
+            {
+                string normalized = string.Equals(channel, "prerelease", StringComparison.OrdinalIgnoreCase) ? "prerelease" : "stable";
+                Current?.UpdateChannel?.Set(normalized);
+            }
+            catch (Exception ex)
+            {
+                Log.EnqueueExceptionSafe(ex, "Could not persist the update channel.", Array.Empty<(string, object)>());
+            }
+        }
+
+        /// <summary>Version tag the user chose to ignore; "" when none (default).</summary>
+        public static string GetSkippedVersion()
+        {
+            try
+            {
+                return Current?.SkippedUpdateVersion?.Get() ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                Log.EnqueueExceptionSafe(ex, "Could not read the skipped update version.", Array.Empty<(string, object)>());
+                return string.Empty;
+            }
+        }
+
+        public static void SetSkippedVersion(string version)
+        {
+            try
+            {
+                Current?.SkippedUpdateVersion?.Set(version ?? string.Empty);
+            }
+            catch (Exception ex)
+            {
+                Log.EnqueueExceptionSafe(ex, "Could not persist the skipped update version.", Array.Empty<(string, object)>());
+            }
+        }
+
+        /// <summary>Run the update check on startup (default: true).</summary>
+        public static bool GetAutoCheckEnabled()
+        {
+            try
+            {
+                return Current?.AutoCheckUpdates?.Get() ?? true;
+            }
+            catch (Exception ex)
+            {
+                Log.EnqueueExceptionSafe(ex, "Could not read the auto-update setting; assuming enabled.", Array.Empty<(string, object)>());
+                return true;
+            }
+        }
+
+        public static void SetAutoCheckEnabled(bool enabled)
+        {
+            try
+            {
+                Current?.AutoCheckUpdates?.Set(enabled);
+            }
+            catch (Exception ex)
+            {
+                Log.EnqueueExceptionSafe(ex, "Could not persist the auto-update setting.", Array.Empty<(string, object)>());
+            }
+        }
 
         public static void GetConfig()
         {

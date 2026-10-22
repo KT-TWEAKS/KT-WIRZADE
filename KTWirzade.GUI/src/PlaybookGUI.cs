@@ -20,12 +20,18 @@ using System.Windows.Media.Imaging;
 using KTWirzade.GUI.Utils;
 using KTWirzade.GUI.ViewModels;
 using KTWirzade.Shared;
+using KTWirzade.Shared.I18n;
 
 namespace KTWirzade.GUI
 {
     public class PlaybookGUI : Playbook, INotifyPropertyChanged, IDragItem
     {
         private const string VerificationApiUrl = "https://licensing-site.vercel.app/api/verify";
+
+        // A cached verification result is reused until the hash changes or the
+        // last successful check gets older than this window. Unreached results
+        // are never considered fresh (see GetStatus).
+        private static readonly TimeSpan VerificationFreshnessWindow = TimeSpan.FromDays(7);
 
         public enum VerificationLevel
         {
@@ -160,6 +166,27 @@ namespace KTWirzade.GUI
             }
         }
 
+        private bool _isUserTrusted;
+
+        /// <summary>
+        /// True when the verification level is Unverified AND the user manually
+        /// granted trust to this exact hash via PlaybookTrustStore. This is a
+        /// user-level signal only: it must never be presented as platform
+        /// verification, and it is never true for any other level (in
+        /// particular never for Malicious, which cannot be bypassed).
+        /// </summary>
+        public bool IsUserTrusted
+        {
+            get
+            {
+                return _isUserTrusted;
+            }
+            set
+            {
+                SetProperty(ref _isUserTrusted, value, "IsUserTrusted");
+            }
+        }
+
         public string FilePath
         {
             get
@@ -263,7 +290,7 @@ namespace KTWirzade.GUI
             {
                 if (LastChecked == default(DateTime))
                 {
-                    return "Never";
+                    return LanguageManager.T("Status.Never", "Never");
                 }
                 return LastChecked.ToShortDateString();
             }
@@ -588,10 +615,25 @@ namespace KTWirzade.GUI
             using (StreamReader reader = new StreamReader(statusFile))
             {
                 string[] split = StringCipher.Decrypt(await reader.ReadLineAsync(), "wysca").Split('|');
+                // Corruption guard: a truncated/foreign status file must not crash the
+                // caller with an index/parse error. Throwing a clear FormatException makes
+                // GetStatus treat the cache as invalid and re-verify (regenerating it).
+                if (split.Length < 5)
+                {
+                    throw new FormatException("APBX status file is truncated or corrupt (expected 5 fields, got " + split.Length + ").");
+                }
+                if (!Enum.TryParse(split[1], false, out VerificationLevel parsedLevel))
+                {
+                    throw new FormatException("APBX status file is corrupt (unknown verification level '" + split[1] + "').");
+                }
+                if (!DateTime.TryParse(split[3], CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsedLastChecked))
+                {
+                    throw new FormatException("APBX status file is corrupt (invalid date '" + split[3] + "').");
+                }
                 result.Hash = split[0];
-                result.VerificationLevel = (VerificationLevel)Enum.Parse(typeof(VerificationLevel), split[1]);
+                result.VerificationLevel = parsedLevel;
                 result.MachineGuid = split[2];
-                result.LastChecked = DateTime.Parse(split[3], CultureInfo.InvariantCulture);
+                result.LastChecked = parsedLastChecked;
                 result.PendingUpdate = (string.IsNullOrEmpty(split[4]) ? null : split[4]);
             }
             StatusInfo = result;
@@ -612,6 +654,13 @@ namespace KTWirzade.GUI
             {
                 App.AdminNodeLaunched.Release();
             }
+            else
+            {
+                // The elevated node never came up: writing would fail anyway. Skip the write
+                // instead of proceeding blindly and surfacing an opaque IPC error later.
+                Log.EnqueueExceptionSafe(new InvalidOperationException("Admin node was not ready within 5s; status file was not written."), "APBX verification status was not persisted.", new (string, object)[1] { ("Playbook", Name) });
+                return;
+            }
             await InterLink.ExecuteSafeAsync((Expression<Action>)(() => WriteEncryptedStatusAdmin(encryptedString, FileNameWithoutExtension + ".status")), true, -1);
         }
 
@@ -628,7 +677,7 @@ namespace KTWirzade.GUI
             {
                 throw new Exception("GetHash was called with no apbx file present.");
             }
-            SHA256 sha = SHA256.Create();
+            using SHA256 sha = SHA256.Create();
             using FileStream stream = File.OpenRead(path);
             Hash = BitConverter.ToString(sha.ComputeHash(stream)).Replace("-", string.Empty);
         }
@@ -641,6 +690,7 @@ namespace KTWirzade.GUI
                 // Impersonation of the KT WIRZADE/Ameliorated name without a product code
                 // is always treated as malicious.
                 VerificationStatus = VerificationLevel.Malicious;
+                LastChecked = DateTime.Now;
                 return;
             }
 
@@ -654,6 +704,7 @@ namespace KTWirzade.GUI
                 {
                     Log.EnqueueExceptionSafe(ex, "Playbook verification skipped: no local .apbx to hash.");
                     VerificationStatus = VerificationLevel.Unverified;
+                    LastChecked = DateTime.Now;
                     return;
                 }
             }
@@ -661,7 +712,23 @@ namespace KTWirzade.GUI
             // Playbooks pode não ter ProductCode (ex.: FSOS-XR10) — nesse caso
             // o registro oficial casa o .apbx pelo hash SHA-256.
             VerificationStatus = VerificationLevel.Unverified;
-            switch (await IsVerified(ProductCode, Hash))
+            // Bounded retry with backoff so a single network blip does not leave
+            // the playbook Unreached: up to 3 attempts with 1s/3s delays
+            // (~19s worst case with the 5s per-request timeout in IsVerified).
+            string verificationResult = null;
+            for (int attempt = 0; attempt < 3; attempt++)
+            {
+                if (attempt > 0)
+                {
+                    await Task.Delay(attempt == 1 ? 1000 : 3000);
+                }
+                verificationResult = await IsVerified(ProductCode, Hash);
+                if (verificationResult != null)
+                {
+                    break;
+                }
+            }
+            switch (verificationResult)
             {
                 case "verified":
                     VerificationStatus = VerificationLevel.Verified;
@@ -677,6 +744,41 @@ namespace KTWirzade.GUI
                     VerificationStatus = VerificationLevel.Unreached;
                     break;
             }
+            LastChecked = DateTime.Now;
+        }
+
+        /// <summary>
+        /// Forces a fresh verification, bypassing the cached status and the
+        /// freshness window. A network failure (Unreached) never downgrades a
+        /// previously known Verified or Malicious result. Always rewrites the
+        /// encrypted status cache and refreshes IsUserTrusted.
+        /// </summary>
+        public async Task ReverifyAsync()
+        {
+            VerificationLevel? previousLevel = VerificationStatus;
+            await GetVerificationStatus();
+            if (VerificationStatus == VerificationLevel.Unreached && previousLevel.HasValue &&
+                (previousLevel.Value == VerificationLevel.Verified || previousLevel.Value == VerificationLevel.Malicious))
+            {
+                VerificationStatus = previousLevel.Value;
+            }
+            RefreshUserTrust();
+            await WriteEncryptedStatus();
+        }
+
+        /// <summary>
+        /// Syncs IsUserTrusted from PlaybookTrustStore. Only Unverified can be
+        /// user-trusted; every other level (including Malicious) forces the
+        /// flag to false so the trust store can never mask a security result.
+        /// </summary>
+        public void RefreshUserTrust()
+        {
+            bool trusted = false;
+            if (VerificationStatus == VerificationLevel.Unverified && !string.IsNullOrEmpty(Hash))
+            {
+                trusted = PlaybookTrustStore.IsTrusted(Hash);
+            }
+            IsUserTrusted = trusted;
         }
 
         private async Task<string> IsVerified(string productCode, string hash)
@@ -694,7 +796,10 @@ namespace KTWirzade.GUI
 
                 using (var client = new HttpClient())
                 {
-                    client.Timeout = TimeSpan.FromSeconds(15);
+                    // Keep local APBX use responsive when the verification service is
+                    // unreachable. The UI reports Unreached explicitly; this timeout
+                    // never turns a failed request into a Verified result.
+                    client.Timeout = TimeSpan.FromSeconds(5);
                     client.DefaultRequestHeaders.UserAgent.ParseAdd("KT-WIRZADE/" + Globals.CurrentVersion);
                     using (var response = await client.GetAsync(VerificationApiUrl + "?" + string.Join("&", query)))
                     {
@@ -751,6 +856,7 @@ namespace KTWirzade.GUI
             Task task = Task.Run(async delegate
             {
                 await GetHash();
+                VerificationLevel? cachedLevel = null;
                 if (File.Exists(statusFile) && !statusError)
                 {
                     try
@@ -758,22 +864,37 @@ namespace KTWirzade.GUI
                         if (StatusInfo.MachineGuid != GlobalsGUI.MachineGuid || StatusInfo.Hash != Hash)
                         {
                             File.Delete(statusFile);
-                            throw new Exception();
                         }
-                        if (StatusInfo.VerificationLevel == VerificationLevel.Verified)
+                        else
                         {
-                            VerificationStatus = VerificationLevel.Verified;
-                            return;
+                            cachedLevel = StatusInfo.VerificationLevel;
+                            TimeSpan age = DateTime.Now - StatusInfo.LastChecked;
+                            // Reuse the cached result until the hash changes or the
+                            // last check is older than the freshness window. A cached
+                            // Unreached is never fresh: the network deserves another
+                            // chance on the next run (and "Tentar novamente" exists).
+                            if (cachedLevel.Value != VerificationLevel.Unreached &&
+                                age >= TimeSpan.Zero && age <= VerificationFreshnessWindow)
+                            {
+                                VerificationStatus = cachedLevel;
+                                return;
+                            }
                         }
-                        throw new Exception();
                     }
-                    catch
+                    catch (Exception ex)
                     {
-                        await GetVerificationStatus();
-                        return;
+                        Log.EnqueueExceptionSafe(ex, "Cached APBX verification could not be reused.", new (string, object)[1] { ("Playbook", Name) });
                     }
                 }
                 await GetVerificationStatus();
+                // A network failure must not erase a previously known security result
+                // for the same hash on this machine. Unreached remains visible only
+                // when this APBX has no earlier verified or malicious result.
+                if (VerificationStatus == VerificationLevel.Unreached && cachedLevel.HasValue &&
+                    (cachedLevel.Value == VerificationLevel.Verified || cachedLevel.Value == VerificationLevel.Malicious))
+                {
+                    VerificationStatus = cachedLevel.Value;
+                }
             });
             Task updTask = Task.CompletedTask;
             if (Git != null && ProductCode != null && PendingUpdate == null && (int)DateTime.Now.Subtract(LastChecked).TotalMinutes > 30)
@@ -790,8 +911,13 @@ namespace KTWirzade.GUI
                         UpdatesChecked = true;
                         LastChecked = DateTime.Now;
                     }
-                    catch (Exception)
+                    catch (Exception ex)
                     {
+                        // Record failed checks too; otherwise an offline machine retries
+                        // the same release request on every app launch.
+                        UpdatesChecked = true;
+                        LastChecked = DateTime.Now;
+                        Log.EnqueueExceptionSafe(ex, "Could not check for a playbook update.", new (string, object)[1] { ("Playbook", Name) });
                     }
                 });
             }
@@ -801,6 +927,7 @@ namespace KTWirzade.GUI
             }
             await task;
             await updTask;
+            RefreshUserTrust();
             await WriteEncryptedStatus();
             if (VerificationStatus != VerificationLevel.Malicious)
             {

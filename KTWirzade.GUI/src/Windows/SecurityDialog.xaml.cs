@@ -82,32 +82,6 @@ namespace KTWirzade.GUI.Windows
             Loaded += OnLoaded;
         }
 
-        public static BitmapSource Convert(Bitmap bitmap)
-        {
-            using MemoryStream memory = new MemoryStream();
-            bitmap.Save(memory, ImageFormat.Png);
-            memory.Position = 0L;
-            BitmapImage bitmapImage = new BitmapImage();
-            bitmapImage.BeginInit();
-            bitmapImage.StreamSource = memory;
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.EndInit();
-            bitmapImage.Freeze();
-            return bitmapImage;
-        }
-
-        [DllImport("gdi32.dll")]
-        public static extern bool DeleteObject(IntPtr hObject);
-
-        private Bitmap BitmapImage2Bitmap(BitmapImage bitmapImage)
-        {
-            using MemoryStream outStream = new MemoryStream();
-            PngBitmapEncoder pngBitmapEncoder = new PngBitmapEncoder();
-            pngBitmapEncoder.Frames.Add(BitmapFrame.Create(bitmapImage));
-            pngBitmapEncoder.Save(outStream);
-            return new Bitmap(new Bitmap(outStream));
-        }
-
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             if (MaterialManager.IsVMwareVM && SystemInfoEx.WindowsVersion.BuildNumber >= 22523)
@@ -130,9 +104,9 @@ namespace KTWirzade.GUI.Windows
             BitmapImage bmiSec = (BitmapImage)FindResource("WindowsSecurityBitmap");
             await Task.Run(delegate
             {
-                toggleOnSource = Convert(ImageUtilities.ResizeImage(BitmapImage2Bitmap(bmiOn), (int)toggleX, (int)toggleY));
-                toggleOffSource = Convert(ImageUtilities.ResizeImage(BitmapImage2Bitmap(bmiOff), (int)toggleX, (int)toggleY));
-                securitySource = Convert(ImageUtilities.ResizeImage(BitmapImage2Bitmap(bmiSec), (int)resX, (int)resY));
+                toggleOnSource = DialogHelpers.Convert(ImageUtilities.ResizeImage(DialogHelpers.BitmapImage2Bitmap(bmiOn), (int)toggleX, (int)toggleY));
+                toggleOffSource = DialogHelpers.Convert(ImageUtilities.ResizeImage(DialogHelpers.BitmapImage2Bitmap(bmiOff), (int)toggleX, (int)toggleY));
+                securitySource = DialogHelpers.Convert(ImageUtilities.ResizeImage(DialogHelpers.BitmapImage2Bitmap(bmiSec), (int)resX, (int)resY));
             });
             SecurityImage.Source = securitySource;
             Storyboard policyBoard = null;
@@ -566,7 +540,9 @@ namespace KTWirzade.GUI.Windows
                     CheckMark.Visibility = Visibility.Hidden;
                     ProgressBar.Start();
                 }
-                await Task.Delay(200);
+                // Polling cadence: 200ms re-ran the (relatively expensive) registry
+                // Defender-toggle query far more often than needed.
+                await Task.Delay(2000);
             }
         }
 

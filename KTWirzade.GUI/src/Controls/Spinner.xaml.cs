@@ -20,13 +20,24 @@ namespace KTWirzade.GUI.Controls
 
         private const double duration = 1000.0;
 
+        // Set when the control leaves the visual tree; guards every re-armed
+        // animation callback so the chain stops instead of looping forever.
+        private bool _stopped;
+
         public Spinner()
         {
             InitializeComponent();
+            Unloaded += OnUnloaded;
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            _stopped = true;
         }
 
         private void OnLoad(object sender, RoutedEventArgs e)
         {
+            _stopped = false;
             double centerX = canvas.ActualWidth / 2.0;
             double centerY = canvas.ActualHeight / 2.0;
             double r1 = Math.Min(centerX, centerY);
@@ -69,16 +80,32 @@ namespace KTWirzade.GUI.Controls
                 DoubleAnimation dotanim = new DoubleAnimation(0.0, 360.0, new Duration(TimeSpan.FromMilliseconds(wait * i)));
                 dotanim.Completed += delegate
                 {
+                    if (_stopped)
+                    {
+                        return;
+                    }
                     dot.Visibility = Visibility.Visible;
                     DoubleAnimation Anim1 = new DoubleAnimation(0.0, 90.0, new Duration(TimeSpan.FromMilliseconds(wait)));
                     Anim1.Completed += delegate
                     {
+                        if (_stopped)
+                        {
+                            return;
+                        }
                         DoubleAnimation doubleAnimation = new DoubleAnimation(90.0, 270.0, new Duration(TimeSpan.FromMilliseconds(7.0 * wait)));
                         doubleAnimation.Completed += delegate
                         {
+                            if (_stopped)
+                            {
+                                return;
+                            }
                             DoubleAnimation doubleAnimation2 = new DoubleAnimation(270.0, 360.0, new Duration(TimeSpan.FromMilliseconds(wait)));
                             doubleAnimation2.Completed += delegate
                             {
+                                if (_stopped)
+                                {
+                                    return;
+                                }
                                 if (secLoop)
                                 {
                                     dot.Visibility = Visibility.Hidden;
@@ -86,6 +113,10 @@ namespace KTWirzade.GUI.Controls
                                     DoubleAnimation doubleAnimation3 = new DoubleAnimation(0.0, 360.0, new Duration(TimeSpan.FromMilliseconds(1500.0)));
                                     doubleAnimation3.Completed += delegate
                                     {
+                                        if (_stopped)
+                                        {
+                                            return;
+                                        }
                                         canvas.Children.Remove(dot);
                                         if (canvas.Children.Count == 1)
                                         {

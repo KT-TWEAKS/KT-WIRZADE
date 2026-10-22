@@ -12,7 +12,7 @@
     <SolidColorBrush x:Key="UsbItemBackgroundBrush" Color="{DynamicResource ButtonTextPrimaryColor}" Opacity="0.04375" />
     <Color x:Key="TextPrimaryInverseColor">White</Color>
     <SolidColorBrush x:Key="TextPrimaryInverseBrush" Color="White" />
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#787878" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5F5F5F" />
     <SolidColorBrush x:Key="PageBackground" Color="#BFF8F9FC" />
     <SolidColorBrush x:Key="PageBorderBrush" Color="#99E4E8EC" />
     <SolidColorBrush x:Key="PageSubtextColor" Color="#191a1a" />
@@ -22,6 +22,7 @@
     <SolidColorBrush x:Key="ProgressBarBrush" Color="#7c3aed" />
     <SolidColorBrush x:Key="ContentBoxBorderBrush" Color="#99E3E5E8" />
     <SolidColorBrush x:Key="FakeBackgroundBrush" Color="#B3ECF1F4" />
+    <SolidColorBrush x:Key="FakePageBackgroundBrush" Color="#f8f9fc" Opacity="1" />
     <SolidColorBrush x:Key="PrimaryBrush" Color="#A6EEF4F7" />
     <SolidColorBrush x:Key="SecondaryBrush" Color="#B3D9DFE2" />
     <SolidColorBrush x:Key="VerificationPopupBackgroundBrush" Color="#f8f9fd" />

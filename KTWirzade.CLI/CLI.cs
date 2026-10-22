@@ -326,6 +326,7 @@ namespace KTWirzade.CLI
             }
             var status = "Starting Playbook";
             bool errorsOccurred = false;
+            Exception fatalException = null;
             try
             {
                 // Open a named rollback session so CLI runs are revertible and closed
@@ -344,19 +345,27 @@ namespace KTWirzade.CLI
             catch (Exception exception)
             {
                 InterLink.ShutdownNode(Level.TrustedInstaller);
-                KTWirzade.Shared.Rollback.RollbackManager.EndSession(false);
+                errorsOccurred = true;
+                fatalException = exception;
+            }
+            finally
+            {
+                // Environment.Exit does not unwind the stack, so the session must be
+                // closed exactly once here — before the exit paths below run.
+                KTWirzade.Shared.Rollback.RollbackManager.EndSession(!errorsOccurred);
+            }
 
-                if (exception is SerializableException serializableException && serializableException.OriginalType.Type == typeof(SerializationException))
+            if (fatalException != null)
+            {
+                if (fatalException is SerializableException serializableException && serializableException.OriginalType.Type == typeof(SerializationException))
                 {
-                    Console.WriteLine("\r\nYAML Error: " + exception.ToString());
+                    Console.WriteLine("\r\nYAML Error: " + fatalException.ToString());
                     Environment.Exit(1);
                 }
 
-                Console.WriteLine("\r\nFatal Playbook Error: " + exception.ToString());
+                Console.WriteLine("\r\nFatal Playbook Error: " + fatalException.ToString());
                 Environment.Exit(1);
             }
-
-            KTWirzade.Shared.Rollback.RollbackManager.EndSession(!errorsOccurred);
 
             if (errorsOccurred)
                 Console.WriteLine("\r\nPlaybook completed with errors.");

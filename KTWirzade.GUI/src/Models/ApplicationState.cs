@@ -15,6 +15,11 @@ namespace KTWirzade.GUI.Models
             modePage = new ModePage();
             progressPage = new ProgressPage();
             finishPage = new FinishPage();
+            // ProgressPageViewModel.GetNextPage passes state.finishErrorPage to
+            // FinishErrorPageViewModel; leaving it null made that state object null
+            // on the error path (the success path never hits it because finishPage
+            // was the only page pre-created).
+            finishErrorPage = new FinishErrorPage();
         }
     }
 

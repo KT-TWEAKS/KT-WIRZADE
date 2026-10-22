@@ -7,13 +7,7 @@ using System.Windows;
 using KTWirzade.GUI.Models;
 using KTWirzade.Shared;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using System.Threading;
-using System;
-using System.Collections.Generic;
-using System.Drawing;
 
 
 
@@ -45,7 +39,8 @@ namespace KTWirzade.GUI.ViewModels
 
         public override ViewModelBase GetPreviousPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            // Progress page is terminal: there is no going back once amelioration started.
+            return null;
         }
 
         public override bool HasPreviousPage()

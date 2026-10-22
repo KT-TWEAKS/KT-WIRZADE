@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Security.Policy;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -397,7 +398,7 @@ namespace KTWirzade.Shared
 
             string repo = GetRepository();
 
-            using var httpClient = new HttpClient();
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("curl/7.55.1"); //Required for GitHub
 
             string url = gitPlatform switch
@@ -414,9 +415,12 @@ namespace KTWirzade.Shared
             var json = await response.Content.ReadAsStringAsync();
             var array = JArray.Parse(json);
 
-            var tag = (string)array.FirstOrDefault()?["tag_name"];
-            
-            return tag?.TrimStart('v');
+            var release = array.FirstOrDefault(item => item["prerelease"]?.Value<bool>() != true);
+            var tag = (string)release?["tag_name"];
+            if (string.IsNullOrWhiteSpace(tag))
+                throw new InvalidOperationException("The repository has no stable APBX release.");
+
+            return tag.TrimStart('v');
         }
         public async Task<List<string>> GetPlaybookVersions()
         {
@@ -430,7 +434,7 @@ namespace KTWirzade.Shared
 
             string repo = GetRepository();
 
-            using var httpClient = new HttpClient();
+            using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
             httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("curl/7.55.1"); //Required for GitHub
 
             string url = gitPlatform switch
@@ -448,23 +452,36 @@ namespace KTWirzade.Shared
             var array = JArray.Parse(json);
 
             var result = new List<string>();
-            foreach (var releaseToken in array)
-                result.Add(((string)releaseToken["tag_name"])?.TrimStart('v'));
+            foreach (var releaseToken in array.Where(item => item["prerelease"]?.Value<bool>() != true))
+            {
+                string tag = ((string)releaseToken["tag_name"])?.TrimStart('v');
+                if (!string.IsNullOrWhiteSpace(tag)) result.Add(tag);
+            }
 
             return result;
         }
         
         public async Task DownloadLatestPlaybook(BackgroundWorker worker = null)
         {
+            await DownloadLatestPlaybookFile(worker);
+        }
+
+        public async Task<string> DownloadLatestPlaybookFile(BackgroundWorker worker = null)
+        {
             string repo = GetRepository();
             string gitPlatform = GetPlaybookGitPlatform();
 
-            var httpClient = new WinUtil.HttpProgressClient();
+            using var httpClient = new WinUtil.HttpProgressClient();
+            // The metadata request is short; the asset download may be large. Set the
+            // client timeout before its first request and bound metadata separately.
+            httpClient.Client.Timeout = TimeSpan.FromMinutes(10);
             httpClient.Client.DefaultRequestHeaders.UserAgent.ParseAdd("curl/7.55.1"); //Required for GitHub
 
             var downloadUrl = string.Empty;
-            var downloadDir = System.IO.Path.Combine(Environment.GetEnvironmentVariable("TEMP"), "AME");
-            var downloadPath = System.IO.Path.Combine(downloadDir, "playbook.apbx");
+            var downloadDir = System.IO.Path.Combine(Environment.GetEnvironmentVariable("TEMP"), "AME", "APBX Updates");
+            System.IO.Directory.CreateDirectory(downloadDir);
+            string updateKey = UniqueId?.ToString("N") ?? Guid.NewGuid().ToString("N");
+            var downloadPath = System.IO.Path.Combine(downloadDir, updateKey + "-latest.apbx");
 
             string baseUrl;
             string releasesUrl;
@@ -495,18 +512,22 @@ namespace KTWirzade.Shared
                     break;
             }
 
-            var releasesResponse = await httpClient.GetAsync(releasesUrl);
+            using var releasesTimeout = new CancellationTokenSource();
+            releasesTimeout.CancelAfter(TimeSpan.FromSeconds(15));
+            var releasesResponse = await httpClient.Client.GetAsync(releasesUrl, releasesTimeout.Token);
             releasesResponse.EnsureSuccessStatusCode();
 
             var releasesContent = await releasesResponse.Content.ReadAsStringAsync();
             var releases = JArray.Parse(releasesContent);
-            var release = releases.FirstOrDefault();
+            var release = releases.FirstOrDefault(item => item["prerelease"]?.Value<bool>() != true);
+            if (release == null)
+                throw new InvalidOperationException("No stable APBX release was found.");
 
             long size = 3000000;
             
             if (release?.SelectToken(assetsKey) is JArray assets)
             {
-                var asset = assets.FirstOrDefault(a => a["name"].ToString().EndsWith(".apbx"));
+                var asset = assets.FirstOrDefault(a => ((string)a["name"])?.EndsWith(".apbx", StringComparison.OrdinalIgnoreCase) == true);
                 if (asset != null)
                 {
                     downloadUrl = asset[browserDownloadUrlKey]?.ToString();
@@ -520,18 +541,30 @@ namespace KTWirzade.Shared
                 worker.ReportProgress(10);
             
             // Download the release asset
-            if (!string.IsNullOrEmpty(downloadUrl))
+            if (string.IsNullOrWhiteSpace(downloadUrl))
+                throw new InvalidOperationException("The latest stable release does not contain an APBX asset.");
+
+            httpClient.Client.DefaultRequestHeaders.Clear();
+            httpClient.ProgressChanged += (totalFileSize, totalBytesDownloaded, progressPercentage) =>
             {
-                httpClient.Client.DefaultRequestHeaders.Clear();
-                
-                httpClient.ProgressChanged += (totalFileSize, totalBytesDownloaded, progressPercentage) => {
-                    if (progressPercentage.HasValue && worker != null)
-                        worker.ReportProgress((int)Math.Ceiling(10 + (progressPercentage.Value * 0.7)));
-                };
-                
+                if (progressPercentage.HasValue && worker != null)
+                    worker.ReportProgress((int)Math.Ceiling(10 + (progressPercentage.Value * 0.7)));
+            };
+
+            try
+            {
+                if (System.IO.File.Exists(downloadPath)) System.IO.File.Delete(downloadPath);
                 await httpClient.StartDownload(downloadUrl, downloadPath, size);
+                if (!System.IO.File.Exists(downloadPath) || new System.IO.FileInfo(downloadPath).Length == 0)
+                    throw new InvalidDataException("The downloaded APBX file is empty.");
+                if (worker != null) worker.ReportProgress(90);
+                return downloadPath;
             }
-            httpClient.Dispose();
+            catch
+            {
+                try { if (System.IO.File.Exists(downloadPath)) System.IO.File.Delete(downloadPath); } catch { }
+                throw;
+            }
         }
 
         public string GetRepository()

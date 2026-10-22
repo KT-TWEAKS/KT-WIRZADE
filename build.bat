@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 echo ============================================
-echo    KT WIRZADE - Build Script v1.0.1
+echo    KT WIRZADE - Build Script v1.0.2
 echo ============================================
 echo.
 

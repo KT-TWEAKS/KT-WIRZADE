@@ -19,7 +19,7 @@
     <DockPanel Name="RootWindow" Background="{DynamicResource AboutBrush}">
         <DockPanel Name="TitleBar" Dock="Top" MaxHeight="36">
             <Image Style="{StaticResource QualityImage}" Margin="7, 7,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="16" Height="16" />
-            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,36" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,36" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top" IsCancel="True" Click="CloseButton_Click" />
             <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,9.5,0,5" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Text="Sobre" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
        </DockPanel>
         <Grid Margin="20,0,20,16">
@@ -37,7 +37,7 @@
 
             <StackPanel Grid.Row="1" Margin="0,12,0,0">
                 <TextBlock FontSize="18" FontWeight="Bold" Text="KT WIRZADE" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
-                <TextBlock Name="VersionText" HorizontalAlignment="Center" Text="v1.0.1" FontSize="12" Margin="0,4,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock Name="VersionText" HorizontalAlignment="Center" Text="v1.0.2" FontSize="12" Margin="0,4,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock Name="OsInfoText" HorizontalAlignment="Center" FontSize="10.5" Margin="0,2,0,0" Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.8" />
             </StackPanel>
 

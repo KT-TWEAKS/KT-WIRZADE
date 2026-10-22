@@ -165,6 +165,17 @@ namespace KTWirzade.GUI.Windows
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                // An IPC/execution failure escaping this async void would reach the
+                // global handler and force-quit the app - surface it in the UI instead.
+                Log.EnqueueExceptionSafe(ex, "System preparation failed.", Array.Empty<(string, object)>());
+                CloseButton.IsEnabled = true;
+                ProgressBar.Visibility = Visibility.Collapsed;
+                FinishText.Visibility = Visibility.Visible;
+                FinishText.Text = "Falha na preparacao. Esta janela pode ser fechada.";
+                StatusText.Text = "System preparation failed";
+            }
             finally
             {
                 if (taskbarProgress != null)

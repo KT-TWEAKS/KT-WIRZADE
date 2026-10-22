@@ -41,6 +41,7 @@ namespace KTWirzade.GUI.Controls
                 ApplyBackdrop();
                 IntPtr handle = new WindowInteropHelper(this).Handle;
                 SetWindowLong(handle, -16, GetWindowLong(handle, -16) & -524289);
+                HookWindows10BackdropEvents();
             };
             // Windows 10 rounds via a GDI window region; the region does not track
             // geometry changes, so reapply after resize and minimize/restore.
@@ -50,8 +51,49 @@ namespace KTWirzade.GUI.Controls
             };
             base.StateChanged += delegate
             {
-                Dispatcher.BeginInvoke(new Action(() => MaterialManager.ApplyRoundedCornerRegion(this)));
+                Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    MaterialManager.ApplyRoundedCornerRegion(this);
+                    ReapplyWindows10Backdrop();
+                }));
             };
+        }
+
+        private void ReapplyWindows10Backdrop()
+        {
+            // Only Windows 10 builds the backdrop through a volatile accent policy:
+            // maximize/restore transitions can drop it silently. Windows 11 resolves
+            // the backdrop through DWM attributes and needs no re-assertion.
+            if (GlobalsGUI.WinVer >= 22000 || MaterialManager.IsVMwareVM)
+            {
+                return;
+            }
+            ApplyBackdrop();
+        }
+
+        private void HookWindows10BackdropEvents()
+        {
+            if (GlobalsGUI.WinVer >= 22000 || MaterialManager.IsVMwareVM)
+            {
+                return;
+            }
+            if (PresentationSource.FromVisual(this) is HwndSource hwndSource)
+            {
+                hwndSource.AddHook(Windows10BackdropHook);
+            }
+        }
+
+        private IntPtr Windows10BackdropHook(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            const int WM_ENTERSIZEMOVE = 0x0231;
+            const int WM_EXITSIZEMOVE = 0x0232;
+            // Reasserting the accent at the boundaries of a drag session removes the
+            // well-known Windows 10 acrylic ghost trails while moving the window.
+            if (msg == WM_ENTERSIZEMOVE || msg == WM_EXITSIZEMOVE)
+            {
+                ApplyBackdrop();
+            }
+            return IntPtr.Zero;
         }
 
         [DllImport("user32.dll", SetLastError = true)]

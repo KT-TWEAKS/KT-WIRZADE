@@ -40,9 +40,5 @@ namespace KTWirzade.GUI.Pages.IsoPage
                 OnChecked(new RoutedEventArgs(CheckedEvent));
             }
         }
-
-        internal UsbProgressItem()
-        {
-        }
     }
 }

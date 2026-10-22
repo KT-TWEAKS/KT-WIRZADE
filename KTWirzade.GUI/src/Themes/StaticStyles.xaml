@@ -198,5 +198,31 @@
             </Setter.Value>
         </Setter>
     </Style>
-    
+
+    <!-- Sidebar thin scrollbar (previously defined in MainWindow instance resources;
+         moved here so UserControls such as DashboardView/IntroPageView can resolve it) -->
+    <Style x:Key="SidebarScrollBar" TargetType="{x:Type ScrollBar}">
+        <Setter Property="Width" Value="6" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type ScrollBar}">
+                    <Grid Background="Transparent">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.Thumb>
+                                <Thumb>
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="{x:Type Thumb}">
+                                            <Border Background="{DynamicResource TextSecondaryBrush}" CornerRadius="3" Opacity="0.4" Margin="1,0" />
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>

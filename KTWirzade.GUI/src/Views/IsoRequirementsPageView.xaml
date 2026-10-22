@@ -16,6 +16,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <StackPanel Margin="0,0,0,0" MinHeight="70">
             <TextBlock Style="{DynamicResource Header}" Margin="0,0,0,13" TextTrimming="WordEllipsis" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" Text="{Binding ISO.Title}" />
@@ -32,7 +33,7 @@
             </Grid>
             <StackPanel Grid.Column="1" Margin="2,8,0,0">
                 <TextBlock Style="{DynamicResource Header}" FontSize="16" Text="{Binding ActivationStatusText}" />
-                <TextBlock Margin="0,1,0,0" Foreground="#FF808080" Style="{DynamicResource InText}" Text="{Binding ActivationResultText}" Visibility="{Binding ActivationResultTextVisibility}" />
+                <TextBlock Margin="0,1,0,0" Foreground="{DynamicResource TextSecondaryBrush}" Style="{DynamicResource InText}" Text="{Binding ActivationResultText}" Visibility="{Binding ActivationResultTextVisibility}" />
                 <controls:ProgressBarIndeterminate x:Name="ActivationBar" Width="250" Visibility="Visible" BoardTime="0:0:1.8" Margin="0,3,0,0" VerticalAlignment="Top" BetweenDelay="400" HorizontalAlignment="Left" />
             </StackPanel>
         </Grid>
@@ -47,7 +48,7 @@
             </Grid>
             <StackPanel Grid.Column="1" Margin="2,0,0,0">
                 <TextBlock Style="{DynamicResource Header}" FontSize="16" Margin="0,3,0,0" Text="{Binding SystemCheckStatusText}" />
-                <TextBlock Margin="0,1,0,0" Width="195" HorizontalAlignment="Left" TextWrapping="Wrap" Foreground="#FF808080" Style="{DynamicResource InText}" Text="{Binding SystemCheckResultText}" Visibility="{Binding ResultTextVisibility}" />
+                <TextBlock Margin="0,1,0,0" Width="195" HorizontalAlignment="Left" TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" Style="{DynamicResource InText}" Text="{Binding SystemCheckResultText}" Visibility="{Binding ResultTextVisibility}" />
                 <controls:ProgressBarIndeterminate x:Name="SystemBar" Width="250" Visibility="Hidden" BoardTime="0:0:1.8" Margin="0,3,0,0" BetweenDelay="400" VerticalAlignment="Top" HorizontalAlignment="Left" />
             </StackPanel>
         </Grid>
@@ -170,6 +171,21 @@
                 </Grid>
             </Border>
         </StackPanel>
+        <Border Name="OverrideBox" Grid.Row="4" Visibility="Collapsed" Margin="2,8,10,0" Padding="12,9" CornerRadius="6" Background="{DynamicResource WarningBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource StatusWarningBrush}">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Warning" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource StatusWarningBrush}" />
+                    <TextBlock Name="OverrideFailedText" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" Text="Verificações opcionais pendentes" />
+                </StackPanel>
+                <CheckBox Name="OverrideAcceptBox" Margin="0,7,0,0" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" Content="Entendo os riscos e desejo continuar mesmo assim" Checked="OverrideAcceptBox_OnChecked" Unchecked="OverrideAcceptBox_OnUnchecked" />
+                <Grid Margin="0,4,0,0">
+                    <TextBlock Name="OverrideBadgeText" Visibility="Collapsed" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource StatusWarningBrush}" VerticalAlignment="Center" Text="1 verificação ignorada pelo usuário" />
+                    <Button Name="OverrideRecheckButton" HorizontalAlignment="Right" Margin="0,-2,0,-2" Padding="13,0,13,0" Height="26" Style="{DynamicResource TransparentButton}" Click="OverrideRecheckButton_OnClick">
+                        <TextBlock VerticalAlignment="Center" FontSize="12" Margin="0,0,0,1" Text="Verificar novamente" Foreground="{DynamicResource TransparentButtonTextForeground}" />
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </Border>
         <CheckBox Name="activationAccept" Content="Eu entendo que meu sistema ja esta otimizado." VerticalAlignment="Bottom" Grid.Row="2" IsEnabled="False" Visibility="Collapsed" Checked="activationAccept_Checked" Unchecked="activationAccept_Checked" />
     </Grid>
 </UserControl>

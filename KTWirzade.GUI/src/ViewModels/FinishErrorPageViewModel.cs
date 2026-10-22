@@ -2,6 +2,7 @@ using Core.Actions;
 using System.Windows;
 using System.Windows.Controls;
 using KTWirzade.GUI.Models;
+using KTWirzade.Shared.I18n;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -23,7 +24,7 @@ namespace KTWirzade.GUI.ViewModels
             MainCancelButtonActive = false;
             MainNextButtonContent = new TextBlock
             {
-                Text = "Reboot"
+                Text = LanguageManager.T("Button.Reboot", "Reboot")
             };
             MainNextButtonStyle = MainNextButtonStyles.Pulse;
             MainPlaybookColumnVisibility = Visibility.Collapsed;
@@ -42,7 +43,8 @@ namespace KTWirzade.GUI.ViewModels
 
         public override ViewModelBase GetPreviousPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            // Terminal page: there is no previous page in the flow.
+            return null;
         }
 
         public override bool HasPreviousPage()

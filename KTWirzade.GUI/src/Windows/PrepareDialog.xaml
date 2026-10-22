@@ -39,7 +39,7 @@
         </Rectangle>
         <DockPanel Name="TitleBar" Dock="Top" Height="40" VerticalAlignment="Top">
             <Image Style="{StaticResource QualityImage}" Margin="8, 6,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="21" Height="21" />
-            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" IsEnabled="False" DockPanel.Dock="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,50" Visibility="Visible" IsEnabled="False" DockPanel.Dock="Right" VerticalAlignment="Top" IsCancel="True" Click="CloseButton_Click" />
             <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,11,0,9" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Width="770" Text="Preparar sistema" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
         </DockPanel>
         <Grid Row="1">
@@ -62,7 +62,7 @@
             </Grid>
             <Grid Column="1" Height="501" VerticalAlignment="Top" UseLayoutRounding="True">
                 <Border Background="{DynamicResource PageBackground}" CornerRadius="9,0,0,9" />
-                <Border Name="PageContainer" UseLayoutRounding="True" BorderBrush="{DynamicResource PageBorderBrush}" BorderThickness="1,1,0,1" Background="#00FFFFFF" CornerRadius="8,0,0,8" Padding="29,31,29,0">
+                <Border Name="PageContainer" UseLayoutRounding="True" BorderBrush="{DynamicResource PageBorderBrush}" BorderThickness="1,1,0,1" Background="{DynamicResource PageBackground}" CornerRadius="8,0,0,8" Padding="29,31,29,0">
                     <Grid>
                         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
                             <TextBlock FontSize="16" FontWeight="Bold" Text="Preparar sistema" />

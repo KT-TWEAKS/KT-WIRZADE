@@ -1,12 +1,76 @@
-# 1.0.1 — estabilidade e recuperação
-
-Veja [notas de atualização e compatibilidade](RELEASE-1.0.1.md). Correções de parser, filtros, downloads, rollback, IPC e atualizador; interface acrílica no Windows 10; melhorias de desempenho; executável único verificável.
-
 # KT WIRZADE - Changelog
 
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
-## [Não lançado]
+## [1.0.2] - 2026-10-22
+
+### Atualizado (Atualizador - verificação e completude do ciclo 1.0.2)
+
+- **Versão 1.0.2 completa no ciclo de release**: `Globals.CurrentVersion`, `<Version>` da GUI, `scripts/build-release.ps1` (default `1.0.2` — o script travava com `Version mismatch in Globals.cs`), `build.bat`, `/build.yml` (nomes de assets + `RELEASE-1.0.2.md`), `GlobalsGUI.WizardPlaybook` (agora lê `Globals.CurrentVersion`, sem possibilidade de divergência) e textos estáticos `v1.0.1` de Welcome/About/UpdateCheckDialog.
+- **Fallback de verificação via `SHA256SUMS.txt`**: quando a API do GitHub não publica o campo `digest` do asset, o atualizador baixa o `SHA256SUMS.txt` da própria release (mesma validação estrutural: HTTPS/host oficial/nome/tamanho, leitura limitada a 256 KB) e usa o hash publicado da linha do EXE. Nenhuma forma de download sem hash verificável; formato sha256sum com marcador binário suportado; divergências de nome/linha malformada falham fechado.
+- **Erros de download agora chegam ao usuário**: `DownloadLatestAsync` relança falhas reais (só continua retornando `null` quando não há update/asset), então o diálogo mostra a causa exata em vez do texto genérico.
+- **Diálogo de update recebe snapshot pré-verificado**: o prompt de startup não dispara uma segunda chamada à API (`UpdateCheckDialog(UpdateInfo preloaded)`), o prompt e o botão da barra de título usam o mesmo singleton (`MainWindow.ShowUpdatesDialog()`).
+- **HTTP 429** tratado como limite de requisições do GitHub (antes passava pelo retry por ser 4xx não mapeado).
+- **Canal prerelease ordena por data de publicação**: `/releases` lista por data de *criação*; um draft criado antes e publicado depois fazia a lista devolver release antiga. Agora `SelectReleaseFromList` ordena por `published_at`.
+- **Comparação de versão reforçada** (`IsNewerVersion`): comparação elemento a elemento (suporta 4 segmentos tipo `1.0.2.1`), não-numérico falha fechado; testes de versões-sufixo (`1.0.1-beta.2` vs `1.0.1`) e ordem numérica (`1.0.10` > `1.0.9`) adicionados.
+- **Erro de cancelamento/timeout com mensagem ambígua corrigida** ("Verificacao cancelada." reportada em timeout de startup).
+
+### Atualizado (Interface - atualizador e dashboard)
+
+- **Quick action "Atualizações" do dashboard abre o diálogo real de update** (mesmo singleton da barra de título): o fluxo anterior com `MessageBox` ignorava o canal configurado e a versão ignorada pelo usuário.
+- **Diálogo de Atualizações ganhou controle de verificação automática ao iniciar** (checkbox persistido via `WizardConfig.SetAutoCheckEnabled`), com o toggle de canal reorganizado numa linha de opções própria.
+- **Dashboard localizado (PT/EN)**: selo de status de conexão, cartões de ação rápida (títulos, subtítulos e textos dos botões Abrir/Restaurar via binding), cabeçalhos de seção e estados vazios reagindo à troca de idioma em tempo real.
+- **Crash "FillBorder não pode ser encontrado no escopo de nome" ao abrir o diálogo de Atualizações corrigido**: inicializar o novo checkbox no construtor disparava os storyboards do estilo do `CheckBox` antes do template existir; a inicialização do valor persistido foi movida para o `Loaded`, quando o template já está aplicado, agora com guarda de falha (não propaga erro).
+- **Troca de canal à prova de crash**: clicar no toggle estável/pré-release não derruba mais o aplicativo mesmo se a inicialização do atualizador falhar; o motivo real aparece dentro do diálogo (async-void blindado).
+- **Inicialização defensiva do cliente HTTP do atualizador (`UpdateChecker`)**: o cliente compartilhado passou a ser construído sob demanda com guarda; uma inicialização de tipo falha no .NET Framework é cacheada pelo runtime e quebraria o atualizador em TODOS os toques seguintes — agora falhas de header/cliente viram erro normal de verificação, com fallback sem headers.
+- **Rollback: botão "Abrir pasta"** no rodapé da janela abre a pasta da sessão selecionada (logs, snapshots e `session.json`) no Explorador, habilitado somente quando a sessão está selecionada e a pasta existe; tip nos botões do rodapé (Atualizar/Limpar antigas/Limpar tudo).
+- **Confirmação ao ignorar "instalação fresca"**: o hipertexto "Ignorar" do requisito de instalação fresca (página de requisitos e requisitos ISO) agora pede confirmação explicando o risco, no mesmo padrão do bypass de versão do Windows.
+- **Diálogo de bypass de versão com contexto de família Windows 10/11**: mostra se a sua build (ou build da ISO) é Windows 10 ou 11 e diferencia o risco entre famílias distintas e builds mais novas da mesma família.
+- **Blur do Windows 10 corrigido (3 camadas)**: `MaterialManager` consulta `HKCU\...\Themes\Personalize\EnableTransparency` e, com efeitos de transparência desligados, desarma o accent e aplica `FakeBackgroundBrush` no lugar do fundo transparente (evita janela branca/achatada); `AcrylicWindow` reasserta o accent em `WM_ENTERSIZEMOVE`/`WM_EXITSIZEMOVE` (elimina as trilhas fantasma clássicas do arraste no acrylic do Win10) e no `StateChanged` (maximizar/restaurar). Windows 11 (DWM attributes) permanece inalterado.
+- **Reconciliação de APBX em tempo real fecha seleção fantasma**: o reconcílio do watcher (`DispatchPlaybookReconciliation`) agora também roda `WizardConfig.RecordMissingHiddenPlaybooks` e a nova `DeselectMissingSelectedPlaybook` limpa `GlobalsGUI.Current.Playbook`/estado do card quando o `.apbx` do playbook selecionado deixa de existir — o fluxo não continua mais contra um item fantasma que falharia apenas no lançamento do CLI com arquivo inexistente.
+- **Auditoria de paridade de tema Win10/11 concluída**: as 115 referências `{DynamicResource}/{StaticResource}` dos XAML resolvem nos dois conjuntos de tema (151 chaves no Win10, 152 no Win11; a única exclusiva do Win11, `FakeWindowCorner`, é recurso morto sem referência). Cores fixas remanescentes fora dos dicionários são intencionais (mocks de UAC/Windows, scrim de popups, branco sobre `BlueButton`, vermelho de perigo, cor de acento da barra de rolagem).
+
+### Atualizado (Interface - update visual e acessibilidade)
+
+- **Contraste WCAG AA corrigido no tema claro**: `TextSecondaryBrush` (`#787878` -> `#5F5F5F`) e os textos de arrastar-e-soltar (`#a0a0a0`/`#888888` -> `TextSecondaryBrush`) - corrige 111+ superfícies de uma vez.
+- **Tokens de tema aplicados no lugar de cores fixas**: `OverAllControls`, `YesNoButton`, labels de erro de validação (`#FFFF0000` -> `StatusErrorBrush`, removido `Opacity="0.7"`), avisos de erro da página de conclusão (`#fce100`/`#433519` -> `YellowInfoCircleFill`/`WarningBoxBrush`) e os textos cinza das páginas de requisitos (`#FF808080` -> `TextSecondaryBrush`).
+- **Removido o preenchimento cyan de depuração** (`#FF00FFFF`) do `ApplyPackageDialog`, que era renderizado por baixo do cartão do diálogo.
+- **Sombra do popup de verificação corrigida**: o clon de sombra deixou de fixar a paleta clara, eliminando o halo errado no tema escuro; o raio passou a usar `PopupCornerRadius`.
+- **Paridade Win10/Win11**: `FakePageBackgroundBrush` adicionada aos dicionários do Windows 10 (12 pontos de código já a resolviam); estilos mortos removidos (`{x:Type RadioButton}` do W11 Dark, `{x:Type GroupBox}` + `BorderGapMaskConverter` do Light).
+- **`SidebarScrollBar` movida para o escopo do aplicativo** (`Themes/StaticStyles.xaml`), eliminando a dependência frágil de `StaticResource` entre BAMLs.
+- **Tema aplicado de forma síncrona no startup** (`ThemeWatcher.ApplyThemeNow()` antes de criar as janelas), eliminando o flash do tema errado na primeira pintura.
+- **Acessibilidade**: `AutomationProperties.Name` nos cartões de ação rápida do dashboard; retângulo de foco de teclado restaurado nos campos de usuário/senha; `IsDefault`/`IsCancel` no `MessageBox`, `UACBox`, `RollbackWindow`, `UpdateCheckDialog` e `CustomizationDialog` (Enter/Esc funcionam); `MessageBox` agora usa o estilo `Window` como os demais diálogos.
+- **UX dos diálogos**: confirmação antes de fechar o `ProgressDialog` durante a execução (inclusive por Alt+F4); `UsbWriteDialog` sempre libera o Fechar (fail-safe de 45 min e caminho de erro); `ApplyPackageDialog` não reinicia mais o sistema quando a instalação falha (oferece Fechar/Reiniciar agora); `PrepareDialog` mostra erro em vez de fechar o app em falha de IPC.
+- **Redução de CPU**: polling do `SecurityDialog` (200ms -> 2s) e do `AntivirusDialog` (500ms/1.5s -> 3s); `Spinner`/`ProgressBarIndeterminate` param as animações ao serem removidos da árvore visual.
+
+## [1.0.1] — estabilidade e recuperação
+
+Veja [notas de atualização e compatibilidade](RELEASE-1.0.1.md). Correções de parser, filtros, downloads, rollback, IPC e atualizador; interface acrílica no Windows 10; melhorias de desempenho; executável único verificável.
+
+### Corrigido (GUI - estabilidade)
+
+- **Congelamento da UI na página de requisitos**: removidos `.GetAwaiter().GetResult()`/`.Wait()` sobre chamadas de IPC feitos na UI thread (mesmo bug documentado no `MaterialManager`).
+- **Crash na seleção de USB**: `IsoPageView.RefreshUsbPage` não retornava após falha de enumeração (NRE em `async void`) e liberava o lock sem `try/finally`.
+- **"Mostrar logs" quebrado**: o `OpenFileDialog` rodava dentro de `Task.Run` (thread MTA) - agora roda na thread correta em `ProgressDialog` e `IsoProgressDialog`.
+- **Falso "Amelioration failed"**: a sincronização entre `Exited` e "Playbook finished." deixou de depender de espera mágica de 8s; `HasSafelyExitted` é reiniciado a cada execução; `WaitForExit` saiu da UI thread (não mata mais processos saudáveis).
+- **Navegação**: `CanExecute` real dos botões Anterior/Próximo, guarda de `null` em `CurrentViewModel`, páginas terminais retornam `null` em vez de lançar `NotImplementedException`, e `PulseNextButtonCommand` deixou de lançar no getter.
+- **Assinatura perdida**: `Items.CollectionChanged` é assinada independentemente do evento `PreparationCompleted` (remoção de ISO/playbook volta a funcionar mesmo com clique tardio no Welcome).
+- **Handler global de exceções**: contador com janela de 30s, fallback visível quando o nível de aplicação não é tratado, e `AssemblyResolve` loga em vez de engolir falhas.
+- **Janelas modais reutilizadas**: `AboutWindow`, `RollbackWindow` e `UpdateCheckDialog` não são mais recriados a cada clique.
+- **Loop infinito** na página de carregamento (timeout de 90s) e busy-wait do parser de ISO (deadline de 10s).
+- **Escape de argumentos do CLI**: valores com `::` agora fazem round-trip corretamente no parser de linha de comando.
+- **Status de verificação**: parse com validação (`split.Length`, `Enum.TryParse`), `SHA256` liberado corretamente e escrita abortada quando o nó admin não está disponível.
+- **Diálogos de módulos**: bounds em `TweaksDialog`/`UninstallUpdatesDialog`, handles de registro com `using` no `AntivirusDialog`, `TrySetCanceled` (não `SetCanceled`) nos `TaskCompletionSource`, e helper compartilhado `DialogHelpers` no lugar de 4 cópias idênticas de conversão de bitmap.
+
+### Corrigido (Motor e CLI)
+
+- **`UpdateAction` reportava sucesso mesmo com falha do DISM**: agora valida o exit code via `HandleExitCodes` (`!0` -> erro), força `Wait = true`, usa `try/finally` em `InProgress` e só marca `Completed` com exit code `0`.
+- **Sessões de rollback**: `EndSession` limpa a sessão em `finally` (não pode ser reprocessada) e `WriteSessionFile` cai para `File.Move` quando `File.Replace` não é suportado, registrando a perda em log em vez de descartar silenciosamente.
+- **Downloads**: `AtomicDownload` não mascara mais a exceção original com a limpeza do temporário e tem fallback para `File.Move`.
+- **`UpdateChecker`** usa um `HttpClient` compartilhado (evita esgotamento de soquetes) com cabeçalhos configurados uma única vez.
+- **`LanguageAction`** compara também por `Culture.Name` (evita reinstalação infinita de idiomas sem tag IETF).
+- **CLI**: fechamento único da sessão de rollback em `finally` (antes podia deixar a sessão aberta no caminho fatal).
+- **i18n**: novas chaves `Button.Reboot`, `Progress.Running`, `Status.Never`; migração do idioma salvo de `C:\ProgramData\AME\language.json` para `C:\ProgramData\KTWirzade\language.json`.
 
 ### Corrigido (Motor - revisão completa)
 

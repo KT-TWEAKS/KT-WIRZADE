@@ -51,13 +51,33 @@ namespace KTWirzade.Shared.Helpers
                 if (expectedHash != null && !actualHash.Equals(expectedHash, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException("Download SHA-256 mismatch.");
                 cancellationToken.ThrowIfCancellationRequested();
-                if (File.Exists(fullPath)) File.Replace(temp, fullPath, null);
+                if (File.Exists(fullPath))
+                {
+                    try
+                    {
+                        File.Replace(temp, fullPath, null);
+                    }
+                    catch (Exception ex) when (ex is PlatformNotSupportedException || ex is NotSupportedException)
+                    {
+                        // File.Replace is unsupported on some file systems;
+                        // fall back to an overwrite move.
+                        if (File.Exists(fullPath)) File.Delete(fullPath);
+                        File.Move(temp, fullPath);
+                    }
+                }
                 else File.Move(temp, fullPath);
                 return actualHash;
             }
             finally
             {
-                if (File.Exists(temp)) File.Delete(temp);
+                try
+                {
+                    if (File.Exists(temp)) File.Delete(temp);
+                }
+                catch
+                {
+                    // Best-effort cleanup only; never mask the original exception.
+                }
             }
         }
     }

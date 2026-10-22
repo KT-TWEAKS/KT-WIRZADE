@@ -1,5 +1,6 @@
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -17,6 +18,7 @@ using KTWirzade.GUI.Utils;
 using KTWirzade.GUI.ViewModels;
 using KTWirzade.GUI.Windows;
 using KTWirzade.Shared;
+using KTWirzade.Shared.I18n;
 using static KTWirzade.Shared.Requirements;
 
 namespace KTWirzade.GUI.Views
@@ -34,6 +36,116 @@ namespace KTWirzade.GUI.Views
             public int Bottom;
         }
 
+        // Session-wide record of the checks the user explicitly chose to override
+        // (in-memory only; which check id was overridden and when).
+        private sealed class OverrideRecord
+        {
+            public string CheckId;
+
+            public DateTime TimestampUtc;
+        }
+
+        private static readonly List<OverrideRecord> _sessionOverrides = new List<OverrideRecord>();
+
+        // True while a third-party antivirus is still present (bypassable warning).
+        private bool _antivirusFailed;
+
+        // True while the user has explicitly acknowledged the antivirus risk.
+        private bool _antivirusOverrideAccepted;
+
+        // Set while the override checkbox is changed programmatically so the
+        // Checked/Unchecked handlers do not re-enter (or re-prompt the user).
+        private bool _settingOverride;
+
+        // Shows/hides the override section; hidden whenever there is nothing left
+        // to override, so the state is never stale on screen.
+        private void UpdateAntivirusOverrideUi()
+        {
+            if (_antivirusFailed)
+            {
+                OverrideWarningText.Text = Text("Intro.Guidance.Antivirus", "Remova o antivírus de terceiros para continuar.");
+                OverrideBox.Visibility = Visibility.Visible;
+                OverrideBadgeText.Visibility = _antivirusOverrideAccepted ? Visibility.Visible : Visibility.Collapsed;
+            }
+            else
+            {
+                // Situation changed: nothing left to override.
+                SetOverrideAccepted(false);
+                _antivirusOverrideAccepted = false;
+                OverrideBox.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        private void SetOverrideAccepted(bool accepted)
+        {
+            _settingOverride = true;
+            try
+            {
+                OverrideAcceptBox.IsChecked = accepted;
+            }
+            finally
+            {
+                _settingOverride = false;
+            }
+        }
+
+        private void RecordOverride(string checkId)
+        {
+            _sessionOverrides.Add(new OverrideRecord { CheckId = checkId, TimestampUtc = DateTime.UtcNow });
+            Core.Log.WriteSafe((Core.LogType)1, "Verificação opcional ignorada pelo usuário: " + checkId + ".", (Core.SerializableTrace)null, Array.Empty<(string, object)>());
+        }
+
+        private void OverrideAcceptBox_OnChecked(object sender, RoutedEventArgs e)
+        {
+            if (_settingOverride)
+            {
+                return;
+            }
+            MessageBoxResult result = KTWirzade.GUI.MessageBox.Show(
+                this,
+                OverrideWarningText.Text + "\n\nContinuar mesmo assim pode causar instabilidade ou problemas no sistema. Deseja continuar por sua conta e risco?",
+                "Continuar mesmo assim?",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (result != MessageBoxResult.Yes)
+            {
+                // Cancelled: the override stays unchecked and Next remains disabled.
+                SetOverrideAccepted(false);
+                UpdateAntivirusOverrideUi();
+                if (base.DataContext is ViewModelBase vmCancel)
+                {
+                    vmCancel.MainNextButtonActive = false;
+                }
+                return;
+            }
+            _antivirusOverrideAccepted = true;
+            RecordOverride("antivirus");
+            UpdateAntivirusOverrideUi();
+            if (base.DataContext is ViewModelBase vm)
+            {
+                vm.MainNextButtonActive = true;
+            }
+        }
+
+        private void OverrideAcceptBox_OnUnchecked(object sender, RoutedEventArgs e)
+        {
+            if (_settingOverride)
+            {
+                return;
+            }
+            _antivirusOverrideAccepted = false;
+            UpdateAntivirusOverrideUi();
+            if (base.DataContext is ViewModelBase vm && _antivirusFailed)
+            {
+                vm.MainNextButtonActive = false;
+            }
+        }
+
+        private void OverrideRecheckButton_OnClick(object sender, RoutedEventArgs e)
+        {
+            RunAgainButton_OnClick(sender, e);
+        }
+
         public IntroPageView()
         {
             InitializeComponent();
@@ -46,39 +158,49 @@ namespace KTWirzade.GUI.Views
                 }
                 try
                 {
+                    ApplyLocalizedLabels();
                     viewModel.MainNextButtonCommand = new GlobalsGUI.CommandHandler(Next, () => true);
                     RunAgainButton.IsEnabled = true;
                     RunAgainErrorButton.IsEnabled = true;
                     UpgradeButton.IsEnabled = true;
-                    AntivirusBox.Visibility = Visibility.Hidden;
-                    NotRequiredBox.Visibility = Visibility.Hidden;
-                    AppliedBox.Visibility = Visibility.Hidden;
-                    AppliedErrorBox.Visibility = Visibility.Hidden;
-                    UpgradeBox.Visibility = Visibility.Hidden;
+                    AntivirusBox.Visibility = Visibility.Collapsed;
+                    NotRequiredBox.Visibility = Visibility.Collapsed;
+                    AppliedBox.Visibility = Visibility.Collapsed;
+                    AppliedErrorBox.Visibility = Visibility.Collapsed;
+                    UpgradeBox.Visibility = Visibility.Collapsed;
+                    DefenderBox.Visibility = Visibility.Collapsed;
+                    VerificationUnavailableBox.Visibility = Visibility.Collapsed;
                     NextStepText.Visibility = Visibility.Collapsed;
+                    FooterGuidanceText.Text = Text("Intro.Guidance.Default", "Clique em “Avançar” para verificar os requisitos.");
                     SlideModuleUp();
                     bool nextButton = true;
                     viewModel.MainNextButtonActive = false;
-                    DisableSecurityStack.Opacity = 0.4;
-                    DisableSecurityButton.IsEnabled = false;
+                    SetSecurityActionVisible(false);
+                    // A fresh check cycle invalidates any previously accepted override.
+                    _antivirusFailed = false;
+                    _antivirusOverrideAccepted = false;
+                    SetOverrideAccepted(false);
+                    OverrideBox.Visibility = Visibility.Collapsed;
                     PlaybookGUI lastAppliedMatch = GlobalsGUI.Current.Playbook.LastAppliedMatch(GlobalsGUI.Current.AppliedPlaybooks);
                     if (lastAppliedMatch != null && ((Playbook)lastAppliedMatch).Version != ((Playbook)GlobalsGUI.Current.Playbook).Version && ((Playbook)GlobalsGUI.Current.Playbook).IsUpgradeApplicable(((Playbook)lastAppliedMatch).Version))
                     {
                         UpgradeBox.Visibility = Visibility.Visible;
+                        FooterGuidanceText.Text = Text("Intro.Guidance.Upgrade", "Use Atualizar para instalar a versão mais recente deste APBX.");
                         nextButton = false;
                     }
                     else if (lastAppliedMatch != null && ((Playbook)lastAppliedMatch).Version == ((Playbook)GlobalsGUI.Current.Playbook).Version)
                     {
-                        AppliedText.Text = "This Playbook is currently applied";
+                        AppliedText.Text = Text("Intro.Applied.Current", "Este APBX já está aplicado");
+                        FooterGuidanceText.Text = Text("Intro.Guidance.Applied", "Este APBX já está aplicado. Use “Executar novamente” para reaplicá-lo.");
                         nextButton = false;
                         if ((int)((Playbook)lastAppliedMatch).ErrorLevel == 1)
                         {
-                            AppliedErrorBoxText.Text = "This Playbook is applied with errors";
+                            AppliedErrorBoxText.Text = Text("Intro.Applied.Errors", "Este APBX foi aplicado com erros");
                             AppliedErrorBox.Visibility = Visibility.Visible;
                         }
                         else if ((int)((Playbook)lastAppliedMatch).ErrorLevel == 2)
                         {
-                            AppliedErrorBoxText.Text = "This Playbook failed to apply";
+                            AppliedErrorBoxText.Text = Text("Intro.Applied.Failed", "Falha ao aplicar este APBX");
                             AppliedErrorBox.Visibility = Visibility.Visible;
                         }
                         else
@@ -89,7 +211,8 @@ namespace KTWirzade.GUI.Views
                     else if (((Playbook)GlobalsGUI.Current.Playbook).Username == "KTWirzade" && GlobalsGUI.Current.Playbook.VerificationStatus == PlaybookGUI.VerificationLevel.Verified && HasKTWirzadeIntegriy())
                     {
                         nextButton = false;
-                        AppliedText.Text = "This Playbook is currently applied";
+                        AppliedText.Text = Text("Intro.Applied.Current", "Este APBX já está aplicado");
+                        FooterGuidanceText.Text = Text("Intro.Guidance.Applied", "Este APBX já está aplicado. Use “Executar novamente” para reaplicá-lo.");
                         AppliedBox.Visibility = Visibility.Visible;
                     }
                     else
@@ -116,6 +239,7 @@ namespace KTWirzade.GUI.Views
                         if (flag)
                         {
                             nextButton = false;
+                            FooterGuidanceText.Text = Text("Intro.Guidance.Antivirus", "Remova o antivírus de terceiros para continuar.");
                             NextStepText.Visibility = Visibility.Hidden;
                             AntivirusBox.Visibility = Visibility.Visible;
                         }
@@ -126,20 +250,20 @@ namespace KTWirzade.GUI.Views
                                 nextButton = false;
                                 NotRequiredBox.Visibility = Visibility.Hidden;
                                 NextStepText.Visibility = Visibility.Visible;
-                                DisableSecurityStack.Opacity = 1.0;
-                                DisableSecurityButton.IsEnabled = true;
+                                SetSecurityActionVisible(true);
+                                FooterGuidanceText.Text = Text("Intro.Guidance.Security", "Conclua a ação de segurança acima para continuar.");
                             }
                         }
                         else if (!((Playbook)GlobalsGUI.Current.Playbook).Requirements.Contains((Requirement)6))
                         {
                             NotRequiredBox.Visibility = Visibility.Visible;
                         }
+                        _antivirusFailed = flag;
+                        UpdateAntivirusOverrideUi();
                     }
-                    if (viewModel.MainNextButtonActive)
-                    {
-                        viewModel.MainNextButtonActive = nextButton;
-                    }
-                    else
+                    // Dead branch removed: MainNextButtonActive was forced to false above,
+                    // so the old "if (MainNextButtonActive)" guard was never true. The
+                    // computed `nextButton` result is applied exactly once at the end below.
                     {
                         if (lastAppliedMatch != null && ((Playbook)lastAppliedMatch).Version != ((Playbook)GlobalsGUI.Current.Playbook).Version && !((Playbook)GlobalsGUI.Current.Playbook).IsUpgradeApplicable(((Playbook)lastAppliedMatch).Version))
                         {
@@ -201,10 +325,17 @@ namespace KTWirzade.GUI.Views
                         string cache = GlobalsGUI.Current.Playbook.FileNameWithoutExtension;
                         try
                         {
+                            // Bounded wait (~60s): if verification never completes, break the
+                            // loop and leave the Next button disabled instead of waiting forever.
+                            DateTime verificationDeadline = DateTime.UtcNow.AddSeconds(60);
                             while (App.DeCrippleDefender ||
                                    (GlobalsGUI.Current?.Playbook?.FileNameWithoutExtension == cache &&
                                     GlobalsGUI.Current?.Playbook?.VerificationTask?.IsCompleted == false))
                             {
+                                if (DateTime.UtcNow >= verificationDeadline)
+                                {
+                                    return;
+                                }
                                 await Task.Delay(100);
                             }
                         }
@@ -214,7 +345,11 @@ namespace KTWirzade.GUI.Views
                         }
                         if (!(cache != GlobalsGUI.Current.Playbook.FileNameWithoutExtension))
                         {
-                            if (nextButton)
+                            VerificationUnavailableBox.Visibility =
+                                GlobalsGUI.Current.Playbook.VerificationStatus == PlaybookGUI.VerificationLevel.Unreached
+                                    ? Visibility.Visible
+                                    : Visibility.Collapsed;
+                            if (nextButton || _antivirusOverrideAccepted)
                             {
                                 viewModel.MainNextButtonActive = true;
                             }
@@ -248,6 +383,34 @@ namespace KTWirzade.GUI.Views
                     SetWindowPos(handle, -2, lpRect.Left, lpRect.Top, (int)base.Width, (int)base.Height, 0);
                 }
             };
+        }
+
+        private static string Text(string key, string fallback)
+        {
+            return LanguageManager.T(key, fallback);
+        }
+
+        private void ApplyLocalizedLabels()
+        {
+            RunAgainText.Text = Text("Intro.Action.RunAgain", "Executar novamente");
+            RunAgainErrorText.Text = Text("Intro.Action.RunAgain", "Executar novamente");
+            UpgradeActionText.Text = Text("Intro.Action.Upgrade", "Atualizar");
+            UpgradeText.Text = Text("Intro.Upgrade.Available", "Há uma atualização disponível para este APBX");
+            AntivirusActionText.Text = Text("Intro.Action.Run", "Executar ação");
+            OverrideRecheckText.Text = Text("Button.Recheck", "Verificar novamente");
+            SecurityActionTitle.Text = Text("Intro.Security.Title", "Desativar segurança");
+            SecurityActionDescription.Text = Text("Intro.Security.Description", "Permitir acesso ao sistema de arquivos do KT WIRZADE");
+            SecurityActionText.Text = Text("Intro.Action.Run", "Executar ação");
+            AppliedText.Text = Text("Intro.Applied.Current", "Este APBX já está aplicado");
+            NextStepText.Text = Text("Intro.NextStep", "O próximo passo verificará se o sistema atende\naos requisitos para continuar.");
+            FooterGuidanceText.Text = Text("Intro.Guidance.Default", "Clique em “Avançar” para verificar os requisitos.");
+        }
+
+        private void SetSecurityActionVisible(bool visible)
+        {
+            DefenderBox.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+            DisableSecurityStack.Opacity = 1.0;
+            DisableSecurityButton.IsEnabled = visible;
         }
 
         private void Next()
@@ -361,98 +524,15 @@ namespace KTWirzade.GUI.Views
 
         private void SlideModuleUp()
         {
-            Storyboard storyboard = new Storyboard();
-            DoubleAnimationUsingKeyFrames opacityAnim = new DoubleAnimationUsingKeyFrames
-            {
-                Duration = new Duration(new TimeSpan(0, 0, 0, 0, 260)),
-                KeyFrames =
-            {
-                (DoubleKeyFrame)new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 0))),
-                (DoubleKeyFrame)new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 260)))
-            }
-            };
-            ThicknessAnimationUsingKeyFrames transitionAnim = new ThicknessAnimationUsingKeyFrames
-            {
-                Duration = new Duration(new TimeSpan(0, 0, 0, 0, 460))
-            };
-            ThicknessKeyFrame transitionKey1 = new LinearThicknessKeyFrame
-            {
-                Value = new Thickness(0.0, 0.0, 0.0, 0.0),
-                KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 0))
-            };
-            ThicknessKeyFrame transitionKey2 = new LinearThicknessKeyFrame
-            {
-                Value = new Thickness(0.0, 0.0, 0.0, 0.0),
-                KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 200))
-            };
-            ThicknessKeyFrame transitionKey3 = new EasingThicknessKeyFrame
-            {
-                EasingFunction = new SineEase
-                {
-                    EasingMode = EasingMode.EaseOut
-                },
-                Value = new Thickness(0.0, -53.0, 0.0, 0.0),
-                KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 460))
-            };
-            transitionAnim.KeyFrames.Add(transitionKey1);
-            transitionAnim.KeyFrames.Add(transitionKey2);
-            transitionAnim.KeyFrames.Add(transitionKey3);
-            Storyboard.SetTarget(opacityAnim, ModuleGrid);
-            Storyboard.SetTargetProperty(opacityAnim, new PropertyPath("Opacity"));
-            Storyboard.SetTarget(transitionAnim, ModuleGrid);
-            Storyboard.SetTargetProperty(transitionAnim, new PropertyPath("Margin"));
-            storyboard.Children.Add(opacityAnim);
-            storyboard.Children.Add(transitionAnim);
-            DoubleAnimationUsingKeyFrames scale_x = new DoubleAnimationUsingKeyFrames
-            {
-                Duration = TimeSpan.FromMilliseconds(460.0),
-                KeyFrames = new DoubleKeyFrameCollection
-            {
-                new LinearDoubleKeyFrame
-                {
-                    Value = 0.95,
-                    KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 0))
-                },
-                new LinearDoubleKeyFrame
-                {
-                    Value = 0.95,
-                    KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 200))
-                },
-                new EasingDoubleKeyFrame
-                {
-                    EasingFunction = new SineEase
-                    {
-                        EasingMode = EasingMode.EaseOut
-                    },
-                    Value = 1.0,
-                    KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 460))
-                }
-            }
-            };
-            DoubleAnimationUsingKeyFrames scale_y = new DoubleAnimationUsingKeyFrames
-            {
-                Duration = TimeSpan.FromMilliseconds(160.0),
-                KeyFrames = new DoubleKeyFrameCollection
-            {
-                new LinearDoubleKeyFrame
-                {
-                    Value = 0.95,
-                    KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 0))
-                },
-                new EasingDoubleKeyFrame
-                {
-                    EasingFunction = new SineEase
-                    {
-                        EasingMode = EasingMode.EaseOut
-                    },
-                    Value = 1.0,
-                    KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 160))
-                }
-            }
-            };
-            moduletransform.BeginAnimation(ScaleTransform.ScaleXProperty, scale_x);
-            moduletransform.BeginAnimation(ScaleTransform.ScaleYProperty, scale_y);
-            storyboard.Begin();
+            Func<SineEase> ease = () => new SineEase { EasingMode = EasingMode.EaseOut };
+            ModuleGrid.BeginAnimation(UIElement.OpacityProperty,
+                new DoubleAnimation(0.0, 1.0, TimeSpan.FromMilliseconds(260)) { EasingFunction = ease() });
+            moduleTranslate.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(8.0, 0.0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease() });
+            moduletransform.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(0.97, 1.0, TimeSpan.FromMilliseconds(300)) { EasingFunction = ease() });
+            moduletransform.BeginAnimation(ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(0.97, 1.0, TimeSpan.FromMilliseconds(220)) { EasingFunction = ease() });
         }
 
         private async void Run_OnClick(object sender, RoutedEventArgs e)
@@ -465,8 +545,8 @@ namespace KTWirzade.GUI.Views
             if (((await GUIUtil.GetDefenderToggles()).All((bool x) => !x) || !Process.GetProcessesByName("MsMpEng").Any()) && base.DataContext is ViewModelBase viewModel)
             {
                 viewModel.MainNextButtonActive = true;
-                DisableSecurityStack.Opacity = 0.4;
-                DisableSecurityButton.IsEnabled = false;
+                SetSecurityActionVisible(false);
+                FooterGuidanceText.Text = Text("Intro.Guidance.Default", "Clique em “Avançar” para verificar os requisitos.");
                 NextStepText.Visibility = Visibility.Hidden;
             }
         }
@@ -484,8 +564,8 @@ namespace KTWirzade.GUI.Views
             {
                 if ((await GUIUtil.GetDefenderToggles()).Any((bool x) => x) && Process.GetProcessesByName("MsMpEng").Any())
                 {
-                    DisableSecurityStack.Opacity = 1.0;
-                    DisableSecurityButton.IsEnabled = true;
+                    SetSecurityActionVisible(true);
+                    FooterGuidanceText.Text = Text("Intro.Guidance.Security", "Conclua a ação de segurança acima para continuar.");
                 }
                 else
                 {
@@ -493,7 +573,15 @@ namespace KTWirzade.GUI.Views
                     {
                         return;
                     }
+                    // Existing bypass path (the removal dialog was dismissed and no
+                    // security action is pending): record it so the override state
+                    // stays visible on the page.
+                    _antivirusFailed = true;
+                    _antivirusOverrideAccepted = true;
+                    RecordOverride("antivirus");
+                    UpdateAntivirusOverrideUi();
                     viewModel.MainNextButtonActive = true;
+                    FooterGuidanceText.Text = Text("Intro.Guidance.Default", "Clique em “Avançar” para verificar os requisitos.");
                 }
                 await SlideModuleDown();
             }
@@ -510,6 +598,17 @@ namespace KTWirzade.GUI.Views
             {
                 return;
             }
+            viewModel.MainNextButtonActive = false;
+            // A fresh check cycle invalidates any previously accepted override.
+            _antivirusFailed = false;
+            _antivirusOverrideAccepted = false;
+            SetOverrideAccepted(false);
+            OverrideBox.Visibility = Visibility.Collapsed;
+            FooterGuidanceText.Text = Text("Intro.Guidance.Default", "Clique em “Avançar” para verificar os requisitos.");
+            NextStepText.Visibility = Visibility.Collapsed;
+            NotRequiredBox.Visibility = Visibility.Collapsed;
+            AntivirusBox.Visibility = Visibility.Collapsed;
+            SetSecurityActionVisible(false);
             RunAgainButton.IsEnabled = false;
             RunAgainErrorButton.IsEnabled = false;
             UpgradeButton.IsEnabled = false;
@@ -564,6 +663,7 @@ namespace KTWirzade.GUI.Views
                 if (flag)
                 {
                     nextButton = false;
+                    FooterGuidanceText.Text = Text("Intro.Guidance.Antivirus", "Remova o antivírus de terceiros para continuar.");
                     NextStepText.Visibility = Visibility.Hidden;
                     AntivirusBox.Visibility = Visibility.Visible;
                 }
@@ -574,121 +674,112 @@ namespace KTWirzade.GUI.Views
                         nextButton = false;
                         NotRequiredBox.Visibility = Visibility.Hidden;
                         NextStepText.Visibility = Visibility.Visible;
-                        DisableSecurityStack.Opacity = 1.0;
-                        DisableSecurityButton.IsEnabled = true;
+                        SetSecurityActionVisible(true);
+                        FooterGuidanceText.Text = Text("Intro.Guidance.Security", "Conclua a ação de segurança acima para continuar.");
                     }
                 }
                 else if (!((Playbook)GlobalsGUI.Current.Playbook).Requirements.Contains((Requirement)6))
                 {
                     NotRequiredBox.Visibility = Visibility.Visible;
                 }
+                _antivirusFailed = flag;
+                UpdateAntivirusOverrideUi();
             }
-            if (nextButton)
+            if (nextButton || _antivirusOverrideAccepted)
             {
                 viewModel.MainNextButtonActive = true;
             }
+            FooterGuidanceText.Text = nextButton
+                ? Text("Intro.Guidance.Default", "Clique em “Avançar” para verificar os requisitos.")
+                : FooterGuidanceText.Text;
+            RunAgainButton.IsEnabled = true;
+            RunAgainErrorButton.IsEnabled = true;
+            UpgradeButton.IsEnabled = true;
             SlideModuleUp();
         }
 
         private async Task SlideModuleDown()
         {
-            Storyboard storyboard = new Storyboard();
-            DoubleAnimationUsingKeyFrames opacityAnim = new DoubleAnimationUsingKeyFrames
-            {
-                Duration = new Duration(new TimeSpan(0, 0, 0, 0, 280)),
-                KeyFrames =
-            {
-                (DoubleKeyFrame)new LinearDoubleKeyFrame(1.0, KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 0))),
-                (DoubleKeyFrame)new LinearDoubleKeyFrame(0.0, KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 280)))
-            }
-            };
-            ThicknessAnimationUsingKeyFrames transitionAnim = new ThicknessAnimationUsingKeyFrames
-            {
-                Duration = new Duration(new TimeSpan(0, 0, 0, 0, 210))
-            };
-            ThicknessKeyFrame transitionKey1 = new LinearThicknessKeyFrame
-            {
-                Value = new Thickness(0.0, -53.0, 0.0, 0.0),
-                KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 0))
-            };
-            ThicknessKeyFrame transitionKey2 = new EasingThicknessKeyFrame
-            {
-                EasingFunction = new SineEase
-                {
-                    EasingMode = EasingMode.EaseOut
-                },
-                Value = new Thickness(0.0, 0.0, 0.0, 0.0),
-                KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 210))
-            };
-            transitionAnim.KeyFrames.Add(transitionKey1);
-            transitionAnim.KeyFrames.Add(transitionKey2);
-            Storyboard.SetTarget(opacityAnim, ModuleGrid);
-            Storyboard.SetTargetProperty(opacityAnim, new PropertyPath("Opacity"));
-            Storyboard.SetTarget(transitionAnim, ModuleGrid);
-            Storyboard.SetTargetProperty(transitionAnim, new PropertyPath("Margin"));
-            storyboard.Children.Add(opacityAnim);
-            storyboard.Children.Add(transitionAnim);
-            DoubleAnimationUsingKeyFrames scale_x = new DoubleAnimationUsingKeyFrames
-            {
-                Duration = TimeSpan.FromMilliseconds(160.0),
-                KeyFrames = new DoubleKeyFrameCollection
-            {
-                new LinearDoubleKeyFrame
-                {
-                    Value = 1.0,
-                    KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 0))
-                },
-                new EasingDoubleKeyFrame
-                {
-                    EasingFunction = new SineEase
-                    {
-                        EasingMode = EasingMode.EaseOut
-                    },
-                    Value = 0.95,
-                    KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 160))
-                }
-            }
-            };
-            DoubleAnimationUsingKeyFrames scale_y = new DoubleAnimationUsingKeyFrames
-            {
-                Duration = TimeSpan.FromMilliseconds(160.0),
-                KeyFrames = new DoubleKeyFrameCollection
-            {
-                new LinearDoubleKeyFrame
-                {
-                    Value = 1.0,
-                    KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 0))
-                },
-                new EasingDoubleKeyFrame
-                {
-                    EasingFunction = new SineEase
-                    {
-                        EasingMode = EasingMode.EaseOut
-                    },
-                    Value = 0.95,
-                    KeyTime = KeyTime.FromTimeSpan(new TimeSpan(0, 0, 0, 0, 160))
-                }
-            }
-            };
-            moduletransform.BeginAnimation(ScaleTransform.ScaleXProperty, scale_x);
-            moduletransform.BeginAnimation(ScaleTransform.ScaleYProperty, scale_y);
-            storyboard.Begin();
+            Func<SineEase> ease = () => new SineEase { EasingMode = EasingMode.EaseOut };
+            ModuleGrid.BeginAnimation(UIElement.OpacityProperty,
+                new DoubleAnimation(1.0, 0.0, TimeSpan.FromMilliseconds(280)) { EasingFunction = ease() });
+            moduleTranslate.BeginAnimation(TranslateTransform.YProperty,
+                new DoubleAnimation(0.0, 8.0, TimeSpan.FromMilliseconds(210)) { EasingFunction = ease() });
+            moduletransform.BeginAnimation(ScaleTransform.ScaleXProperty,
+                new DoubleAnimation(1.0, 0.97, TimeSpan.FromMilliseconds(160)) { EasingFunction = ease() });
+            moduletransform.BeginAnimation(ScaleTransform.ScaleYProperty,
+                new DoubleAnimation(1.0, 0.97, TimeSpan.FromMilliseconds(160)) { EasingFunction = ease() });
             await Task.Delay(300);
-            AppliedBox.Visibility = Visibility.Hidden;
-            AppliedErrorBox.Visibility = Visibility.Hidden;
-            UpgradeBox.Visibility = Visibility.Hidden;
-            AntivirusBox.Visibility = Visibility.Hidden;
+            AppliedBox.Visibility = Visibility.Collapsed;
+            AppliedErrorBox.Visibility = Visibility.Collapsed;
+            UpgradeBox.Visibility = Visibility.Collapsed;
+            AntivirusBox.Visibility = Visibility.Collapsed;
         }
 
         private void OpenUpdates(object sender, RoutedEventArgs e)
         {
             FocusWindow(this, new EventArgs());
             Popup.IsOpen = false;
+
+            bool appUpdateAvailable = GlobalsGUI.Current.WizardPlaybook?.PendingUpdate != null;
+            PlaybookGUI currentPlaybook = GlobalsGUI.Current.Playbook as PlaybookGUI;
+            bool playbookUpdateAvailable = currentPlaybook?.PendingUpdate != null;
+
+            if (appUpdateAvailable && playbookUpdateAvailable)
+            {
+                MessageBoxResult choice = KTWirzade.GUI.MessageBox.Show(
+                    this,
+                    "Há uma atualização do KT WIRZADE e outra deste APBX.\n\nSim: ver atualização do aplicativo.\nNão: ver atualização do APBX.",
+                    "Escolher atualização",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Information);
+                if (choice != MessageBoxResult.Yes && choice != MessageBoxResult.No) return;
+                if (choice == MessageBoxResult.No)
+                {
+                    OpenPlaybookReleasePage(currentPlaybook);
+                    return;
+                }
+            }
+            else if (playbookUpdateAvailable)
+            {
+                OpenPlaybookReleasePage(currentPlaybook);
+                return;
+            }
+
             MainWindow.CurrentDispatcher.Invoke(delegate
             {
                 MainWindow owner = System.Windows.Application.Current.Windows.OfType<MainWindow>().First();
-                new UpdateCheckDialog().Show(owner);
+                // Singleton dialog shared with the title bar; avoids duplicated dialogs.
+                owner.ShowUpdatesDialog();
             });
+        }
+
+        private void OpenPlaybookReleasePage(Playbook playbook)
+        {
+            try
+            {
+                if (playbook == null || !Uri.TryCreate(playbook.Git, UriKind.Absolute, out Uri gitUri) ||
+                    !string.Equals(gitUri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException("O link Git do APBX não é um endereço HTTPS válido.");
+                }
+
+                string repositoryPath = gitUri.AbsolutePath.Trim('/');
+                if (repositoryPath.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+                    repositoryPath = repositoryPath.Substring(0, repositoryPath.Length - 4);
+                if (string.IsNullOrWhiteSpace(repositoryPath))
+                    throw new InvalidOperationException("O repositório deste APBX não foi identificado.");
+
+                string releasesPath = string.Equals(gitUri.Host, "gitlab.com", StringComparison.OrdinalIgnoreCase)
+                    ? repositoryPath + "/-/releases"
+                    : repositoryPath + "/releases";
+                string releasesUrl = new UriBuilder(Uri.UriSchemeHttps, gitUri.Host, -1, releasesPath).Uri.ToString();
+                Process.Start(new ProcessStartInfo(releasesUrl) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                KTWirzade.GUI.MessageBox.Show(this, "Não foi possível abrir as versões do APBX: " + ex.Message, "Erro");
+            }
         }
 
         private void Continue(object sender, RoutedEventArgs e)

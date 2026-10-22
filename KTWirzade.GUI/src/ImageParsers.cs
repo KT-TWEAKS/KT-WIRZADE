@@ -205,11 +205,22 @@ namespace KTWirzade.GUI
                                 ((IDisposable)hiveStream)?.Dispose();
                             }
                             string hiveName = Path.GetFileName(hivePath);
-                            while (!MainWindow.HasLoaded)
+                            // The parser also runs while the splash/--apply-package is active,
+                            // where MainWindow may never load. Bound every wait with a deadline
+                            // so this thread can not spin forever if HasLoaded never turns true.
+                            DateTime waitDeadline = DateTime.UtcNow.AddSeconds(10);
+                            while (!MainWindow.HasLoaded && DateTime.UtcNow < waitDeadline)
                             {
                                 Thread.Sleep(100);
                             }
-                            for (int i = 1; i < 5 || !MainWindow.HasLoaded; i++)
+                            if (!MainWindow.HasLoaded)
+                            {
+                                Log.WriteSafe((LogType)1, "Timed out waiting for the main window; hooking the hive with the admin node as-is.", (SerializableTrace)null, Array.Empty<(string, object)>());
+                            }
+                            // Bounded retry: the old `i < 5 || !MainWindow.HasLoaded` condition
+                            // looped forever when the window never loaded. The deadline keeps the
+                            // retry-while-unloaded behavior but always terminates.
+                            for (int i = 1; (i < 5 || !MainWindow.HasLoaded) && DateTime.UtcNow < waitDeadline; i++)
                             {
                                 try
                                 {

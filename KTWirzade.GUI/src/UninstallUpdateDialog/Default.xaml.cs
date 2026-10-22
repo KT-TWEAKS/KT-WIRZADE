@@ -393,7 +393,7 @@ namespace KTWirzade.GUI.UninstallUpdateDialog
             {
                 cancellationToken.Register(delegate
                 {
-                    tcs.SetCanceled();
+                    tcs.TrySetCanceled();
                 });
             }
             if (!process.HasExited)

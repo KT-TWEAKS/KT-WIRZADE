@@ -77,37 +77,61 @@ namespace KTWirzade.GUI.Utils
         private static void CopyAPBX(string apbx, string destName, string altName)
         {
             string pbPath = Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks");
+            string destPath = Path.Combine(pbPath, destName);
+            string altPath = Path.Combine(pbPath, altName);
             string statusFile = Path.Combine(pbPath, Path.GetFileNameWithoutExtension(destName) + ".status");
-            string altStatusFile = Path.Combine(pbPath, Path.GetFileNameWithoutExtension(destName) + ".status");
+            string altStatusFile = Path.Combine(pbPath, Path.GetFileNameWithoutExtension(altName) + ".status");
+            string tempPath = Path.Combine(pbPath, "." + Guid.NewGuid().ToString("N") + ".apbx.tmp");
             try
             {
-                if (File.Exists(Path.Combine(pbPath, destName)))
+                File.Copy(apbx, tempPath, overwrite: false);
+                if (File.Exists(destPath))
                 {
-                    File.Delete(Path.Combine(pbPath, destName));
+                    // The temporary file is on the same volume, so replacing it keeps
+                    // the old APBX available until the new copy is complete.
+                    File.Replace(tempPath, destPath, null);
                 }
-                if (File.Exists(Path.Combine(pbPath, altName)))
+                else
                 {
-                    File.Delete(Path.Combine(pbPath, altName));
+                    File.Move(tempPath, destPath);
                 }
             }
-            catch (Exception)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                throw new SecurityException();
+                throw new SecurityException("Could not safely replace the cached APBX file.", ex);
             }
-            File.Copy(apbx, Path.Combine(pbPath, destName));
-            if (File.Exists(statusFile))
+            finally
             {
-                Wrap.ExecuteSafe(delegate
+                try
                 {
-                    File.Delete(statusFile);
-                }, true, null);
+                    if (File.Exists(tempPath)) File.Delete(tempPath);
+                }
+                catch (Exception ex)
+                {
+                    WriteExceptionSafe(ex, "Could not remove the temporary APBX file.", new (string, object)[1] { ("Path", tempPath) });
+                }
             }
-            if (File.Exists(altStatusFile))
+
+            if (!string.Equals(destPath, altPath, StringComparison.OrdinalIgnoreCase))
             {
-                Wrap.ExecuteSafe(delegate
-                {
-                    File.Delete(altStatusFile);
-                }, true, null);
+                DeleteCacheSidecar(altPath);
+            }
+            DeleteCacheSidecar(statusFile);
+            if (!string.Equals(statusFile, altStatusFile, StringComparison.OrdinalIgnoreCase))
+            {
+                DeleteCacheSidecar(altStatusFile);
+            }
+        }
+
+        private static void DeleteCacheSidecar(string path)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                WriteExceptionSafe(ex, "Could not remove an obsolete APBX cache file.", new (string, object)[1] { ("Path", path) });
             }
         }
         public static void ExtractArchive(string apbx, string targetDir, string exclude = null)
@@ -148,70 +172,84 @@ namespace KTWirzade.GUI.Utils
 
         public static PlaybookGUI GetData(string apbx)
         {
-            string tmpPath = Environment.ExpandEnvironmentVariables(Path.Combine("%TEMP%", Path.GetFileNameWithoutExtension(apbx) + "-" + new Random().Next(10000, 99999).ToString()));
+            string tmpPath = Path.Combine(Path.GetTempPath(), "KTWirzade-APBX-" + Guid.NewGuid().ToString("N"));
             string targetDir = Directory.CreateDirectory(tmpPath).FullName;
-            using (SharpSevenZipExtractor extractor = new SharpSevenZipExtractor(apbx, "malte"))
+            try
             {
-                List<int> toBeExtracted = new List<int>();
-                foreach (ArchiveFileInfo entry in extractor.ArchiveFileData)
+                using (SharpSevenZipExtractor extractor = new SharpSevenZipExtractor(apbx, "malte"))
                 {
-                    if (entry.FileName.StartsWith("playbook.") || entry.FileName.StartsWith("Images\\", StringComparison.OrdinalIgnoreCase))
+                    List<int> toBeExtracted = new List<int>();
+                    foreach (ArchiveFileInfo entry in extractor.ArchiveFileData)
                     {
-                        if (!entry.Method.Contains("7zAES") && !entry.Method.Contains("ZipCrypto"))
+                        if (entry.FileName.StartsWith("playbook.") || entry.FileName.StartsWith("Images\\", StringComparison.OrdinalIgnoreCase))
                         {
-                            throw new Exception("Playbook must be encrypted using 'malte' as the password.");
+                            if (!entry.Method.Contains("7zAES") && !entry.Method.Contains("ZipCrypto"))
+                            {
+                                throw new Exception("Playbook must be encrypted using 'malte' as the password.");
+                            }
+                            toBeExtracted.Add(entry.Index);
                         }
-                        toBeExtracted.Add(entry.Index);
+                    }
+                    extractor.ExtractFiles(targetDir, toBeExtracted.ToArray());
+                }
+
+                PlaybookGUI result = new PlaybookGUI(AmeliorationUtil.DeserializePlaybook(tmpPath));
+                if (Directory.Exists(Path.Combine(tmpPath, "Images")))
+                {
+                    foreach (string image in from x in Directory.GetFiles(Path.Combine(tmpPath, "Images"), "*.png")
+                                             where !x.EndsWith("\\playbook.png", StringComparison.OrdinalIgnoreCase)
+                                             select x)
+                    {
+                        BitmapImage bmi = new BitmapImage();
+                        bmi.BeginInit();
+                        bmi.CacheOption = BitmapCacheOption.OnLoad;
+                        bmi.UriSource = new Uri(image, UriKind.Absolute);
+                        bmi.EndInit();
+                        result.Images.Add(bmi);
+                        result.Images[result.Images.Count - 1].Freeze();
                     }
                 }
-                extractor.ExtractFiles(targetDir, toBeExtracted.ToArray());
-            }
-            PlaybookGUI result = new PlaybookGUI(AmeliorationUtil.DeserializePlaybook(tmpPath));
-            if (Directory.Exists(Path.Combine(tmpPath, "Images")))
-            {
-                foreach (string image in from x in Directory.GetFiles(Path.Combine(tmpPath, "Images"), "*.png")
-                                         where !x.EndsWith("\\playbook.png", StringComparison.OrdinalIgnoreCase)
-                                         select x)
+                string path = null;
+                if (File.Exists(Path.Combine(tmpPath, "playbook.png")))
                 {
-                    BitmapImage bmi = new BitmapImage();
-                    bmi.BeginInit();
-                    bmi.CacheOption = BitmapCacheOption.OnLoad;
-                    bmi.UriSource = new Uri(image, UriKind.Absolute);
-                    bmi.EndInit();
-                    result.Images.Add(bmi);
-                    result.Images[result.Images.Count - 1].Freeze();
+                    path = Path.Combine(tmpPath, "playbook.png");
+                }
+                if (File.Exists(Path.Combine(tmpPath, "Images\\playbook.png")))
+                {
+                    path = Path.Combine(tmpPath, "Images\\playbook.png");
+                }
+                if (path != null)
+                {
+                    BitmapImage bmi2 = new BitmapImage();
+                    bmi2.BeginInit();
+                    bmi2.CacheOption = BitmapCacheOption.OnLoad;
+                    bmi2.UriSource = new Uri(path, UriKind.Absolute);
+                    bmi2.EndInit();
+                    result.IconCache = bmi2;
+                    result.IconCache.Freeze();
+                }
+                else
+                {
+                    result.IconCache = result.Icon;
+                }
+                result.Path = null;
+                if (result.Username == "KTWirzade")
+                {
+                    result.DonateLink = null;
+                }
+                return result;
+            }
+            finally
+            {
+                try
+                {
+                    if (Directory.Exists(tmpPath)) Directory.Delete(tmpPath, recursive: true);
+                }
+                catch (Exception cleanupException)
+                {
+                    WriteExceptionSafe(cleanupException, "Could not clean the temporary APBX extraction directory.", new (string, object)[1] { ("Path", tmpPath) });
                 }
             }
-            string path = null;
-            if (File.Exists(Path.Combine(tmpPath, "playbook.png")))
-            {
-                path = Path.Combine(tmpPath, "playbook.png");
-            }
-            if (File.Exists(Path.Combine(tmpPath, "Images\\playbook.png")))
-            {
-                path = Path.Combine(tmpPath, "Images\\playbook.png");
-            }
-            if (path != null)
-            {
-                BitmapImage bmi2 = new BitmapImage();
-                bmi2.BeginInit();
-                bmi2.CacheOption = BitmapCacheOption.OnLoad;
-                bmi2.UriSource = new Uri(path, UriKind.Absolute);
-                bmi2.EndInit();
-                result.IconCache = bmi2;
-                result.IconCache.Freeze();
-            }
-            else
-            {
-                result.IconCache = result.Icon;
-            }
-            Directory.Delete(tmpPath, true);
-            result.Path = null;
-            if (result.Username == "KTWirzade")
-            {
-                result.DonateLink = null;
-            }
-            return result;
         }
     }
 }

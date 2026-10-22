@@ -20,12 +20,13 @@ namespace KTWirzade.GUI.ViewModels
 
         public override ViewModelBase GetNextPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            // Terminal page: the Next button is disabled and items drive navigation.
+            return null;
         }
 
         public override ViewModelBase GetPreviousPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public override bool HasPreviousPage()

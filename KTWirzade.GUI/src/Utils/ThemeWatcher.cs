@@ -71,20 +71,34 @@ namespace KTWirzade.GUI.Utils
         {
             System.Windows.Application.Current.Dispatcher.BeginInvoke((Action)delegate
             {
-                ThemeDictionary.MergedDictionaries.Clear();
-                string text = ((GlobalsGUI.WinVer >= 22523) ? "Windows11" : "Windows10");
-                ThemeDictionary.MergedDictionaries.Add(new ResourceDictionary
-                {
-                    Source = new Uri("Themes/" + text + "/" + CurrentTheme.ToString() + "Styles.xaml", UriKind.RelativeOrAbsolute)
-                });
-                ThemeDictionary.MergedDictionaries.Add(new ResourceDictionary
-                {
-                    Source = new Uri("Themes/" + text + "/" + CurrentTheme.ToString() + "Resources.xaml", UriKind.RelativeOrAbsolute)
-                });
-                ThemeDictionary.MergedDictionaries.Add(new ResourceDictionary
-                {
-                    Source = new Uri("Themes/" + text + "/SharedStyles.xaml", UriKind.RelativeOrAbsolute)
-                });
+                ApplyThemeNow();
+            });
+        }
+
+        /// <summary>
+        /// Applies the current theme dictionaries synchronously. Called from App.OnStartup
+        /// before any Window is created so the first paint does not flash the hardcoded
+        /// Light theme from App.xaml. Safe to call with no windows and no dispatcher work.
+        /// </summary>
+        public static void ApplyThemeNow()
+        {
+            if (System.Windows.Application.Current == null)
+            {
+                return;
+            }
+            ThemeDictionary.MergedDictionaries.Clear();
+            string text = ((GlobalsGUI.WinVer >= 22523) ? "Windows11" : "Windows10");
+            ThemeDictionary.MergedDictionaries.Add(new ResourceDictionary
+            {
+                Source = new Uri("Themes/" + text + "/" + CurrentTheme.ToString() + "Styles.xaml", UriKind.RelativeOrAbsolute)
+            });
+            ThemeDictionary.MergedDictionaries.Add(new ResourceDictionary
+            {
+                Source = new Uri("Themes/" + text + "/" + CurrentTheme.ToString() + "Resources.xaml", UriKind.RelativeOrAbsolute)
+            });
+            ThemeDictionary.MergedDictionaries.Add(new ResourceDictionary
+            {
+                Source = new Uri("Themes/" + text + "/SharedStyles.xaml", UriKind.RelativeOrAbsolute)
             });
         }
 

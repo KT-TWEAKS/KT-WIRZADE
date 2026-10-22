@@ -266,11 +266,13 @@ namespace KTWirzade.GUI.Windows
             if (exception != null)
             {
                 ErrorImage.Visibility = Visibility.Visible;
+                // A failed preparation must NOT run the reboot countdown; leave the
+                // window open and give the user explicit close / reboot actions.
+                FinishText.Text = "A preparacao falhou. O sistema nao sera reiniciado automaticamente.";
+                FailureActionsPanel.Visibility = Visibility.Visible;
+                return;
             }
-            else
-            {
-                CheckImage.Visibility = Visibility.Visible;
-            }
+            CheckImage.Visibility = Visibility.Visible;
             int seconds = 0;
             while (seconds <= 5)
             {
@@ -314,7 +316,7 @@ namespace KTWirzade.GUI.Windows
 
         private static int RunCommand(string exe, string arguments, DataReceivedEventHandler outputHandler, DataReceivedEventHandler errorHandler)
         {
-            Process process = new Process
+            using Process process = new Process
             {
                 StartInfo = new ProcessStartInfo
                 {
@@ -343,7 +345,22 @@ namespace KTWirzade.GUI.Windows
             {
                 process.BeginErrorReadLine();
             }
-            process.WaitForExit();
+            // Bounded wait so a hung child process cannot wedge the UI forever.
+            // 10 minutes is far beyond any normal DISM/PowerShell run.
+            if (!process.WaitForExit(600000))
+            {
+                try
+                {
+                    process.Kill();
+                }
+                catch (Exception)
+                {
+                }
+                process.WaitForExit();
+                return -1;
+            }
+            // Second (bounded) WaitForExit drains the async output/error handlers.
+            process.WaitForExit(30000);
             return process.ExitCode;
         }
 
@@ -405,9 +422,20 @@ namespace KTWirzade.GUI.Windows
             if (!Win32.InitiateSystemShutdownEx(null, null, 0u, bForceAppsClosed: true, bRebootAfterShutdown: true, 0u))
             {
                 Close();
+                return;
             }
-            Thread.Sleep(5000);
+            // Do not block the UI thread while the shutdown request is processed.
+            _ = Task.Delay(5000).ContinueWith(_ => Dispatcher.Invoke((Action)Close));
+        }
+
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
+        {
             Close();
+        }
+
+        private void RestartButton_Click(object sender, RoutedEventArgs e)
+        {
+            RestartSystem();
         }
 
         [DllImport("kernel32.dll", SetLastError = true)]

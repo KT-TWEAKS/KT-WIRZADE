@@ -40,6 +40,9 @@ namespace KTWirzade.GUI.Windows
         public UninstallUpdatesDialog()
         {
             InitializeComponent();
+            // Lightweight empty state: the update list is scanned before this dialog
+            // opens, so a scan that found nothing must not show a blank window.
+            EmptyUpdatesState.Visibility = PresentUninstallUpdates.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             int i = -1;
             foreach (KeyValuePair<uint, string> update in PresentUninstallUpdates)
             {
@@ -197,52 +200,6 @@ namespace KTWirzade.GUI.Windows
                                                                           select x).Sum((IUninstallUpdateModule x) => x.Height() + 26) * index), 431.3, (index != lastIndex) ? 484 : 500), 8.0, 8.0);
         }
 
-        public static BitmapSource Convert(Bitmap bitmap)
-        {
-            using MemoryStream memory = new MemoryStream();
-            bitmap.Save(memory, ImageFormat.Png);
-            memory.Position = 0L;
-            BitmapImage bitmapImage = new BitmapImage();
-            bitmapImage.BeginInit();
-            bitmapImage.StreamSource = memory;
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.EndInit();
-            bitmapImage.Freeze();
-            return bitmapImage;
-        }
-
-        [DllImport("gdi32.dll")]
-        public static extern bool DeleteObject(IntPtr hObject);
-
-        private Bitmap BitmapImage2Bitmap(BitmapImage bitmapImage)
-        {
-            using MemoryStream outStream = new MemoryStream();
-            PngBitmapEncoder pngBitmapEncoder = new PngBitmapEncoder();
-            pngBitmapEncoder.Frames.Add(BitmapFrame.Create(bitmapImage));
-            pngBitmapEncoder.Save(outStream);
-            return new Bitmap(new Bitmap(outStream));
-        }
-
-        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
-        {
-            if (depObj == null)
-            {
-                yield break;
-            }
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
-            {
-                DependencyObject child = VisualTreeHelper.GetChild(depObj, i);
-                if (child != null && child is T)
-                {
-                    yield return (T)child;
-                }
-                foreach (T item in FindVisualChildren<T>(child))
-                {
-                    yield return item;
-                }
-            }
-        }
-
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             if (MaterialManager.IsVMwareVM && SystemInfoEx.WindowsVersion.BuildNumber >= 22523)
@@ -251,9 +208,12 @@ namespace KTWirzade.GUI.Windows
             }
             double ppuX = PresentationSource.FromVisual(this).CompositionTarget.TransformToDevice.M11;
             double ppuY = PresentationSource.FromVisual(this).CompositionTarget.TransformToDevice.M22;
-            UninstallUpdateStack.Children.Cast<IUninstallUpdateModule>().First().StartOperations();
+            if (UninstallUpdateStack.Children.Count > 0)
+            {
+                UninstallUpdateStack.Children.Cast<IUninstallUpdateModule>().First().StartOperations();
+            }
             List<ImageParams> images = new List<ImageParams>();
-            List<System.Windows.Controls.Image> raw = (from image in FindVisualChildren<System.Windows.Controls.Image>(UninstallUpdateStack)
+            List<System.Windows.Controls.Image> raw = (from image in DialogHelpers.FindVisualChildren<System.Windows.Controls.Image>(UninstallUpdateStack)
                                                        where image.Name != null && !image.Name.Contains("Icon")
                                                        select image).ToList();
             raw.ForEach(delegate (System.Windows.Controls.Image x)
@@ -270,7 +230,7 @@ namespace KTWirzade.GUI.Windows
             {
                 foreach (ImageParams current in images)
                 {
-                    sources.Add(Convert(ImageUtilities.ResizeImage(BitmapImage2Bitmap(current.raw), current.scaleX, current.scaleY)));
+                    sources.Add(DialogHelpers.Convert(ImageUtilities.ResizeImage(DialogHelpers.BitmapImage2Bitmap(current.raw), current.scaleX, current.scaleY)));
                 }
             });
             int i = 0;
@@ -302,6 +262,12 @@ namespace KTWirzade.GUI.Windows
 
         private async void SwitchPageButton_OnClick(object sender, RoutedEventArgs e)
         {
+            // Bounds guard: if there is no next page (or no clip geometry for it),
+            // do nothing instead of indexing out of range.
+            if (_pageIndex + 1 >= UninstallUpdateStack.Children.Count || _pageIndex + 1 >= ExcludeGeometries.Children.Count)
+            {
+                return;
+            }
             Storyboard storyboard = new Storyboard();
             SwitchPageButton.IsEnabled = false;
             ThicknessAnimation buttonAnim = new ThicknessAnimation(new Thickness(0.0, SwitchPageButton.Margin.Top - 1300.0, 185.0, 0.0), new Duration(TimeSpan.FromMilliseconds(400.0)))

@@ -34,17 +34,12 @@ namespace KTWirzade.Shared.Actions
         {
             hasCompleted = true;
             const string separator = "--------------------------------------------------";
-            
-            output.WriteLineRawSafe((File.Exists(output.OutputFile) ? Environment.NewLine + separator : separator) + Environment.NewLine + $"[Status] {Status}" + Environment.NewLine + separator + Environment.NewLine);
-            
-            if (StatusReporter == null)
-                return true;
-            
-            if (String.IsNullOrWhiteSpace(Status))
-                StatusReporter.Report("Running actions");
-            else
-                StatusReporter.Report(Status);
-            
+            var statusText = String.IsNullOrWhiteSpace(Status) ? "Running actions" : Status;
+             
+            output.WriteLineRawSafe((File.Exists(output.OutputFile) ? Environment.NewLine + separator : separator) + Environment.NewLine + $"[Status] {statusText}" + Environment.NewLine + separator + Environment.NewLine);
+             
+            StatusReporter?.Report(statusText);
+             
             return true;
         }
     }

@@ -101,6 +101,13 @@ namespace KTWirzade.GUI.ViewModels
             }
             set
             {
+                if (value == null)
+                {
+                    return;
+                }
+                // Raise PropertyChanged before mutating the derived UI properties so
+                // bindings observe a consistent state in one pass.
+                SetProperty(ref _SelectedPlaybook, value, "SelectedPlaybook");
                 if (value.VerificationStatus != PlaybookGUI.VerificationLevel.Verified || ((Playbook)value).Name != "KT WIRZADE Beta")
                 {
                     SourceText = "Source Code";
@@ -169,7 +176,6 @@ namespace KTWirzade.GUI.ViewModels
                     ContentGridVisibility = Visibility.Visible;
                     NoneGridVisibility = Visibility.Collapsed;
                 }
-                SetProperty(ref _SelectedPlaybook, value, "SelectedPlaybook");
             }
         }
 
@@ -181,6 +187,11 @@ namespace KTWirzade.GUI.ViewModels
             }
             set
             {
+                if (value == null)
+                {
+                    return;
+                }
+                SetProperty(ref _TransitionSelectedPlaybook, value, "TransitionSelectedPlaybook");
                 if (value.VerificationStatus != PlaybookGUI.VerificationLevel.Verified || ((Playbook)value).Name != "KT WIRZADE Beta")
                 {
                     TransitionSourceText = "Source Code";
@@ -253,7 +264,6 @@ namespace KTWirzade.GUI.ViewModels
                     TransitionContentGridVisibility = Visibility.Visible;
                     TransitionNoneGridVisibility = Visibility.Collapsed;
                 }
-                SetProperty(ref _TransitionSelectedPlaybook, value, "TransitionSelectedPlaybook");
             }
         }
 
@@ -667,17 +677,18 @@ namespace KTWirzade.GUI.ViewModels
 
         public override ViewModelBase GetNextPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            // Dialog VM: not part of the wizard flow.
+            return null;
         }
 
         public override ViewModelBase GetPreviousPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public override bool HasPreviousPage()
         {
-            throw new NotImplementedException();
+            return false;
         }
     }
 }

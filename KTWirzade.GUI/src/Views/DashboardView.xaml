@@ -7,6 +7,26 @@
              xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
              mc:Ignorable="d" d:DesignHeight="600" d:DesignWidth="700">
 
+    <UserControl.Resources>
+        <Style x:Key="KeyboardQuickActionCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource FakeBackgroundBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ContentBoxBorderBrush}" />
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="{DynamicResource NoticeBoxBrush}" />
+                    <Setter Property="BorderBrush" Value="{DynamicResource PageBorderBrush}" />
+                </Trigger>
+                <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                    <!-- Colour-only focus ring: bumping BorderThickness to 2 made the card
+                         grow 1px and shift its neighbours on keyboard focus. -->
+                    <Setter Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Background="Transparent">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -14,77 +34,94 @@
       </Grid.RowDefinitions>
 
         <Border Grid.Row="0" Margin="0,0,0,12" Padding="20,16" CornerRadius="8" Background="{DynamicResource NoticeBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
-            <StackPanel>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
                     <wpf:SymbolIcon Symbol="Home" TextBlock.FontSize="22" Margin="0,0,12,0" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource ProgressBarBrush}" />
                     <StackPanel>
-                        <TextBlock FontSize="20" FontWeight="Bold" Text="Bem-vindo ao KT WIRZADE" Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock FontSize="20" FontWeight="Bold" Text="KT WIRZADE" Foreground="{DynamicResource TextPrimaryBrush}" />
                         <TextBlock Name="SubtitleText" FontSize="12" Margin="0,2,0,0" Foreground="{DynamicResource TextSecondaryBrush}" Text="Sistema de otimização e personalização do Windows" />
-                  </StackPanel>
-              </StackPanel>
-          </StackPanel>
-      </Border>
+                    </StackPanel>
+                </StackPanel>
+                <Border Name="ConnectionStatusBadge" Grid.Column="1" Padding="10,6" CornerRadius="12" Background="{DynamicResource StatusInfoSoftBrush}" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <Ellipse Name="ConnectionStatusDot" Width="8" Height="8" Margin="0,0,7,0" Fill="{DynamicResource ProgressBarBrush}" />
+                        <TextBlock Name="ConnectionStatusText" Text="Verificando" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <ScrollViewer.Resources>
+                <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource SidebarScrollBar}" />
+            </ScrollViewer.Resources>
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
               </Grid.RowDefinitions>
 
-                <TextBlock Grid.Row="0" FontSize="14" FontWeight="SemiBold" Text="Ações rápidas" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10" />
+                <TextBlock Grid.Row="0" Name="QuickActionsText" FontSize="14" FontWeight="SemiBold" Text="Ações rápidas" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,0,0,10" />
 
-                <UniformGrid Grid.Row="1" Columns="3" Margin="0,0,0,16">
-                    <Border Tag="load" Focusable="True" ToolTip="Carregar um arquivo APBX" CornerRadius="8" Padding="16,14" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Margin="0,0,6,0" Cursor="Hand" MouseLeftButtonUp="QuickAction_LoadPlaybook" KeyDown="QuickAction_KeyDown">
+                <UniformGrid Grid.Row="1" Columns="2" Margin="0,0,0,16">
+                    <Border Style="{StaticResource KeyboardQuickActionCard}" Tag="load" Focusable="True" AutomationProperties.Name="Carregar playbook: abrir e revisar um arquivo APBX" ToolTip="Carregar um arquivo APBX" CornerRadius="8" Padding="16,14" Margin="0,0,6,0" MouseLeftButtonUp="QuickAction_LoadPlaybook" KeyDown="QuickAction_KeyDown">
                         <StackPanel Orientation="Horizontal">
                             <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource StatusInfoSoftBrush}" Margin="0,0,12,0">
                                 <wpf:SymbolIcon Symbol="DocumentArrowDown" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource ProgressBarBrush}" />
                           </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Carregar Playbook" />
-                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Abrir e revisar um arquivo .apbx" />
+                                <TextBlock Name="LoadPlaybookTitleText" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Carregar Playbook" />
+                                <TextBlock Name="LoadPlaybookSubtitleText" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Abrir e revisar um arquivo .apbx" />
                           </StackPanel>
                       </StackPanel>
                   </Border>
 
-                    <Border Tag="rollback" Focusable="True" ToolTip="Abrir sessões de recuperação" CornerRadius="8" Padding="16,14" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Margin="6,0,6,0" Cursor="Hand" MouseLeftButtonUp="QuickAction_Rollback" KeyDown="QuickAction_KeyDown">
+                    <Border Style="{StaticResource KeyboardQuickActionCard}" Tag="rollback" Focusable="True" AutomationProperties.Name="Recuperação: revisar e retomar rollbacks" ToolTip="Abrir sessões de recuperação" CornerRadius="8" Padding="16,14" Margin="6,0,6,0" MouseLeftButtonUp="QuickAction_Rollback" KeyDown="QuickAction_KeyDown">
                         <StackPanel Orientation="Horizontal">
                             <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource StatusWarningSoftBrush}" Margin="0,0,12,0">
                                 <wpf:SymbolIcon Symbol="ArrowUndo" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource StatusWarningBrush}" />
                           </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Recuperação" />
-                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Revisar e retomar rollbacks" />
+                                <TextBlock Name="RecoveryTitleText" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Recuperação" />
+                                <TextBlock Name="RecoverySubtitleText" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Revisar e retomar rollbacks" />
                           </StackPanel>
                       </StackPanel>
                   </Border>
 
-                    <Border Tag="updates" Focusable="True" ToolTip="Verificar atualizações do aplicativo" CornerRadius="8" Padding="16,14" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Margin="6,0,0,0" Cursor="Hand" MouseLeftButtonUp="QuickAction_CheckUpdates" KeyDown="QuickAction_KeyDown">
+                    <Border Style="{StaticResource KeyboardQuickActionCard}" Tag="updates" Focusable="True" AutomationProperties.Name="Atualizações: buscar a versão mais recente do aplicativo" ToolTip="Verificar atualizações do aplicativo" CornerRadius="8" Padding="16,14" Margin="6,0,0,0" MouseLeftButtonUp="QuickAction_CheckUpdates" KeyDown="QuickAction_KeyDown">
                         <StackPanel Orientation="Horizontal">
                             <Border Width="40" Height="40" CornerRadius="20" Background="{DynamicResource StatusSuccessSoftBrush}" Margin="0,0,12,0">
                                 <wpf:SymbolIcon Symbol="ArrowSync" FontSize="20" HorizontalAlignment="Center" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource StatusSuccessBrush}" />
                           </Border>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Atualizações" />
-                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Buscar versão mais recente" />
+                                <TextBlock Name="UpdatesTitleText" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Atualizações" />
+                                <TextBlock Name="UpdatesSubtitleText" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Text="Buscar versão mais recente" />
                           </StackPanel>
                       </StackPanel>
                   </Border>
               </UniformGrid>
 
-                <TextBlock Grid.Row="2" FontSize="14" FontWeight="SemiBold" Text="Playbooks disponíveis offline" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,10" />
+                <TextBlock Grid.Row="2" Name="InstalledSectionText" FontSize="14" FontWeight="SemiBold" Text="APBX instalados neste computador" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,8,0,10" />
 
                 <Border Grid.Row="3" CornerRadius="8" Padding="0" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" MinHeight="120">
                     <Grid>
-                        <StackPanel Name="EmptyState" Visibility="Visible" Margin="20,30">
+                        <StackPanel Name="LocalPlaybooksEmpty" Visibility="Visible" Margin="20,24">
                             <wpf:SymbolIcon Symbol="CloudOff" FontSize="36" HorizontalAlignment="Center" TextBlock.Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.5" />
-                            <TextBlock Text="Nenhum playbook em cache" FontSize="13" HorizontalAlignment="Center" Margin="0,10,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
-                            <TextBlock Text="Carregue um .apbx para comecar" FontSize="11" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.7" />
+                            <TextBlock Name="InstallEmptyTitleText" Text="Nenhum APBX instalado no dispositivo" FontSize="13" HorizontalAlignment="Center" Margin="0,10,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                            <TextBlock Name="InstallEmptyHintText" Text="APBX importados ficam disponíveis sem depender do cache online" FontSize="11" HorizontalAlignment="Center" Margin="0,2,0,0" Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.7" TextWrapping="Wrap" />
                       </StackPanel>
 
-                        <ItemsControl Name="CachedPlaybooksList" Visibility="Collapsed" Margin="10">
+                        <ItemsControl Name="LocalPlaybooksList" Visibility="Collapsed" Margin="10">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Border Padding="12,10" CornerRadius="6" Margin="0,0,0,6" Background="{DynamicResource SecondaryBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
@@ -96,12 +133,10 @@
                                           </Grid.ColumnDefinitions>
                                             <wpf:SymbolIcon Symbol="Document" FontSize="18" Margin="0,0,10,0" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource ProgressBarBrush}" />
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-                                                <TextBlock FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}">
-                                                    <Run Text="v" /><Run Text="{Binding Version}" /><Run Text=" - " /><Run Text="{Binding SizeDisplay}" />
-                                              </TextBlock>
+                                                <TextBlock Text="{Binding DisplayName}" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding DetailsText}" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" />
                                           </StackPanel>
-                                            <TextBlock Grid.Column="2" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Text="{Binding CachedAtDisplay}" />
+                                            <Button Grid.Column="2" Content="{Binding OpenButtonText, RelativeSource={RelativeSource AncestorType=UserControl}}" Tag="{Binding Playbook}" Click="OpenLocalPlaybook_Click" Style="{DynamicResource BasicButton}" MinWidth="64" Padding="10,4" Margin="10,0,0,0" VerticalAlignment="Center" Cursor="Hand" ToolTip="Selecionar este APBX local" />
                                       </Grid>
                                   </Border>
                               </DataTemplate>
@@ -109,6 +144,54 @@
                       </ItemsControl>
                   </Grid>
               </Border>
+
+                <TextBlock Grid.Row="4" Name="HiddenSectionText" FontSize="14" FontWeight="SemiBold" Text="APBX ocultos" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,18,0,10" />
+                <Border Grid.Row="5" CornerRadius="8" Padding="12" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" MinHeight="54">
+                    <Grid>
+                        <TextBlock Name="HiddenPlaybooksEmpty" Text="Nenhum APBX oculto" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        <ItemsControl Name="HiddenPlaybooksList" Visibility="Collapsed">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,6">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            <TextBlock Text="{Binding FileName}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </StackPanel>
+                                        <Button Grid.Column="1" Content="{Binding RestoreButtonText, RelativeSource={RelativeSource AncestorType=UserControl}}" Tag="{Binding}" Click="RestoreHiddenPlaybook_Click" Style="{DynamicResource BasicButton}" MinWidth="82" Padding="10,4" VerticalAlignment="Center" Cursor="Hand" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
+
+                <TextBlock Grid.Row="6" Name="RemovedSectionText" FontSize="14" FontWeight="SemiBold" Text="Histórico de APBX removidos" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,18,0,10" />
+                <Border Grid.Row="7" CornerRadius="8" Padding="12" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" MinHeight="54">
+                    <Grid>
+                        <TextBlock Name="RemovedPlaybooksEmpty" Text="Nenhum APBX removido do computador" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" HorizontalAlignment="Center" />
+                        <ItemsControl Name="RemovedPlaybooksList" Visibility="Collapsed">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Margin="0,0,0,8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding DisplayName}" FontSize="12" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                            <TextBlock Grid.Column="1" Text="{Binding RemovedAtDisplay}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" />
+                                        </Grid>
+                                        <TextBlock Text="{Binding Reason}" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Grid>
+                </Border>
           </Grid>
       </ScrollViewer>
   </Grid>

@@ -195,74 +195,81 @@ namespace KTWirzade.GUI.Views
             {
                 return;
             }
-            UsbSelectSelectButton.IsEnabled = false;
-            UsbSelectCancelButton.IsEnabled = false;
-            UsbStack.Visibility = Visibility.Collapsed;
-            UsbStack.Children.Clear();
-            UsbLoadContainer.Visibility = Visibility.Visible;
-            Spinner spinner = new Spinner
+            try
             {
-                Foreground = (SolidColorBrush)FindResource("TextPrimaryBrush")
-            };
-            UsbLoadContainer.Children.Add(spinner);
-            SafeResult<List<UsbDisk>> usbDevices = await InterLink.ExecuteSafeAsync<List<UsbDisk>>((Expression<Func<List<UsbDisk>>>)(() => USB.GetDevices(false, log)), false, -1);
-            UsbLoadContainer.Children.Remove(spinner);
-            UsbLoadContainer.Visibility = Visibility.Collapsed;
-            UsbStack.Visibility = Visibility.Visible;
-            if (usbDevices.Failed)
-            {
-                Log.EnqueueExceptionSafe(usbDevices.Exception, Array.Empty<(string, object)>());
-                MessageBox.Show(typeof(MainWindow), "Error loading USB devices: " + usbDevices.Exception);
-                UsbPopup.IsOpen = false;
-            }
-            UsbSelectCancelButton.IsEnabled = true;
-            int i = 0;
-            foreach (UsbDisk item in usbDevices.Value.Where((UsbDisk x) => x.Size > (GlobalsGUI.Current.ISO.Size ?? 6442450944L) + 10485760))
-            {
-                UsbProgressItem button = new UsbProgressItem(item)
+                UsbSelectSelectButton.IsEnabled = false;
+                UsbSelectCancelButton.IsEnabled = false;
+                UsbStack.Visibility = Visibility.Collapsed;
+                UsbStack.Children.Clear();
+                UsbLoadContainer.Visibility = Visibility.Visible;
+                Spinner spinner = new Spinner
                 {
-                    IsChecked = (i == 0),
-                    Margin = new Thickness(0.0, 3.0, 0.0, 0.0)
+                    Foreground = (SolidColorBrush)FindResource("TextPrimaryBrush")
                 };
-                button.Checked += delegate (object sender, RoutedEventArgs args)
+                UsbLoadContainer.Children.Add(spinner);
+                SafeResult<List<UsbDisk>> usbDevices = await InterLink.ExecuteSafeAsync<List<UsbDisk>>((Expression<Func<List<UsbDisk>>>)(() => USB.GetDevices(false, log)), false, -1);
+                UsbLoadContainer.Children.Remove(spinner);
+                UsbLoadContainer.Visibility = Visibility.Collapsed;
+                UsbStack.Visibility = Visibility.Visible;
+                if (usbDevices.Failed)
                 {
-                    IEnumerable<UsbProgressItem> enumerable = UsbStack.Children.OfType<UsbProgressItem>();
-                    if (!Keyboard.IsKeyDown(Key.LeftShift) && !Keyboard.IsKeyDown(Key.RightShift))
+                    Log.EnqueueExceptionSafe(usbDevices.Exception, Array.Empty<(string, object)>());
+                    MessageBox.Show(typeof(MainWindow), "Error loading USB devices: " + usbDevices.Exception);
+                    UsbPopup.IsOpen = false;
+                    return;
+                }
+                UsbSelectCancelButton.IsEnabled = true;
+                int i = 0;
+                foreach (UsbDisk item in usbDevices.Value.Where((UsbDisk x) => x.Size > (GlobalsGUI.Current.ISO.Size ?? 6442450944L) + 10485760))
+                {
+                    UsbProgressItem button = new UsbProgressItem(item)
                     {
-                        foreach (UsbProgressItem current in enumerable)
+                        IsChecked = (i == 0),
+                        Margin = new Thickness(0.0, 3.0, 0.0, 0.0)
+                    };
+                    button.Checked += delegate (object sender, RoutedEventArgs args)
+                    {
+                        IEnumerable<UsbProgressItem> enumerable = UsbStack.Children.OfType<UsbProgressItem>();
+                        if (!Keyboard.IsKeyDown(Key.LeftShift) && !Keyboard.IsKeyDown(Key.RightShift))
                         {
-                            if (current != sender)
+                            foreach (UsbProgressItem current in enumerable)
                             {
-                                current.IsChecked = false;
+                                if (current != sender)
+                                {
+                                    current.IsChecked = false;
+                                }
                             }
                         }
-                    }
-                };
-                button.PreviewMouseLeftButtonDown += delegate (object sender, MouseButtonEventArgs args)
-                {
-                    if (UsbStack.Children.OfType<UsbProgressItem>().Count((UsbProgressItem x) => x.IsChecked == true) >= 5 && (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)))
+                    };
+                    button.PreviewMouseLeftButtonDown += delegate (object sender, MouseButtonEventArgs args)
                     {
-                        args.Handled = true;
-                    }
-                };
-                UsbStack.Children.Insert(i, button);
-                UsbSelectSelectButton.IsEnabled = true;
-                i++;
-            }
-            if (usbDevices.Value.Count > 3 && UsbScrollViewer.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled)
-            {
-                UsbHideBorder.Visibility = Visibility.Visible;
-            }
-            if (usbDevices.Value.Count == 0)
-            {
-                UsbStack.Children.Add(new TextBlock
+                        if (UsbStack.Children.OfType<UsbProgressItem>().Count((UsbProgressItem x) => x.IsChecked == true) >= 5 && (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)))
+                        {
+                            args.Handled = true;
+                        }
+                    };
+                    UsbStack.Children.Insert(i, button);
+                    UsbSelectSelectButton.IsEnabled = true;
+                    i++;
+                }
+                if (usbDevices.Value.Count > 3 && UsbScrollViewer.VerticalScrollBarVisibility == ScrollBarVisibility.Disabled)
                 {
-                    Text = "Plug in a USB device",
-                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
-                    Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush")
-                });
+                    UsbHideBorder.Visibility = Visibility.Visible;
+                }
+                if (usbDevices.Value.Count == 0)
+                {
+                    UsbStack.Children.Add(new TextBlock
+                    {
+                        Text = "Plug in a USB device",
+                        HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                        Foreground = (System.Windows.Media.Brush)FindResource("TextSecondaryBrush")
+                    });
+                }
             }
-            _refreshLock.Release();
+            finally
+            {
+                _refreshLock.Release();
+            }
         }
 
         private void Next()
@@ -593,6 +600,7 @@ namespace KTWirzade.GUI.Views
                         PBLoadContainer.Visibility = Visibility.Collapsed;
                         PBLoadContainer.Children.Remove(spinner);
                         DragBox.SetResourceReference(FrameworkElement.StyleProperty, "DragBoxSmall");
+                        WizardConfig.RestorePlaybook(pb);
                         pb.Checked = true;
                         GlobalsGUI.Current.Items.Add(pb);
                         SelectCancelButton.IsEnabled = true;
@@ -619,6 +627,7 @@ namespace KTWirzade.GUI.Views
             DragBox.SetResourceReference(FrameworkElement.StyleProperty, "DragBoxSmall");
             if (pb != null)
             {
+                WizardConfig.RestorePlaybook(pb);
                 GlobalsGUI.Current.Items.Add(pb);
             }
             if (pb != null && ((Playbook)pb).SupportsISO)

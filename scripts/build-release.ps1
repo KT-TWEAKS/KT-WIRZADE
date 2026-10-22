@@ -1,4 +1,4 @@
-param([string]$Version = '1.0.1')
+param([string]$Version = '1.0.2')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path $PSScriptRoot -Parent
 Push-Location $projectRoot
@@ -50,11 +50,18 @@ try {
 
     $digest = (Get-FileHash -LiteralPath $singleExe -Algorithm SHA256).Hash.ToLowerInvariant()
     $manifestPath = Join-Path $artifactRoot "KT-WIRZADE-v$Version-manifest.json"
+    $sourceCommit = (& git rev-parse HEAD).Trim()
+    $workingTreeChanges = @(& git status --short)
     [ordered]@{
         version = $Version
-        commit = (& git rev-parse HEAD)
+        sourceCommit = $sourceCommit
+        workingTreeDirty = ($workingTreeChanges.Count -gt 0)
+        workingTreeChanges = $workingTreeChanges
         file = [ordered]@{ name=(Split-Path $singleExe -Leaf); size=(Get-Item $singleExe).Length; sha256=$digest }
-        embeddedRuntime = $true
+        singleExecutable = $true
+        embeddedApplicationDependencies = $true
+        targetFramework = '.NET Framework 4.8 (precisa estar instalado no Windows)'
+        runtimeEmbedded = $false
     } | ConvertTo-Json -Depth 4 | Set-Content -Encoding utf8 $manifestPath
     "$digest  $(Split-Path $singleExe -Leaf)" | Set-Content -Encoding ascii (Join-Path $artifactRoot 'SHA256SUMS.txt')
     Write-Host "Single-file release verified: $singleExe"

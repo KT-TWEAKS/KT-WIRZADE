@@ -217,7 +217,20 @@ namespace KTWirzade.GUI.Utils
 
             bool enabled = backdropType != BackdropType.None;
             if (enabled)
-                window.Background = Brushes.Transparent;
+            {
+                if (IsSystemTransparencyDisabled())
+                {
+                    // With "Transparency effects" off, Windows silently ignores the
+                    // acrylic accent and the transparent WPF window ends as a blank
+                    // sheet with a stray tint. Serve the themed opaque surface.
+                    window.SetResourceReference(System.Windows.Controls.Control.BackgroundProperty, "FakeBackgroundBrush");
+                    enabled = false;
+                }
+                else
+                {
+                    window.Background = Brushes.Transparent;
+                }
+            }
 
             var policy = new AccentPolicy
             {
@@ -249,6 +262,44 @@ namespace KTWirzade.GUI.Utils
             finally
             {
                 Marshal.FreeHGlobal(policyPointer);
+            }
+        }
+
+        // "Transparency effects" toggle in Windows 10 Settings > Personalization >
+        // Colors (HKCU\...\Themes\Personalize\EnableTransparency). 0 = disabled,
+        // which makes every acrylic accent request a no-op system-wide.
+        private static bool IsSystemTransparencyDisabled()
+        {
+            try
+            {
+                const string personalizeKey =
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize";
+                RegistryKey key = Registry.CurrentUser.OpenSubKey(personalizeKey, writable: false);
+                if (key == null)
+                {
+                    return false;
+                }
+                using (key)
+                {
+                    if (key.GetValue("EnableTransparency", 1) is int value)
+                    {
+                        return value == 0;
+                    }
+                    try
+                    {
+                        return Convert.ToInt32(key.GetValue("EnableTransparency", 1), System.Globalization.CultureInfo.InvariantCulture) == 0;
+                    }
+                    catch (Exception)
+                    {
+                        return false;
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Unreadable registry: assume transparency is available rather than
+                // degrading every window for a configuration we could not confirm.
+                return false;
             }
         }
     }

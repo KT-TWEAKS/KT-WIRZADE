@@ -115,7 +115,7 @@ namespace KTWirzade.GUI.Views
             FocusWindow(this, new EventArgs());
             if (NextText.Text == "Next")
             {
-                GetNextPage(GetCurrentPage());
+                _ = GetNextPage(GetCurrentPage());
                 return;
             }
             if (string.IsNullOrEmpty(AdminPasswordBox.Password) && ((Playbook)GlobalsGUI.Current.ISO.SelectedPlaybook).Requirements.Contains((Requirement)8))
@@ -235,12 +235,12 @@ namespace KTWirzade.GUI.Views
                 Page page = GetCurrentPage();
                 if (!IsLastPage(page))
                 {
-                    GetNextPage(page);
+                    _ = GetNextPage(page);
                 }
             }
         }
 
-        private async void GetNextPage(Page page)
+        private async Task GetNextPage(Page page)
         {
             switch (page)
             {
@@ -276,7 +276,8 @@ namespace KTWirzade.GUI.Views
                 UsernameContent.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0.5, new Duration(TimeSpan.FromMilliseconds(200.0))));
                 ModelNextButton.IsEnabled = false;
                 ModelCancelButton.IsEnabled = false;
-                await Task.Delay(3000);
+                // Short cosmetic pause (was a 3s lock of the Next button).
+                await Task.Delay(300);
                 ModelNextButton.IsEnabled = true;
                 ModelCancelButton.IsEnabled = true;
                 LoadContainer.Visibility = Visibility.Collapsed;
@@ -325,17 +326,14 @@ namespace KTWirzade.GUI.Views
         {
             if (page == Page.Username)
             {
-                PasswordBox.FocusVisualStyle = null;
                 PasswordBox.Focus();
             }
             if (page == Page.Password)
             {
-                PasswordBox.FocusVisualStyle = null;
                 PasswordBox.Focus();
             }
             if (page == Page.AdminPassword)
             {
-                AdminPasswordBox.FocusVisualStyle = null;
                 AdminPasswordBox.Focus();
             }
         }

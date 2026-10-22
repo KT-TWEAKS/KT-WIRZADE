@@ -17,6 +17,11 @@ using System.Drawing;
 
 namespace KTWirzade.GUI.Windows
 {
+    /// <summary>
+    /// NOTE: UAC consent/prompt replica. Not instantiated anywhere in the app
+    /// (dead code kept for reference) - do not theme or "fix" without
+    /// confirming a caller first.
+    /// </summary>
     public partial class UACBox : Window
     {
         public const string VERIFIEDPUBLISHER = "Verified publisher";

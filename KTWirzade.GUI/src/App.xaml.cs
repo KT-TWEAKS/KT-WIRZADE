@@ -23,6 +23,7 @@ using System.Windows.Threading;
 using KTWirzade.GUI.Utils;
 using KTWirzade.GUI.Windows;
 using KTWirzade.Shared;
+using KTWirzade.Shared.Updates;
 using static Core.Log;
 
 namespace KTWirzade.GUI
@@ -36,13 +37,39 @@ namespace KTWirzade.GUI
 
         private static Mutex _ktWirzadeMutex;
 
+        private static FileSystemWatcher _playbookWatcher;
+
+        private static Timer _playbookReconcileTimer;
+
+        private static int _isReconcilingPlaybooks;
+
         public static readonly SemaphoreSlim AdminNodeLaunched = new SemaphoreSlim(0);
 
         private static int unhandledCount = 0;
 
+        private static DateTime _lastUnhandledException = DateTime.MinValue;
+
         public static event EventHandler PreparationCompleted;
 
         public static event EventHandler DispatchCompleted;
+
+        public static event EventHandler PlaybookInventoryChanged;
+
+        // Startup update check: run at most once per session, prompt at most once.
+        private static bool _updateCheckStarted;
+
+        private static bool _updatePromptShown;
+
+        private static EventHandler _updatePreparationCompletedHandler;
+
+        private static DispatcherTimer _updatePromptTimer;
+
+        private static int _updatePromptWaitTicks;
+
+        internal static void NotifyPlaybookInventoryChanged()
+        {
+            PlaybookInventoryChanged?.Invoke(null, EventArgs.Empty);
+        }
 
         private static async System.Threading.Tasks.Task ParseArguments(string[] args)
         {
@@ -79,7 +106,7 @@ namespace KTWirzade.GUI
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Command line error: " + ex.Message);
+                KTWirzade.GUI.MessageBox.Show(null, "Command line error: " + ex.Message, "KT WIRZADE", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Error, null, null);
                 Environment.Exit(1);
             }
             if (argumentsData is CommandLine.Interprocess interprocessData)
@@ -201,6 +228,10 @@ namespace KTWirzade.GUI
             catch { /* older .NET — fallback to system default */ }
 
             ConfigureCulture();
+            // Apply the real (registry-detected) theme synchronously before any Window is
+            // constructed; otherwise the first paint flashes the hardcoded Light theme from
+            // App.xaml and flips one dispatcher pass later.
+            ThemeWatcher.ApplyThemeNow();
             PreflightCheckFramework();
             // Register resolution before the first window is created. The two UI assemblies
             // are unpacked to the private runtime directory so a single downloaded EXE does
@@ -257,47 +288,49 @@ namespace KTWirzade.GUI
                 DeCrippleDefender = true;
             }
             ThemeWatcher.WatchTheme();
+            // initiallyOwned must be false: with true (the old behavior) WaitOne(0) always
+            // succeeded for the creating process, so the duplicate-instance check never fired.
+            bool mutexAcquired = false;
+            bool mutexGuardFailed = false;
             try
             {
-                // initiallyOwned must be false: with true (the old behavior) WaitOne(0) always
-                // succeeded for the creating process, so the duplicate-instance check never fired.
                 _ktWirzadeMutex = new Mutex(initiallyOwned: false, "KTWirzade.Client");
-                bool acquired;
                 try
                 {
-                    acquired = _ktWirzadeMutex.WaitOne(0);
+                    mutexAcquired = _ktWirzadeMutex.WaitOne(0);
                 }
                 catch (System.Threading.AbandonedMutexException)
                 {
                     // A previous instance crashed without releasing it; we own it now.
-                    acquired = true;
-                }
-                if (!acquired)
-                {
-                    KTWirzade.GUI.MessageBox.Show(null, "Outra instância do KT WIRZADE já está aberta.", "KT WIRZADE", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Warning, null, null);
-                    Environment.Exit(-1);
-                }
-                else
-                {
-                    //try
-                    //{
-                    //    PipeSecurity pipeSecurity = new PipeSecurity();
-                    //    PipeAccessRule adminRule = new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), PipeAccessRights.ReadWrite | PipeAccessRights.Synchronize, AccessControlType.Allow);
-                    //    pipeSecurity.SetAccessRule(adminRule);
-                    //    using (new NamedPipeServerStream("KTWirzade-User-Receiver", PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, pipeSecurity))
-                    //    {
-                    //    }
-                    //}
-                    //catch (Exception)
-                    //{
-                    //    KTWirzade.GUI.MessageBox.Show(null, "Another instance of KT WIRZADE Beta was detected, a new instance will not be started.", "Warning", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Warning, null, null);
-                    //    Environment.Exit(-1);
-                    //}
+                    mutexAcquired = true;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                // Only the mutex creation/WaitOne is protected: an unexpected failure here
+                // disables the guard, it must not silently swallow the whole check.
+                mutexGuardFailed = true;
+                Log.EnqueueExceptionSafe(ex, "Single-instance mutex could not be created or queried.", Array.Empty<(string, object)>());
             }
+            if (!mutexGuardFailed && !mutexAcquired)
+            {
+                KTWirzade.GUI.MessageBox.Show(null, "Outra instância do KT WIRZADE já está aberta.", "KT WIRZADE", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Warning, null, null);
+                Environment.Exit(-1);
+            }
+            //try
+            //{
+            //    PipeSecurity pipeSecurity = new PipeSecurity();
+            //    PipeAccessRule adminRule = new PipeAccessRule(new SecurityIdentifier(WellKnownSidType.WorldSid, null), PipeAccessRights.ReadWrite | PipeAccessRights.Synchronize, AccessControlType.Allow);
+            //    pipeSecurity.SetAccessRule(adminRule);
+            //    using (new NamedPipeServerStream("KTWirzade-User-Receiver", PipeDirection.In, 1, PipeTransmissionMode.Byte, PipeOptions.None, 0, 0, pipeSecurity))
+            //    {
+            //    }
+            //}
+            //catch (Exception)
+            //{
+            //    KTWirzade.GUI.MessageBox.Show(null, "Another instance of KT WIRZADE Beta was detected, a new instance will not be started.", "Warning", KTWirzade.GUI.MessageBoxButton.OK, KTWirzade.GUI.MessageBoxImage.Warning, null, null);
+            //    Environment.Exit(-1);
+            //}
             try
             {
                 // Extracts every embedded runtime dependency (KTWirzade.GUI.Resources.*)
@@ -319,7 +352,6 @@ namespace KTWirzade.GUI
 
         private async System.Threading.Tasks.Task Extracted()
         {
-            base.DispatcherUnhandledException -= UnhandledExceptionShowMessageBox;
             base.DispatcherUnhandledException += App_DispatcherUnhandledException;
             PreflightLoadUiAssemblies();
             Log.MetadataSource = (ILogMetadata)new WizardMetadata();
@@ -403,6 +435,7 @@ namespace KTWirzade.GUI
             InterLink.InitializeSession();
             System.Threading.Tasks.Task initializeTask = InterLink.InitializeConnection((Level)2, (Mode)2, -1);
             WizardConfig.GetConfig();
+            string pbDir = Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks");
             foreach (ISO item in GlobalsGUI.Current.Items.OfType<ISO>().ToList())
             {
                 if (!File.Exists(item.FilePath))
@@ -410,6 +443,14 @@ namespace KTWirzade.GUI
                     GlobalsGUI.Current.Items.Remove(item);
                 }
             }
+            foreach (PlaybookGUI item in GlobalsGUI.Current.Items.OfType<PlaybookGUI>().ToList())
+            {
+                if (WizardConfig.IsPlaybookHidden(item))
+                {
+                    GlobalsGUI.Current.Items.Remove(item);
+                }
+            }
+            List<PlaybookGUI> startupPlaybooks = GlobalsGUI.Current.Items.OfType<PlaybookGUI>().ToList();
             IDragItem firstItem = GlobalsGUI.Current.Items.FirstOrDefault();
             if (firstItem is PlaybookGUI firstPb)
             {
@@ -462,45 +503,7 @@ namespace KTWirzade.GUI
                 WizardConfig.Current.Items = new List<WizardConfig.Item>();
                 WizardConfig.Current.LastSelectedItem.Set(null);
             }
-            System.Threading.Tasks.Task prepareTask = PrepareItems(Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks"));
-            // Remove playbooks whose .apbx files no longer exist (deleted externally)
-            string pbDir = Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks");
-            foreach (PlaybookGUI pb in GlobalsGUI.Current.Items.OfType<PlaybookGUI>().ToList())
-            {
-                string apbxPath = Path.Combine(pbDir, pb.FileNameWithoutExtension + ".apbx");
-                if (!File.Exists(apbxPath))
-                {
-                    Current.Dispatcher.Invoke(() => GlobalsGUI.Current.Items.Remove(pb));
-                }
-            }
-            // Watch for externally deleted .apbx files
-            try
-            {
-                if (Directory.Exists(pbDir))
-                {
-                    var apbxWatcher = new FileSystemWatcher(pbDir, "*.apbx")
-                    {
-                        NotifyFilter = NotifyFilters.FileName,
-                        EnableRaisingEvents = true
-                    };
-                    apbxWatcher.Deleted += (sender, args) =>
-                    {
-                        var pb = GlobalsGUI.Current.Items.OfType<PlaybookGUI>().FirstOrDefault(x => pbDir + "\\" + x.FileNameWithoutExtension + ".apbx" == args.FullPath || string.Equals(x.FileNameWithoutExtension + ".apbx", args.Name, StringComparison.OrdinalIgnoreCase));
-                        if (pb != null)
-                        {
-                            Current.Dispatcher.Invoke(() => GlobalsGUI.Current.Items.Remove(pb));
-                        }
-                    };
-                    apbxWatcher.Created += (sender, args) =>
-                    {
-                        // Optionally reload if a new .apbx appears
-                    };
-                }
-            }
-            catch (Exception)
-            {
-                // Ignore watcher setup failures
-            }
+            System.Threading.Tasks.Task prepareTask = PrepareItems(pbDir);
             try
             {
                 InterLink.LaunchNode((Func<string, int>)((string arguments) => Process.Start(new ProcessStartInfo(Win32.ProcessEx.GetCurrentProcessFileLocation(), arguments)
@@ -535,6 +538,9 @@ namespace KTWirzade.GUI
             new WelcomeWindow().Show();
             await initializeTask;
             await prepareTask;
+            RecordMissingVisiblePlaybooks(startupPlaybooks, pbDir, "Arquivo APBX removido do computador");
+            NotifyPlaybookInventoryChanged();
+            ConfigurePlaybookWatcher(pbDir);
             App.DispatchCompleted?.Invoke(null, new EventArgs());
             await CheckForWizardUpdate();
             App.PreparationCompleted?.Invoke(null, new EventArgs());
@@ -573,34 +579,250 @@ namespace KTWirzade.GUI
 
         private static async System.Threading.Tasks.Task CheckForWizardUpdate()
         {
-            //await System.Threading.Tasks.Task.Run(async delegate
-            //{
-            //    Thread.Sleep(1000);
-            //    try
-            //    {
-            //        if (WizardConfig.Current.PendingUpdate.Get() == null && (int)DateTime.Now.Subtract(WizardConfig.Current.LastChecked.Get()).TotalMinutes > 30)
-            //        {
-            //            await new Updater().CheckForWizardUpdates(GlobalsGUI.Current.WizardPlaybook);
-            //            if (GlobalsGUI.Current.WizardPlaybook.PendingUpdate != null)
-            //            {
-            //                WizardConfig.Current.PendingUpdate.Set(GlobalsGUI.Current.WizardPlaybook.PendingUpdate);
-            //            }
-            //            GlobalsGUI.Current.WizardPlaybook.LastChecked = DateTime.Now;
-            //            WizardConfig.Current.LastChecked.Set(DateTime.Now);
-            //            GlobalsGUI.Current.WizardPlaybook.UpdatesChecked = true;
-            //        }
-            //        else if ((int)DateTime.Now.Subtract(WizardConfig.Current.LastChecked.Get()).TotalMinutes <= 30)
-            //        {
-            //            GlobalsGUI.Current.WizardPlaybook.UpdatesChecked = true;
-            //        }
-            //    }
-            //    catch (Exception)
-            //    {
-            //    }
-            //});
+            // Run at most once per session, no matter how many callers await this.
+            if (_updateCheckStarted) return;
+            _updateCheckStarted = true;
+
+            try
+            {
+                if (!WizardConfig.GetAutoCheckEnabled()) return;
+
+                // Inject persisted settings (Shared cannot reference WizardConfig directly).
+                UpdateChecker.UpdateChannel = WizardConfig.GetUpdateChannel();
+                UpdateChecker.SkippedVersion = WizardConfig.GetSkippedVersion();
+
+                UpdateInfo info;
+                using (CancellationTokenSource timeout = new CancellationTokenSource(TimeSpan.FromSeconds(20)))
+                {
+                    // Off the UI thread; the token bounds the whole check (retries
+                    // included) so startup can never hang on the network.
+                    info = await System.Threading.Tasks.Task.Run(() => UpdateChecker.CheckForUpdatesAsync(timeout.Token));
+                }
+
+                if (info == null) return;
+
+                if (!string.IsNullOrEmpty(info.Error))
+                {
+                    // Silent at startup: log the reason and move on, never a MessageBox.
+                    Log.EnqueueSafe(LogType.Warning, "Startup update check failed: " + info.Error, null, Array.Empty<(string, object)>());
+                    return;
+                }
+
+                // Only prompt when there really is a NEW, non-ignored update.
+                if (info.Skipped || !info.UpdateAvailable) return;
+
+                ShowUpdatePromptWhenReady(info);
+            }
+            catch (Exception ex)
+            {
+                // Failures here must never affect startup: silent but logged.
+                Log.EnqueueExceptionSafe(ex, "Startup update check failed.", Array.Empty<(string, object)>());
+            }
         }
 
-        private static async System.Threading.Tasks.Task PrepareItems(string pbDir)
+        /// <summary>
+        /// Prompts once the main window exists so the dialog never steals focus from
+        /// the Welcome flow. PreparationCompleted (raised right after the check above
+        /// returns) is the earliest reliable signal; from there a bounded watcher waits
+        /// for the user to actually reach the main window.
+        /// </summary>
+        private static void ShowUpdatePromptWhenReady(UpdateInfo info)
+        {
+            if (_updatePromptShown) return;
+
+            Window owner = FindUpdatePromptOwner();
+            if (owner != null)
+            {
+                ShowUpdatePrompt(info, owner);
+                return;
+            }
+
+            if (_updatePreparationCompletedHandler != null) return;
+            _updatePreparationCompletedHandler = (s, e) =>
+            {
+                EventHandler handler = _updatePreparationCompletedHandler;
+                _updatePreparationCompletedHandler = null;
+                if (handler != null) PreparationCompleted -= handler;
+                TryShowUpdatePromptAfterPreparation(info);
+            };
+            PreparationCompleted += _updatePreparationCompletedHandler;
+        }
+
+        private static void TryShowUpdatePromptAfterPreparation(UpdateInfo info)
+        {
+            if (_updatePromptShown) return;
+
+            Window owner = FindUpdatePromptOwner();
+            if (owner != null)
+            {
+                ShowUpdatePrompt(info, owner);
+                return;
+            }
+
+            // Still on the Welcome window: watch (bounded) for the main window
+            // instead of forcing a window over the current flow.
+            if (_updatePromptTimer != null) return;
+            _updatePromptWaitTicks = 0;
+            _updatePromptTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+            _updatePromptTimer.Tick += (s, e) =>
+            {
+                if (_updatePromptShown)
+                {
+                    StopUpdatePromptTimer();
+                    return;
+                }
+
+                Window ready = FindUpdatePromptOwner();
+                if (ready != null)
+                {
+                    StopUpdatePromptTimer();
+                    ShowUpdatePrompt(info, ready);
+                    return;
+                }
+
+                if (++_updatePromptWaitTicks >= 600)
+                {
+                    // Ten minutes without a main window: give up silently.
+                    StopUpdatePromptTimer();
+                }
+            };
+            _updatePromptTimer.Start();
+        }
+
+        private static void StopUpdatePromptTimer()
+        {
+            DispatcherTimer timer = _updatePromptTimer;
+            _updatePromptTimer = null;
+            if (timer == null) return;
+            try
+            {
+                timer.Stop();
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        private static Window FindUpdatePromptOwner()
+        {
+            try
+            {
+                foreach (Window window in Current.Windows)
+                {
+                    KTWirzade.GUI.MainWindow main = window as KTWirzade.GUI.MainWindow;
+                    if (main != null && main.IsLoaded && main.IsVisible) return main;
+                }
+            }
+            catch (Exception)
+            {
+            }
+            return null;
+        }
+
+        private static void ShowUpdatePrompt(UpdateInfo info, Window owner)
+        {
+            if (_updatePromptShown) return;
+            _updatePromptShown = true;
+            try
+            {
+                // Route through the main window's singleton when available so this
+                // prompt and the Updates button share one dialog; preloaded info
+                // avoids a second GitHub request right after the startup check.
+                if (owner is KTWirzade.GUI.MainWindow main)
+                {
+                    main.ShowUpdatesDialog(info);
+                    return;
+                }
+                UpdateCheckDialog dialog = new UpdateCheckDialog(info);
+                dialog.Show(owner);
+            }
+            catch (Exception ex)
+            {
+                // Keep _updatePromptShown set: a failed prompt must not loop.
+                Log.EnqueueExceptionSafe(ex, "Could not open the startup update prompt.", Array.Empty<(string, object)>());
+            }
+        }
+
+        private static void ConfigurePlaybookWatcher(string pbDir)
+        {
+            try
+            {
+                Directory.CreateDirectory(pbDir);
+                _playbookReconcileTimer = new Timer(_ => DispatchPlaybookReconciliation(), null, Timeout.Infinite, Timeout.Infinite);
+                _playbookWatcher = new FileSystemWatcher(pbDir, "*.apbx")
+                {
+                    IncludeSubdirectories = false,
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size,
+                    EnableRaisingEvents = false
+                };
+                _playbookWatcher.Created += OnPlaybookFileChanged;
+                _playbookWatcher.Changed += OnPlaybookFileChanged;
+                _playbookWatcher.Deleted += OnPlaybookFileChanged;
+                _playbookWatcher.Renamed += OnPlaybookFileRenamed;
+                _playbookWatcher.Error += (sender, args) =>
+                {
+                    Log.EnqueueExceptionSafe(args.GetException(), "APBX folder watcher failed.", Array.Empty<(string, object)>());
+                    SchedulePlaybookReconciliation();
+                };
+                _playbookWatcher.EnableRaisingEvents = true;
+                SchedulePlaybookReconciliation();
+            }
+            catch (Exception ex)
+            {
+                Log.EnqueueExceptionSafe(ex, "Could not monitor the APBX folder.", new (string, object)[1] { ("Path", pbDir) });
+            }
+        }
+
+        private static void OnPlaybookFileChanged(object sender, FileSystemEventArgs args) => SchedulePlaybookReconciliation();
+
+        private static void OnPlaybookFileRenamed(object sender, RenamedEventArgs args) => SchedulePlaybookReconciliation();
+
+        private static void SchedulePlaybookReconciliation()
+        {
+            try
+            {
+                _playbookReconcileTimer?.Change(400, Timeout.Infinite);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
+        }
+
+        private static void DispatchPlaybookReconciliation()
+        {
+            App app = System.Windows.Application.Current as App;
+            if (app == null || app.Dispatcher.HasShutdownStarted || app.Dispatcher.HasShutdownFinished) return;
+            app.Dispatcher.BeginInvoke(new System.Action(async () =>
+            {
+                if (Interlocked.CompareExchange(ref _isReconcilingPlaybooks, 1, 0) != 0)
+                {
+                    SchedulePlaybookReconciliation();
+                    return;
+                }
+
+                try
+                {
+                    string pbDir = Environment.ExpandEnvironmentVariables("%PROGRAMDATA%\\KTWirzade\\Playbooks");
+                    if (!Directory.Exists(pbDir)) return;
+                    List<PlaybookGUI> previousPlaybooks = GlobalsGUI.Current.Items.OfType<PlaybookGUI>().ToList();
+                    await PrepareItems(pbDir, reloadIsoItems: false);
+                    RecordMissingVisiblePlaybooks(previousPlaybooks, pbDir, "Arquivo APBX removido do computador");
+                    WizardConfig.RecordMissingHiddenPlaybooks(pbDir);
+                    DeselectMissingSelectedPlaybook(pbDir);
+                    NotifyPlaybookInventoryChanged();
+                }
+                catch (Exception ex)
+                {
+                    Log.EnqueueExceptionSafe(ex, "Could not synchronize APBX files with the interface.", Array.Empty<(string, object)>());
+                }
+                finally
+                {
+                    Interlocked.Exchange(ref _isReconcilingPlaybooks, 0);
+                }
+            }));
+        }
+
+        private static async System.Threading.Tasks.Task PrepareItems(string pbDir, bool reloadIsoItems = true)
         {
             List<Task<IDragItem>> tasks = new List<Task<IDragItem>>();
             List<string> apbxFiles = (Directory.Exists(pbDir) ? Directory.EnumerateFiles(pbDir, "*.apbx").ToList() : new List<string>());
@@ -611,7 +833,7 @@ namespace KTWirzade.GUI
             {
                 tasks.Add(LoadItemBounded(async () => await LoadPlaybook(apbx), loadGate));
             }
-            foreach (IDragItem iso in GlobalsGUI.Current.Items.Where((IDragItem x) => x.FilePath != null))
+            foreach (IDragItem iso in reloadIsoItems ? GlobalsGUI.Current.Items.Where((IDragItem x) => x.FilePath != null) : Enumerable.Empty<IDragItem>())
             {
                 var isoPath = iso.FilePath;
                 tasks.Add(LoadItemBounded(async () => await LoadISO(isoPath), loadGate));
@@ -634,6 +856,17 @@ namespace KTWirzade.GUI
                 PlaybookGUI pb = item as PlaybookGUI;
                 if (pb != null)
                 {
+                    if (WizardConfig.IsPlaybookHidden(pb))
+                    {
+                        WizardConfig.RefreshHiddenPlaybook(pb, Path.GetFileName(apbxFiles[i]));
+                        int hiddenIndex = GlobalsGUI.Current.Items.FindPlaybookIndex(x =>
+                            AreSamePlaybook(x, pb) || string.Equals(x.FileNameWithoutExtension, pb.FileNameWithoutExtension, StringComparison.OrdinalIgnoreCase));
+                        if (hiddenIndex >= 0)
+                        {
+                            GlobalsGUI.Current.Items.RemoveAt(hiddenIndex);
+                        }
+                        continue;
+                    }
                     if (pb.FileNameWithoutExtension + ".apbx" != Path.GetFileName(apbxFiles[i]))
                     {
                         if (File.Exists(Path.Combine(pbDir, pb.FileNameWithoutExtension + ".apbx")))
@@ -648,13 +881,16 @@ namespace KTWirzade.GUI
                         pb.VerificationTask = System.Threading.Tasks.Task.Run(() => pb.GetStatus());
                     }
                     pb.Checked = true;
-                    int index = GlobalsGUI.Current.Items.FindPlaybookIndex((PlaybookGUI x) => x.FileNameWithoutExtension == pb.FileNameWithoutExtension);
+                    int index = GlobalsGUI.Current.Items.FindPlaybookIndex((PlaybookGUI x) =>
+                        string.Equals(x.FileNameWithoutExtension, pb.FileNameWithoutExtension, StringComparison.OrdinalIgnoreCase) || AreSamePlaybook(x, pb));
                     if (index == -1)
                     {
                         GlobalsGUI.Current.Items.Add(pb);
                         continue;
                     }
-                    pb.Selected = GlobalsGUI.Current.Playbook != null && GlobalsGUI.Current.Playbook.FileNameWithoutExtension == pb.FileNameWithoutExtension;
+                    pb.Selected = GlobalsGUI.Current.Playbook != null &&
+                        (string.Equals(GlobalsGUI.Current.Playbook.FileNameWithoutExtension, pb.FileNameWithoutExtension, StringComparison.OrdinalIgnoreCase) ||
+                         AreSamePlaybook(GlobalsGUI.Current.Playbook, pb));
                     pb.SidebarInitialHeight = (pb.Selected ? 37 : 0);
                     GlobalsGUI.Current.Items[index] = pb;
                     if (pb.Selected)
@@ -683,6 +919,69 @@ namespace KTWirzade.GUI
                     GlobalsGUI.Current.ISO = iso2;
                 }
             }
+            WizardConfig.RecordMissingHiddenPlaybooks(pbDir);
+        }
+
+        private static void RecordMissingVisiblePlaybooks(IEnumerable<PlaybookGUI> previousPlaybooks, string pbDir, string reason)
+        {
+            HashSet<string> files = new HashSet<string>(
+                Directory.Exists(pbDir)
+                    ? Directory.EnumerateFiles(pbDir, "*.apbx").Select(Path.GetFileName)
+                    : Enumerable.Empty<string>(),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (PlaybookGUI previous in previousPlaybooks ?? Enumerable.Empty<PlaybookGUI>())
+            {
+                // A file renamed in Explorer is normalized by PrepareItems. Match by
+                // identity before deciding that the old filename was deleted.
+                bool stillInstalled = GlobalsGUI.Current.Items.OfType<PlaybookGUI>()
+                    .Any(current => !ReferenceEquals(current, previous) && AreSamePlaybook(current, previous));
+                string expectedFileName = previous.FileNameWithoutExtension + ".apbx";
+                if (stillInstalled || files.Contains(expectedFileName) || WizardConfig.IsPlaybookHidden(previous))
+                {
+                    continue;
+                }
+
+                WizardConfig.RecordPlaybookRemoved(previous, expectedFileName, reason);
+                GlobalsGUI.Current.Items.Remove(previous);
+            }
+        }
+
+        // The reconciliation removed playbooks whose .apbx file vanished; a still-active
+        // selection to one of them would let the wizard continue against a ghost and
+        // only fail at CLI launch (missing playbook path). Clear it up front.
+        private static void DeselectMissingSelectedPlaybook(string pbDir)
+        {
+            PlaybookGUI selected = GlobalsGUI.Current.Playbook;
+            if (selected == null || string.IsNullOrWhiteSpace(selected.FileNameWithoutExtension)) return;
+            string selectedFile = Path.Combine(pbDir, selected.FileNameWithoutExtension + ".apbx");
+            if (File.Exists(selectedFile)) return;
+
+            GlobalsGUI.Current.Playbook = null;
+            selected.Selected = false;
+            selected.SidebarInitialHeight = 0;
+            Log.EnqueueExceptionSafe(
+                new FileNotFoundException("O playbook selecionado ficou sem arquivo .apbx no computador.", selectedFile),
+                "Seleção cancelada automaticamente após remoção do APBX.",
+                new (string, object)[1] { ("Playbook", selected.Name ?? selected.FileNameWithoutExtension) });
+        }
+
+        private static bool AreSamePlaybook(PlaybookGUI left, PlaybookGUI right)
+        {
+            if (left == null || right == null) return false;
+            if (left.UniqueId.HasValue && right.UniqueId.HasValue)
+            {
+                return left.UniqueId.Value == right.UniqueId.Value;
+            }
+
+            if (string.IsNullOrWhiteSpace(left.Name) && string.IsNullOrWhiteSpace(left.Username) &&
+                string.IsNullOrWhiteSpace(right.Name) && string.IsNullOrWhiteSpace(right.Username))
+            {
+                return string.Equals(left.FileNameWithoutExtension, right.FileNameWithoutExtension, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return string.Equals(left.Name, right.Name, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(left.Username, right.Username, StringComparison.OrdinalIgnoreCase);
         }
 
         private static async Task<IDragItem> LoadItemBounded(Func<Task<IDragItem>> loader, SemaphoreSlim gate)
@@ -700,7 +999,6 @@ namespace KTWirzade.GUI
 
         private static async Task<PlaybookGUI> LoadPlaybook(string apbx)
         {
-            string tmpPath = Environment.ExpandEnvironmentVariables(Path.Combine("%TEMP%", Path.GetFileNameWithoutExtension(apbx) + "-" + new Random().Next(10000, 99999)));
             try
             {
                 PlaybookGUI pb = await System.Threading.Tasks.Task.Run(() => APBX.GetData(apbx));
@@ -711,18 +1009,6 @@ namespace KTWirzade.GUI
             }
             catch (Exception ex)
             {
-                Wrap.ExecuteSafe(delegate
-                {
-                    if (Directory.Exists(tmpPath))
-                    {
-                        Directory.Delete(tmpPath);
-                    }
-                    if (File.Exists(Path.GetFileNameWithoutExtension(apbx) + ".status"))
-                    {
-                        File.Delete(Path.GetFileNameWithoutExtension(apbx) + ".status");
-                    }
-                }, false, (LogOptions)null);
-                InterLink.EnqueueSafe((Expression<System.Action>)(() => RemovePlaybookAdmin(Path.GetFileName(apbx))), 5000, true);
                 Log.EnqueueExceptionSafe(ex, "Could not load a playbook.", new (string, object)[1] { ("Path", apbx) });
                 return null;
             }
@@ -841,24 +1127,27 @@ namespace KTWirzade.GUI
             return iso;
         }
 
-        private async void Process_Exit(object sender, EventArgs e)
+        private void Process_Exit(object sender, EventArgs e)
         {
             Application_Exit(sender);
         }
 
-        private async void Application_Exit(object sender, ExitEventArgs e = null)
+        private void Application_Exit(object sender, ExitEventArgs e = null)
         {
             WizardConfig.EndConfigThread();
-        }
-
-        private void UnhandledExceptionShowMessageBox(object sender, DispatcherUnhandledExceptionEventArgs e)
-        {
-            System.Windows.MessageBox.Show("Unexpected error: " + e.Exception);
         }
 
         private static void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
         {
             e.Handled = true;
+            // Burst counter: five benign errors minutes apart must not hard-kill the app.
+            // Only rapid-fire failures within the same window escalate to Environment.Exit.
+            DateTime now = DateTime.Now;
+            if ((now - _lastUnhandledException).TotalSeconds > 30)
+            {
+                unhandledCount = 0;
+            }
+            _lastUnhandledException = now;
             unhandledCount++;
             Log.EnqueueExceptionSafe((LogType)3, e.Exception, Array.Empty<(string, object)>());
             if (unhandledCount >= 5)
@@ -892,6 +1181,23 @@ namespace KTWirzade.GUI
                     System.Windows.MessageBox.Show("Please contact the KT WIRZADE team for assistance.\r\n\r\n" + e.Exception.ToString() + hint, "A critical error occurred", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Hand);
                 }
                 Environment.Exit(-1);
+            }
+            else
+            {
+                // Levels 1/3 (partner processes) previously swallowed the exception with no
+                // trace beyond the log entry; surface a fallback message instead of silently
+                // continuing as if nothing happened.
+                try
+                {
+                    System.Windows.MessageBox.Show(
+                        "KT WIRZADE hit an unexpected error:\r\n\r\n" + e.Exception.Message + Environment.NewLine + Environment.NewLine +
+                        "The error was written to the log. Please report it to the KT WIRZADE team.",
+                        "Unexpected error", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                }
+                catch (Exception)
+                {
+                    // No interactive session available for a message box; the log entry above remains.
+                }
             }
         }
 
@@ -1035,7 +1341,13 @@ namespace KTWirzade.GUI
                 candidate = (!candidate.EndsWith("Windows", StringComparison.OrdinalIgnoreCase) ? candidate + ".dll" : candidate + ".winmd");
             if (File.Exists(candidate))
             {
-                try { return Assembly.LoadFrom(candidate); } catch { }
+                try { return Assembly.LoadFrom(candidate); }
+                catch (Exception ex)
+                {
+                    // A bare catch here resurfaces later as an opaque BAML/NotImplemented error;
+                    // record which dependency failed to load from the runtime directory.
+                    Log.WriteExceptionSafe(ex, "Failed to load assembly '" + args.Name + "' from the runtime directory: " + candidate);
+                }
             }
 
             // 2) Try alongside the exe (same as non-single probing path)
@@ -1044,7 +1356,13 @@ namespace KTWirzade.GUI
             {
                 string exeCandidate = Path.Combine(exeDir, baseName + ".dll");
                 if (File.Exists(exeCandidate))
-                    try { return Assembly.LoadFrom(exeCandidate); } catch { }
+                {
+                    try { return Assembly.LoadFrom(exeCandidate); }
+                    catch (Exception ex)
+                    {
+                        Log.WriteExceptionSafe(ex, "Failed to load assembly '" + args.Name + "' from the exe directory: " + exeCandidate);
+                    }
+                }
             }
 
             return null;
@@ -1106,7 +1424,10 @@ namespace KTWirzade.GUI
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Log.WriteExceptionSafe(ex, "Could not extract the FluentIcons assemblies to the runtime directory.");
+            }
         }
     }
 }

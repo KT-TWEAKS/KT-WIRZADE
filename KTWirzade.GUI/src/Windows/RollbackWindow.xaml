@@ -19,7 +19,7 @@
     <DockPanel Name="RootWindow" Background="{DynamicResource AboutBrush}">
         <DockPanel Name="TitleBar" Dock="Top" MaxHeight="36">
             <Image Style="{StaticResource QualityImage}" Margin="7,7,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="16" Height="16" />
-            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,36" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
+            <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,36" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top" IsCancel="True" Click="CloseButton_Click" ToolTip="Fechar janela" />
             <TextBlock Name="TitleSpace" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,9.5,0,5" FontSize="12" LineStackingStrategy="BlockLineHeight" LineHeight="12" Text="Rollback" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
       </DockPanel>
         <Grid Margin="20,0,20,16">
@@ -117,6 +117,9 @@
                                             <DataTrigger Binding="{Binding IsReverted}" Value="True">
                                                 <Setter Property="Background" Value="{DynamicResource StatusSuccessSoftBrush}" />
                                             </DataTrigger>
+                                            <DataTrigger Binding="{Binding IsComplete}" Value="False">
+                                                <Setter Property="Background" Value="{DynamicResource StatusWarningSoftBrush}" />
+                                            </DataTrigger>
                                         </Style.Triggers>
                                     </Style>
                                 </Border.Style>
@@ -128,6 +131,9 @@
                                                 <DataTrigger Binding="{Binding IsReverted}" Value="True">
                                                     <Setter Property="Foreground" Value="{DynamicResource StatusSuccessBrush}" />
                                                 </DataTrigger>
+                                                <DataTrigger Binding="{Binding IsComplete}" Value="False">
+                                                    <Setter Property="Foreground" Value="{DynamicResource StatusWarningBrush}" />
+                                                </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </TextBlock.Style>
@@ -135,13 +141,21 @@
                             </Border>
                             <Button Grid.Column="4" Width="24" Height="24" Padding="0" HorizontalAlignment="Center" VerticalAlignment="Center"
                                     Style="{DynamicResource BasicButton}" Click="DeleteSession_Click" Cursor="Hand"
-                                    ToolTip="Excluir esta sessão (não reverte nada, apenas apaga o registro)">
+                                    ToolTip="Excluir esta sessão (não reverte nada, apenas apaga o registro)"
+                                    AutomationProperties.Name="Excluir sessão de rollback">
                                 <wpf:SymbolIcon Symbol="Dismiss" FontSize="10" />
                             </Button>
                         </Grid>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+                <Border Grid.Row="1" Name="EmptySessionsState" Visibility="Collapsed" Padding="20" Background="{DynamicResource FakeBackgroundBrush}" CornerRadius="6" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <wpf:SymbolIcon Symbol="ArrowUndo" FontSize="28" HorizontalAlignment="Center" TextBlock.Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.6" />
+                        <TextBlock Text="Nenhuma sessão de rollback disponível" FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Center" Margin="0,8,0,0" Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock Text="As sessões com alterações reversíveis aparecerão aqui." FontSize="10.5" HorizontalAlignment="Center" Margin="0,3,0,0" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
             </Grid>
 
             <Border Grid.Row="3" Margin="0,12,0,0" CornerRadius="8" Padding="12,10" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
@@ -156,27 +170,33 @@
                     </Grid.ColumnDefinitions>
 
                     <TextBlock Grid.Row="0" Grid.Column="0" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Text="Progresso do rollback" />
-                    <TextBlock Grid.Row="0" Grid.Column="1" Name="RollbackProgressLabel" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Text="0%" HorizontalAlignment="Right" />
+                    <TextBlock Grid.Row="0" Grid.Column="1" Name="RollbackProgressLabel" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Text="Selecione uma sessão" HorizontalAlignment="Right" />
 
-                    <ProgressBar Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Name="RollbackProgressBar" Height="12" Margin="0,8,0,0" Minimum="0" Maximum="100" Value="0" Foreground="{DynamicResource ProgressBarBrush}" Background="{DynamicResource StatusInfoSoftBrush}" />
+                    <controls:ProgressBarDeterminate Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="RollbackProgressBar" BarHeight="12" Margin="0,8,0,0" Maximum="100" Value="0" />
                 </Grid>
             </Border>
 
             <DockPanel Grid.Row="4" Margin="0,12,0,0">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <Button Name="RefreshButton" Padding="14,6" MinWidth="90" Style="{DynamicResource BasicButton}" Click="RefreshButton_Click" Cursor="Hand">
+                    <Button Name="RefreshButton" Padding="14,6" MinWidth="90" Style="{DynamicResource BasicButton}" Click="RefreshButton_Click" Cursor="Hand" ToolTip="Busca sessões de rollback salvas no computador">
                         <StackPanel Orientation="Horizontal">
                             <wpf:SymbolIcon Symbol="ArrowSync" FontSize="11" Margin="0,0,6,0" />
                             <TextBlock Text="Atualizar" FontSize="11" />
                        </StackPanel>
                    </Button>
-                    <Button Name="ClearOldButton" Margin="8,0,0,0" Padding="14,6" MinWidth="110" Style="{DynamicResource BasicButton}" Click="ClearOldButton_Click" Cursor="Hand">
+                    <Button Name="OpenSessionFolderButton" Margin="8,0,0,0" Padding="14,6" MinWidth="105" Style="{DynamicResource BasicButton}" Click="OpenSessionFolderButton_Click" Cursor="Hand" IsEnabled="False" ToolTip="Abre a pasta da sessão selecionada (logs e backups) no Explorador de Arquivos">
+                        <StackPanel Orientation="Horizontal">
+                            <wpf:SymbolIcon Symbol="Folder" FontSize="11" Margin="0,0,6,0" />
+                            <TextBlock Text="Abrir pasta" FontSize="11" />
+                       </StackPanel>
+                   </Button>
+                    <Button Name="ClearOldButton" Margin="8,0,0,0" Padding="14,6" MinWidth="110" Style="{DynamicResource BasicButton}" Click="ClearOldButton_Click" Cursor="Hand" ToolTip="Remove sessões antigas concluídas (mantém as recentes)">
                         <StackPanel Orientation="Horizontal">
                             <wpf:SymbolIcon Symbol="Delete" FontSize="11" Margin="0,0,6,0" />
                             <TextBlock Text="Limpar antigas" FontSize="11" />
                        </StackPanel>
                    </Button>
-                    <Button Name="ClearAllButton" Margin="8,0,0,0" Padding="14,6" MinWidth="100" Style="{DynamicResource BasicButton}" Click="ClearAllButton_Click" Cursor="Hand">
+                    <Button Name="ClearAllButton" Margin="8,0,0,0" Padding="14,6" MinWidth="100" Style="{DynamicResource BasicButton}" Click="ClearAllButton_Click" Cursor="Hand" ToolTip="Remove todas as sessões de rollback do histórico">
                         <StackPanel Orientation="Horizontal">
                             <wpf:SymbolIcon Symbol="Dismiss" FontSize="11" Margin="0,0,6,0" />
                             <TextBlock Text="Limpar tudo" FontSize="11" />
@@ -186,10 +206,10 @@
                 <TextBlock Name="StatusText" VerticalAlignment="Center" HorizontalAlignment="Right" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" Text="0 sessões encontradas" />
            </DockPanel>
 
-            <Button Grid.Row="5" Name="RollbackActionButton" Margin="0,12,0,0" Padding="14,8" MinWidth="180" Height="34" Style="{DynamicResource BlueButton}" Click="RollbackActionButton_Click" Cursor="Hand" HorizontalAlignment="Center">
+            <Button Grid.Row="5" Name="RollbackActionButton" Margin="0,12,0,0" Padding="14,8" MinWidth="180" Height="34" Style="{DynamicResource BlueButton}" IsDefault="True" Click="RollbackActionButton_Click" Cursor="Hand" HorizontalAlignment="Center" IsEnabled="False">
                 <StackPanel Orientation="Horizontal">
                     <wpf:SymbolIcon Symbol="ArrowUndo" FontSize="13" Foreground="White" Margin="0,0,8,0" />
-                    <TextBlock Text="Reverter Selecionado" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                    <TextBlock Name="RollbackActionText" Text="Reverter Selecionado" FontSize="13" FontWeight="SemiBold" Foreground="White" />
                </StackPanel>
            </Button>
        </Grid>

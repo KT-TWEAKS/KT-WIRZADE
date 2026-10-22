@@ -1172,7 +1172,7 @@
                                 </Shape.Fill>
                             </Rectangle>
                             <Rectangle Name="DragBoxRect" StrokeDashArray="6.5" Stroke="#979797" StrokeThickness="0.7" RadiusX="10" RadiusY="10" />
-                            <TextBlock Name="DragBoxText" Foreground="#a0a0a0" HorizontalAlignment="Center" FontSize="11" LineStackingStrategy="BlockLineHeight" LineHeight="13" VerticalAlignment="Center" TextAlignment="Center" Text="Drag and drop .apbx&#xD;&#xA;or .iso file" />
+                            <TextBlock Name="DragBoxText" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" FontSize="11" LineStackingStrategy="BlockLineHeight" LineHeight="13" VerticalAlignment="Center" TextAlignment="Center" Text="Drag and drop .apbx&#xD;&#xA;or .iso file" />
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -1257,8 +1257,8 @@
                                 </Shape.Fill>
                             </Rectangle>
                             <Rectangle Name="DragBoxRect" StrokeDashArray="6.5" Stroke="#979797" StrokeThickness="0.7" RadiusX="10" RadiusY="10" />
-                            <TextBlock Name="DragBoxText" Margin="0,18,0,0" Foreground="#888888" HorizontalAlignment="Center" FontSize="11" LineStackingStrategy="BlockLineHeight" LineHeight="13" VerticalAlignment="Top" TextAlignment="Center" Text="Drag and drop .apbx&#xD;&#xA;or .iso file" />
-                            <TextBlock Name="DragBoxText2" Margin="0,0,0,16" Foreground="#888888" HorizontalAlignment="Center" FontSize="9.5" LineStackingStrategy="BlockLineHeight" LineHeight="13" VerticalAlignment="Bottom" TextAlignment="Center" Text="Click for more options" />
+                            <TextBlock Name="DragBoxText" Margin="0,18,0,0" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" FontSize="11" LineStackingStrategy="BlockLineHeight" LineHeight="13" VerticalAlignment="Top" TextAlignment="Center" Text="Drag and drop .apbx&#xD;&#xA;or .iso file" />
+                            <TextBlock Name="DragBoxText2" Margin="0,0,0,16" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" FontSize="9.5" LineStackingStrategy="BlockLineHeight" LineHeight="13" VerticalAlignment="Bottom" TextAlignment="Center" Text="Click for more options" />
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -1326,7 +1326,7 @@
                                 </Shape.Fill>
                             </Rectangle>
                             <Rectangle Name="DragBoxRect" Margin="0,1,0,1" StrokeDashArray="4,4" Stroke="#979797" StrokeThickness="1.15" RadiusX="5" RadiusY="5" />
-                            <TextBlock Name="DragBoxText" Foreground="#a0a0a0" HorizontalAlignment="Center" FontSize="9" LineStackingStrategy="BlockLineHeight" LineHeight="10" VerticalAlignment="Center" TextAlignment="Center" Text="Drag and&#xD;&#xA;drop .apbx file" />
+                            <TextBlock Name="DragBoxText" Foreground="{DynamicResource TextSecondaryBrush}" HorizontalAlignment="Center" FontSize="9" LineStackingStrategy="BlockLineHeight" LineHeight="10" VerticalAlignment="Center" TextAlignment="Center" Text="Drag and&#xD;&#xA;drop .apbx file" />
                         </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -1725,52 +1725,9 @@
     <Style x:Key="InText" TargetType="{x:Type TextBlock}">
         <Setter Property="Foreground" Value="#000000" />
     </Style>
-    <BorderGapMaskConverter x:Key="BorderGapMaskConverter" />
-    <Style x:Key="{x:Type GroupBox}" TargetType="{x:Type GroupBox}">
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="BorderBrush" Value="#00000000" />
-        <Setter Property="Foreground" Value="#FF000000" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type GroupBox}">
-                    <Grid SnapsToDevicePixels="True">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="6" />
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="6" />
-                        </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="Auto" />
-                            <RowDefinition Height="*" />
-                            <RowDefinition Height="6" />
-                        </Grid.RowDefinitions>
-                        <Border Background="{TemplateBinding Control.Background}" BorderBrush="#00FFFFFF" BorderThickness="{TemplateBinding Control.BorderThickness}" CornerRadius="4" Grid.Column="0" Grid.ColumnSpan="4" Grid.RowSpan="3" Grid.Row="1" />
-                        <Border BorderBrush="#00FFFFFF" BorderThickness="{TemplateBinding Control.BorderThickness}" CornerRadius="4" Grid.ColumnSpan="4" Grid.RowSpan="3" Grid.Row="1">
-                            <UIElement.OpacityMask>
-                                <MultiBinding ConverterParameter="7" Converter="{StaticResource BorderGapMaskConverter}">
-                                    <Binding ElementName="Header" Path="ActualWidth" />
-                                    <Binding Path="ActualWidth" RelativeSource="{RelativeSource Self}" />
-                                    <Binding Path="ActualHeight" RelativeSource="{RelativeSource Self}" />
-                                </MultiBinding>
-                            </UIElement.OpacityMask>
-                            <Border BorderBrush="#FFA9A9A9" BorderThickness="{TemplateBinding Control.BorderThickness}" CornerRadius="4">
-                                <Border BorderBrush="#00FFFFFF" BorderThickness="{TemplateBinding Control.BorderThickness}" CornerRadius="2" />
-                            </Border>
-                        </Border>
-                        <Border Name="Header" Grid.Column="1" Padding="3,1,3,0" Grid.RowSpan="2" Grid.Row="0">
-                            <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
-                        </Border>
-                        <ContentPresenter Grid.Column="1" Grid.ColumnSpan="2" Margin="{TemplateBinding Control.Padding}" Grid.Row="2" SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" />
-                    </Grid>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
     <Style x:Key="OverAllControls" TargetType="{x:Type Control}">
-        <Setter Property="Foreground" Value="#202020" />
-        <Setter Property="BorderBrush" Value="#0081D9" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
     </Style>
     <Style x:Key="{x:Type Window}" BasedOn="{StaticResource OverAllControls}" TargetType="{x:Type Window}" />
     <Style x:Key="{x:Type Label}" BasedOn="{StaticResource OverAllControls}" TargetType="{x:Type Label}" />
@@ -1778,7 +1735,7 @@
     <Style x:Key="{x:Type ListView}" BasedOn="{StaticResource OverAllControls}" TargetType="{x:Type ListView}" />
     <Style x:Key="YesNoButton" TargetType="{x:Type Button}">
         <Setter Property="Background" Value="#B8B8B8" />
-        <Setter Property="Foreground" Value="#000000" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Margin" Value="2" />

@@ -32,7 +32,10 @@ namespace KTWirzade.GUI.Views
         public ProgressPageView()
         {
             InitializeComponent();
-            textBox.AppendText("Running playbook..." + Environment.NewLine);
+            string runningText = KTWirzade.Shared.I18n.LanguageManager.T("Progress.Running", "Running playbook...");
+            textBox.AppendText(runningText + Environment.NewLine);
+            CurrentActionText.Text = runningText;
+            StartElapsedTimer();
             ComponentDispatcher.ThreadIdle += Begin;
             MainWindow.CurrentDispatcher.Invoke(delegate
             {
@@ -40,6 +43,25 @@ namespace KTWirzade.GUI.Views
                 mainWindow.Topmost = true;
                 mainWindow.TitleSpace.MouseLeftButtonDown -= mainWindow.TitleBar_MouseDown;
             });
+        }
+
+        // Elapsed-time readout next to the current action label; stopped when the
+        // playbook finishes (see proc_DataReceived) so the final value stays put.
+        private DispatcherTimer _elapsedTimer;
+
+        private void StartElapsedTimer()
+        {
+            if (_elapsedTimer != null)
+            {
+                return;
+            }
+            DateTime start = DateTime.UtcNow;
+            _elapsedTimer = new DispatcherTimer(DispatcherPriority.Normal, Dispatcher)
+            {
+                Interval = TimeSpan.FromSeconds(1)
+            };
+            _elapsedTimer.Tick += (s, e) => ElapsedText.Text = (DateTime.UtcNow - start).ToString(@"mm\:ss");
+            _elapsedTimer.Start();
         }
 
         private static int CountDownloadActions(string apbxPath)
@@ -74,6 +96,8 @@ namespace KTWirzade.GUI.Views
         private async void Begin(object sender, EventArgs e)
         {
             ComponentDispatcher.ThreadIdle -= Begin;
+            // Reset the static flag so failures from a previous run are not silenced.
+            HasSafelyExitted = false;
             try
             {
                 try
@@ -150,28 +174,39 @@ namespace KTWirzade.GUI.Views
             catch (Exception ex)
             {
                 Log.WriteExceptionSafe((LogType)1, ex, "Could not initialize amelioration process.", Array.Empty<(string, object)>());
-                try
-                {
-                    GC.Collect();
-                    GC.WaitForPendingFinalizers();
-                    string saveLogDir = System.Windows.Forms.Application.StartupPath + "\\KT WIRZADE Logs";
-                    if (Directory.Exists(saveLogDir))
-                    {
-                        Directory.Delete(saveLogDir, recursive: true);
-                    }
-                    Directory.Move(Directory.GetCurrentDirectory() + "\\Logs", saveLogDir);
-                }
-                catch (Exception)
-                {
-                }
+                ArchiveLogs();
                 MessageBox.Show(typeof(MainWindow), "Could not initialize amelioration process. Check the error logs and contact the team for more information and assistance.", "Amelioration failed.", MessageBoxButton.OK, MessageBoxImage.Error);
                 System.Windows.Application.Current.Shutdown(-1);
             }
         }
 
+        /// <summary>
+        /// Moves the live "Logs" folder next to the executable so it survives cleanup.
+        /// Previously copy-pasted (with an empty catch) at three call sites.
+        /// </summary>
+        private static void ArchiveLogs()
+        {
+            try
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                string saveLogDir = System.Windows.Forms.Application.StartupPath + "\\KT WIRZADE Logs";
+                if (Directory.Exists(saveLogDir))
+                {
+                    Directory.Delete(saveLogDir, recursive: true);
+                }
+                Directory.Move(Directory.GetCurrentDirectory() + "\\Logs", saveLogDir);
+            }
+            catch (Exception)
+            {
+            }
+        }
+
         private void proc_DataReceived(object sender, DataReceivedEventArgs e)
         {
-            textBox.Dispatcher.Invoke(DispatcherPriority.Normal, (Action)async delegate
+            // BeginInvoke (not Invoke): the stdout reader thread must never block on the
+            // UI thread, otherwise a full output pipe can deadlock the child process.
+            textBox.Dispatcher.BeginInvoke(DispatcherPriority.Normal, (Action)async delegate
             {
                 string data = e.Data;
                 if (data == null)
@@ -197,20 +232,7 @@ namespace KTWirzade.GUI.Views
                         else if (e.Data.StartsWith(":KTWIRZADE-Fatal Error: "))
                         {
                             proc.Exited -= proc_UnexpectedExit;
-                            try
-                            {
-                                GC.Collect();
-                                GC.WaitForPendingFinalizers();
-                                string saveLogDir = System.Windows.Forms.Application.StartupPath + "\\KT WIRZADE Logs";
-                                if (Directory.Exists(saveLogDir))
-                                {
-                                    Directory.Delete(saveLogDir, recursive: true);
-                                }
-                                Directory.Move(Directory.GetCurrentDirectory() + "\\Logs", saveLogDir);
-                            }
-                            catch (Exception)
-                            {
-                            }
+                            ArchiveLogs();
                             MessageBox.Show(typeof(MainWindow), "Amelioration failed. Check the error logs and contact the team for more information and assistance.", "Amelioration failed.", MessageBoxButton.OK, MessageBoxImage.Error);
                             System.Windows.Application.Current.Shutdown(-1);
                         }
@@ -228,7 +250,10 @@ namespace KTWirzade.GUI.Views
                         HasSafelyExitted = true;
                         try
                         {
-                            if (!proc.WaitForExit(10000))
+                            // Wait for the process off the UI thread: never block the UI
+                            // with WaitForExit (it could freeze the window for 10s).
+                            bool exitedCleanly = await Task.Run(() => proc.WaitForExit(10000));
+                            if (!exitedCleanly)
                             {
                                 proc.Kill();
                             }
@@ -237,6 +262,7 @@ namespace KTWirzade.GUI.Views
                         {
                         }
                         InstallationProgressBar.Value = InstallationProgressBar.Maximum;
+                        _elapsedTimer?.Stop();
                         Registry.LocalMachine.CreateSubKey("SOFTWARE\\KTWirzade\\")?.SetValue("KTWirzade", true);
                         try
                         {
@@ -264,7 +290,7 @@ namespace KTWirzade.GUI.Views
                         }
                         viewModel2.MainNextButtonContent = new TextBlock
                         {
-                            Text = "Reboot"
+                            Text = KTWirzade.Shared.I18n.LanguageManager.T("Button.Reboot", "Reboot")
                         };
                         MainWindow.CurrentDispatcher.Invoke(delegate
                         {
@@ -282,6 +308,7 @@ namespace KTWirzade.GUI.Views
                         });
                     }
                     textBox.AppendText(e.Data + Environment.NewLine);
+                    CurrentActionText.Text = e.Data;
                     textBox.ScrollToEnd();
                 }
                 else if (e.Data.Contains(" Weight:"))
@@ -294,27 +321,18 @@ namespace KTWirzade.GUI.Views
 
         private void proc_UnexpectedExit(object sender, EventArgs e)
         {
-            Task.Delay(8000).Wait();
-            if (HasSafelyExitted)
+            // Grace period without blocking the threadpool thread (.Wait() removed).
+            // If the process reached "Playbook finished." safely, do NOT shut down.
+            _ = Task.Delay(8000).ContinueWith(_ =>
             {
-                return;
-            }
-            try
-            {
-                GC.Collect();
-                GC.WaitForPendingFinalizers();
-                string saveLogDir = System.Windows.Forms.Application.StartupPath + "\\KT WIRZADE Logs";
-                if (Directory.Exists(saveLogDir))
+                if (HasSafelyExitted)
                 {
-                    Directory.Delete(saveLogDir, recursive: true);
+                    return;
                 }
-                Directory.Move(Directory.GetCurrentDirectory() + "\\Logs", saveLogDir);
-            }
-            catch (Exception)
-            {
-            }
-            MessageBox.Show(typeof(MainWindow), "Amelioration failed. Check the error logs and contact the team for more information and assistance.", "Amelioration failed.", MessageBoxButton.OK, MessageBoxImage.Error);
-            System.Windows.Application.Current.Shutdown(-1);
+                ArchiveLogs();
+                MessageBox.Show(typeof(MainWindow), "Amelioration failed. Check the error logs and contact the team for more information and assistance.", "Amelioration failed.", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.Application.Current.Shutdown(-1);
+            });
         }
     }
 }

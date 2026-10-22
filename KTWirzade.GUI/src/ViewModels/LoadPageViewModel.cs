@@ -20,12 +20,13 @@ namespace KTWirzade.GUI.ViewModels
 
         public override ViewModelBase GetNextPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            // Load page is a holding page; navigation is driven by the load task.
+            return null;
         }
 
         public override ViewModelBase GetPreviousPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public override bool HasPreviousPage()

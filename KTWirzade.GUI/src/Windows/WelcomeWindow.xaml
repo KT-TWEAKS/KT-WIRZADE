@@ -55,7 +55,7 @@
 
                 <StackPanel Grid.Row="1" Margin="0,14,0,0">
                     <TextBlock FontSize="26" FontWeight="Bold" Text="KT WIRZADE" HorizontalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" />
-                    <TextBlock Name="VersionText" HorizontalAlignment="Center" Text="v1.0.1" FontSize="13" Margin="0,5,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
+                    <TextBlock Name="VersionText" HorizontalAlignment="Center" Text="v1.0.2" FontSize="13" Margin="0,5,0,0" Foreground="{DynamicResource TextSecondaryBrush}" />
                 </StackPanel>
 
                 <Border Grid.Row="2" Margin="0,16,0,0" Height="1" HorizontalAlignment="Stretch" Opacity="0.15">

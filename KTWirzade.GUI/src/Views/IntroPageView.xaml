@@ -18,18 +18,34 @@
         </Grid.RowDefinitions>
         <StackPanel Margin="0,10,0,0">
             <TextBlock Style="{DynamicResource Header}" Margin="0,0,0,13" TextTrimming="WordEllipsis" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" Text="{Binding Playbook.Title}" />
-            <TextBlock HorizontalAlignment="Left" FontSize="13" Style="{DynamicResource InText}" TextTrimming="CharacterEllipsis" Width="380" TextWrapping="Wrap" Foreground="{DynamicResource PageSubtextColor}" MaxHeight="134" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" Text="{Binding Playbook.Description, StringFormat={}{0}}" />
-            <TextBlock />
+            <ScrollViewer MaxHeight="134" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <ScrollViewer.Resources>
+                    <Style TargetType="{x:Type ScrollBar}" BasedOn="{StaticResource SidebarScrollBar}" />
+                </ScrollViewer.Resources>
+                <TextBlock HorizontalAlignment="Stretch" MaxWidth="650" FontSize="13" Style="{DynamicResource InText}" TextWrapping="Wrap" Foreground="{DynamicResource PageSubtextColor}" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" Text="{Binding Playbook.Description, StringFormat={}{0}}" />
+            </ScrollViewer>
             <TextBlock Name="NextStepText" VerticalAlignment="Top" Margin="0,10,0,0" FontSize="13" Style="{DynamicResource InText}" Foreground="{DynamicResource PageSubtextColor}" Text="O próximo passo verificará se o sistema atende&#xD;&#xA;aos requisitos para continuar." />
+            <Border Name="VerificationUnavailableBox" Visibility="Collapsed" Margin="0,10,0,0" Padding="10,8" CornerRadius="6" Background="{DynamicResource StatusWarningSoftBrush}" BorderThickness="1" BorderBrush="{DynamicResource StatusWarningBrush}">
+                <StackPanel Orientation="Horizontal">
+                    <wpf:SymbolIcon Symbol="CloudOff" FontSize="16" Margin="0,0,9,0" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource StatusWarningBrush}" />
+                    <TextBlock FontSize="11" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" VerticalAlignment="Center" Text="Verificação online indisponível. O APBX continua salvo neste computador, mas sua origem não foi confirmada. Revise o arquivo e use apenas se confiar na fonte." />
+                </StackPanel>
+            </Border>
         </StackPanel>
-        <Grid Row="1">
-            <Grid Name="ModuleGrid" RenderTransformOrigin="0.5,0.5" ZIndex="1">
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Grid Name="ModuleGrid" Grid.Row="0" RenderTransformOrigin="0.5,0.5" ZIndex="1">
                 <UIElement.RenderTransform>
                     <TransformGroup>
                         <ScaleTransform CenterX="3" x:Name="moduletransform" />
+                        <TranslateTransform x:Name="moduleTranslate" Y="8" />
                     </TransformGroup>
                 </UIElement.RenderTransform>
-                <Border Name="NotRequiredBox" Visibility="Hidden" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource NoticeBoxBrush}">
+                <Border Name="NotRequiredBox" Visibility="Collapsed" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource NoticeBoxBrush}">
                     <StackPanel Orientation="Horizontal" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}">
                         <Grid Margin="1,-3,0,-2">
                             <Rectangle RadiusX="14" RadiusY="14" Width="11" Height="12" Fill="#FFFFFFFF" HorizontalAlignment="Left" Margin="4,4,0,0" VerticalAlignment="Top" />
@@ -39,7 +55,7 @@
                         <TextBlock FontSize="14" Margin="0,-3,0,-2" Text=" não exige segurança desativada" />
                     </StackPanel>
                 </Border>
-                <Border Name="AntivirusBox" Visibility="Hidden" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource NoticeBoxBrush}">
+                <Border Name="AntivirusBox" Visibility="Collapsed" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource NoticeBoxBrush}">
                     <Grid>
                         <StackPanel Orientation="Horizontal" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}">
                             <Grid Margin="1,-3,0,-2">
@@ -49,11 +65,11 @@
                             <TextBlock FontSize="14" Margin="15,-3,0,-2" Text="Remova o antivirus de terceiros" TextTrimming="CharacterEllipsis" />
                         </StackPanel>
                         <Button Name="AntivirusButton" Margin="0,-7,0,-8" Padding="13,0,13,0" Height="29" Style="{DynamicResource TransparentButton}" HorizontalAlignment="Right" Click="AntivirusButton_OnClick">
-                            <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Executar acao" Foreground="{DynamicResource TransparentButtonTextForeground}" />
+                            <TextBlock Name="AntivirusActionText" VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Executar ação" Foreground="{DynamicResource TransparentButtonTextForeground}" />
                         </Button>
                     </Grid>
                 </Border>
-                <Border Name="AppliedBox" Visibility="Hidden" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource SuccessBoxBrush}">
+                <Border Name="AppliedBox" Visibility="Collapsed" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource SuccessBoxBrush}">
                     <Grid>
                         <StackPanel Orientation="Horizontal" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}">
                             <Image Style="{StaticResource QualityImage}" Margin="3,-3,2,-2" Source="/Icons/checkmark_green_solid_32.png" Height="15" />
@@ -61,13 +77,13 @@
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <Grid Name="AppliedLoadContainer" HorizontalAlignment="Right" Visibility="Collapsed" Width="16" Height="16" Margin="0,0,4,0" />
-                            <Button Name="RunAgainButton" Margin="0,-7,0,-8" Padding="13,0,13,0" Height="29" Style="{DynamicResource TransparentButton}" Click="RunAgainButton_OnClick">
-                                <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Run again" Foreground="{DynamicResource TransparentButtonTextForeground}" />
+                            <Button Name="RunAgainButton" Margin="0,-7,0,-8" Padding="13,0,13,0" Height="29" Style="{DynamicResource TransparentButton}" Click="RunAgainButton_OnClick" Cursor="Hand">
+                                <TextBlock Name="RunAgainText" VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Executar novamente" Foreground="{DynamicResource TransparentButtonTextForeground}" />
                             </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border Name="AppliedErrorBox" Visibility="Hidden" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource WarningBoxBrush}">
+                <Border Name="AppliedErrorBox" Visibility="Collapsed" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource WarningBoxBrush}">
                     <Grid>
                         <StackPanel Orientation="Horizontal" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}">
                             <Grid Margin="1,-3,0,-2">
@@ -78,13 +94,13 @@
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <Grid Name="AppliedErrorLoadContainer" HorizontalAlignment="Right" Visibility="Collapsed" Width="16" Height="16" Margin="0,0,4,0" />
-<Button Name="RunAgainErrorButton" Margin="0,-7,0,-8" Padding="13,0,13,0" Height="29" Style="{DynamicResource TransparentButton}" Click="RunAgainButton_OnClick">
-                                <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Executar novamente" Foreground="{DynamicResource TransparentButtonTextForeground}" />
+<Button Name="RunAgainErrorButton" Margin="0,-7,0,-8" Padding="13,0,13,0" Height="29" Style="{DynamicResource TransparentButton}" Click="RunAgainButton_OnClick" Cursor="Hand">
+                                <TextBlock Name="RunAgainErrorText" VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Executar novamente" Foreground="{DynamicResource TransparentButtonTextForeground}" />
                            </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
-                <Border Name="UpgradeBox" Visibility="Hidden" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource SuccessBoxBrush}">
+                <Border Name="UpgradeBox" Visibility="Collapsed" VerticalAlignment="Top" Style="{DynamicResource ContentBox}" Height="47" Background="{DynamicResource SuccessBoxBrush}">
                     <Grid>
                         <StackPanel Orientation="Horizontal">
                             <Image Style="{StaticResource QualityImage}" Margin="3,-3,2,-2" Source="/Icons/checkmark_green_solid_32.png" Height="15" />
@@ -92,31 +108,46 @@
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                             <Grid Name="UpgradeLoadContainer" HorizontalAlignment="Right" Visibility="Collapsed" Width="16" Height="16" Margin="0,0,4,0" />
-                            <Button Name="UpgradeButton" Margin="0,-7,0,-8" Padding="13,0,13,0" Height="29" Style="{DynamicResource TransparentButton}" Click="RunAgainButton_OnClick">
-                                <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Atualizar" Foreground="{DynamicResource TransparentButtonTextForeground}" />
+                            <Button Name="UpgradeButton" Margin="0,-7,0,-8" Padding="13,0,13,0" Height="29" Style="{DynamicResource TransparentButton}" Click="RunAgainButton_OnClick" Cursor="Hand">
+                                <TextBlock Name="UpgradeActionText" VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Atualizar" Foreground="{DynamicResource TransparentButtonTextForeground}" />
                             </Button>
                         </StackPanel>
                     </Grid>
                 </Border>
             </Grid>
-            <StackPanel ZIndex="2">
-                <Border Name="DefenderBox" Style="{DynamicResource ContentBox}" Height="62">
+            <StackPanel Grid.Row="1" Margin="0,8,0,0" ZIndex="2">
+                <Border Name="DefenderBox" Visibility="Collapsed" Style="{DynamicResource ContentBox}" Height="62">
                     <Grid>
                         <StackPanel Name="DisableSecurityStack" HorizontalAlignment="Left" Orientation="Horizontal">
                             <Image Style="{StaticResource QualityImage}" Margin="6,1,0,0" Source="{DynamicResource ShieldDots32}" Width="18" VerticalAlignment="Center" HorizontalAlignment="Left" />
                             <StackPanel Margin="22,-3,0,-2">
-                                <TextBlock FontSize="15" Text="Desativar segurança" Foreground="{DynamicResource TextSoftBrush}" Margin="0,-1,0,0" />
-                                <TextBlock Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Text="Permitir acesso ao sistema de arquivos do KT WIRZADE" />
+                            <TextBlock Name="SecurityActionTitle" FontSize="15" Text="Desativar segurança" Foreground="{DynamicResource TextSoftBrush}" Margin="0,-1,0,0" />
+                                <TextBlock Name="SecurityActionDescription" Foreground="{DynamicResource TextSecondaryBrush}" FontSize="13" Text="Permitir acesso ao sistema de arquivos do KT WIRZADE" />
                             </StackPanel>
                         </StackPanel>
                         <Button Name="DisableSecurityButton" Margin="0,-2,0,-2" Padding="24,0,24,0" Style="{DynamicResource ContentBoxButton}" HorizontalAlignment="Right" Click="Run_OnClick">
-                            <TextBlock VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Executar acao" />
+                            <TextBlock Name="SecurityActionText" VerticalAlignment="Center" FontSize="14" Margin="0,0,0,1" Text="Executar ação" />
                         </Button>
                     </Grid>
                 </Border>
             </StackPanel>
+            <Border Name="OverrideBox" Grid.Row="2" Visibility="Collapsed" Margin="0,8,0,0" Padding="12,9" CornerRadius="6" Background="{DynamicResource WarningBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource StatusWarningBrush}">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Warning" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center" TextBlock.Foreground="{DynamicResource StatusWarningBrush}" />
+                        <TextBlock Name="OverrideWarningText" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" Text="Remova o antivírus de terceiros para continuar." />
+                    </StackPanel>
+                    <CheckBox Name="OverrideAcceptBox" Margin="0,7,0,0" FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}" Content="Entendo os riscos e desejo continuar mesmo assim" Checked="OverrideAcceptBox_OnChecked" Unchecked="OverrideAcceptBox_OnUnchecked" />
+                    <Grid Margin="0,4,0,0">
+                        <TextBlock Name="OverrideBadgeText" Visibility="Collapsed" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource StatusWarningBrush}" VerticalAlignment="Center" Text="1 verificação ignorada pelo usuário" />
+                        <Button Name="OverrideRecheckButton" HorizontalAlignment="Right" Margin="0,-2,0,-2" Padding="13,0,13,0" Height="26" Style="{DynamicResource TransparentButton}" Click="OverrideRecheckButton_OnClick">
+                            <TextBlock Name="OverrideRecheckText" VerticalAlignment="Center" FontSize="12" Margin="0,0,0,1" Text="Verificar novamente" Foreground="{DynamicResource TransparentButtonTextForeground}" />
+                        </Button>
+                    </Grid>
+                </StackPanel>
+            </Border>
         </Grid>
-        <TextBlock Grid.Row="2" VerticalAlignment="Bottom" FontSize="14" Foreground="{DynamicResource PageSubtextColor}">Clique no botao <Bold>Next</Bold> abaixo para continuar.</TextBlock>
+        <TextBlock Name="FooterGuidanceText" Grid.Row="2" Margin="0,0,125,0" VerticalAlignment="Bottom" FontSize="14" Foreground="{DynamicResource PageSubtextColor}" TextWrapping="Wrap" Text="Clique em “Avançar” para verificar os requisitos." />
         <TextBlock Grid.Row="2" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="0,0,10,10" FontSize="10" Foreground="{DynamicResource TextSecondaryBrush}" Opacity="0.7">modificado por kelvenapk</TextBlock>
         <Popup Name="ConflictPopup" Grid.RowSpan="2" Grid.Row="0" UseLayoutRounding="True" Width="700" Height="490" VerticalOffset="-490" IsOpen="False" StaysOpen="True" PopupAnimation="Fade" AllowsTransparency="True" PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}" MouseLeftButtonDown="FocusWindow">
             <Border UseLayoutRounding="True" Padding="132,42,133,44" CornerRadius="{DynamicResource PopupCornerRadius}" Background="#44000000">

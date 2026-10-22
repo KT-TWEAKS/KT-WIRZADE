@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using KTWirzade.GUI.Models;
+using KTWirzade.Shared.I18n;
 
 namespace KTWirzade.GUI
 {
@@ -41,17 +42,17 @@ namespace KTWirzade.GUI
 
         private UIElement _MainNextButtonContent = new TextBlock
         {
-            Text = "Next"
+            Text = LanguageManager.T("Button.Next", "Next")
         };
 
         private UIElement _MainCancelButtonContent = new TextBlock
         {
-            Text = "Cancel"
+            Text = LanguageManager.T("Button.Cancel", "Cancel")
         };
 
         private UIElement _MainPreviousButtonContent = new TextBlock
         {
-            Text = "Back"
+            Text = LanguageManager.T("Button.Previous", "Back")
         };
 
         private ICommand _MainNextButtonCommand;

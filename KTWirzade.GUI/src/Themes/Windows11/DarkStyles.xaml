@@ -405,7 +405,7 @@
         <Setter Property="FrameworkElement.UseLayoutRounding" Value="True" />
         <Setter Property="FrameworkElement.OverridesDefaultStyle" Value="True" />
         <Setter Property="BorderBrush" Value="#3e3f40" />
-        <Setter Property="Foreground" Value="#393a3b" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="Background" Value="#373738" />
         <Setter Property="UIElement.Opacity" Value="1" />
         <Setter Property="Template">
@@ -456,7 +456,7 @@
                         <Storyboard>
                             <ColorAnimation Duration="0:0:0.035" To="#424344" Storyboard.TargetProperty="Background.Color" />
                             <ColorAnimation Duration="0:0:0.035" To="#444546" Storyboard.TargetProperty="BorderBrush.Color" />
-                            <ColorAnimation Duration="0:0:0.035" To="#404041" Storyboard.TargetProperty="Foreground.Color" />
+                            <ColorAnimation Duration="0:0:0.035" To="#f5f5f7" Storyboard.TargetProperty="Foreground.Color" />
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger.Actions>
@@ -468,7 +468,7 @@
                         <Storyboard>
                             <ColorAnimation Duration="0:0:0.035" To="#373738" Storyboard.TargetProperty="Background.Color" />
                             <ColorAnimation Duration="0:0:0.035" To="#3e3f40" Storyboard.TargetProperty="BorderBrush.Color" />
-                            <ColorAnimation Duration="0:0:0.035" To="#393a3b" Storyboard.TargetProperty="Foreground.Color" />
+                            <ColorAnimation Duration="0:0:0.035" To="#d5d6dd" Storyboard.TargetProperty="Foreground.Color" />
                         </Storyboard>
                     </BeginStoryboard>
                 </EventTrigger.Actions>
@@ -1597,70 +1597,6 @@
             </Setter.Value>
         </Setter>
     </Style>
-    <Style x:Key="{x:Type RadioButton}" TargetType="{x:Type RadioButton}">
-        <Setter Property="BorderBrush" Value="#ffffff" />
-        <Setter Property="Foreground" Value="#FFFFFF" />
-        <Setter Property="Background" Value="#00FFFFFF" />
-        <Setter Property="BorderThickness" Value="1.5" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type RadioButton}">
-                    <Grid Name="templateRoot" Background="#00FFFFFF" SnapsToDevicePixels="True">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                        </Grid.ColumnDefinitions>
-                        <Border Name="radioButtonBorder" BorderBrush="{TemplateBinding Control.BorderBrush}" BorderThickness="{TemplateBinding Control.BorderThickness}" Background="{TemplateBinding Control.Background}" CornerRadius="100" HorizontalAlignment="{TemplateBinding Control.HorizontalContentAlignment}" Margin="1,1,2,1" VerticalAlignment="{TemplateBinding Control.VerticalContentAlignment}">
-                            <Grid Name="markGrid" Margin="2">
-                                <Ellipse Name="optionMark" Fill="{TemplateBinding Control.BorderBrush}" MinWidth="6" MinHeight="6" Opacity="0" />
-                            </Grid>
-                        </Border>
-                        <ContentPresenter Name="contentPresenter" ContentTemplate="{TemplateBinding ContentControl.ContentTemplate}" Content="{TemplateBinding ContentControl.Content}" Grid.Column="1" ContentStringFormat="{TemplateBinding ContentControl.ContentStringFormat}" Focusable="False" HorizontalAlignment="{TemplateBinding Control.HorizontalContentAlignment}" Margin="{TemplateBinding Control.Padding}" RecognizesAccessKey="True" SnapsToDevicePixels="{TemplateBinding UIElement.SnapsToDevicePixels}" VerticalAlignment="{TemplateBinding Control.VerticalContentAlignment}" />
-                    </Grid>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="HasContent" Value="True">
-                            <Setter Property="FrameworkElement.FocusVisualStyle">
-                                <Setter.Value>
-                                    <Style>
-                                        <Setter Property="Control.Template">
-                                            <Setter.Value>
-                                                <ControlTemplate>
-                                                    <Rectangle Margin="14,0,0,0" SnapsToDevicePixels="True" Stroke="{DynamicResource {x:Static SystemColors.ControlTextBrushKey}}" StrokeThickness="1" StrokeDashArray="1 2" />
-                                                </ControlTemplate>
-                                            </Setter.Value>
-                                        </Setter>
-                                    </Style>
-                                </Setter.Value>
-                            </Setter>
-                            <Setter Property="Padding" Value="4,-1,0,0" />
-                        </Trigger>
-                        <Trigger Property="UIElement.IsMouseOver" Value="True">
-                            <Setter TargetName="radioButtonBorder" Property="Border.Background" Value="#FFF3F9FF" />
-                            <Setter TargetName="radioButtonBorder" Property="Border.BorderBrush" Value="#FF5593FF" />
-                            <Setter TargetName="optionMark" Property="Shape.Fill" Value="#FF212121" />
-                        </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter TargetName="radioButtonBorder" Property="Border.Background" Value="#202020" />
-                            <Setter TargetName="radioButtonBorder" Property="Border.BorderBrush" Value="#FF707070" />
-                            <Setter Property="Foreground" Value="#FF808080" />
-                            <Setter TargetName="optionMark" Property="Shape.Fill" Value="#FF707070" />
-                        </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="radioButtonBorder" Property="Border.Background" Value="#FFD9ECFF" />
-                            <Setter TargetName="radioButtonBorder" Property="Border.BorderBrush" Value="#FF3C77DD" />
-                            <Setter TargetName="optionMark" Property="Shape.Fill" Value="#FF212121" />
-                        </Trigger>
-                        <Trigger Property="ToggleButton.IsChecked" Value="True">
-                            <Setter TargetName="optionMark" Property="UIElement.Opacity" Value="1" />
-                        </Trigger>
-                        <Trigger Property="ToggleButton.IsChecked" Value="{x:Null}">
-                            <Setter TargetName="optionMark" Property="UIElement.Opacity" Value="0.56" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
     <Style x:Key="WindowBackgroundWPF" TargetType="{x:Type Control}">
         <Setter Property="Background" Value="#1F1F1F" />
     </Style>
@@ -1671,11 +1607,11 @@
         <Setter Property="Background" Value="#121212" />
         <Setter Property="Foreground" Value="#FFFFFF" />
     </Style>
-    <Style x:Key="InText" TargetType="{x:Type TextBlock}">
-        <Setter Property="Foreground" Value="#FFFFFF" />
-    </Style>
     <Style x:Key="BlueHeaderText" TargetType="{x:Type TextBlock}">
         <Setter Property="Foreground" Value="#98D5FF" />
+    </Style>
+    <Style x:Key="InText" TargetType="{x:Type TextBlock}">
+        <Setter Property="Foreground" Value="#FFFFFF" />
     </Style>
     <Style x:Key="TopBorder" TargetType="{x:Type Border}">
         <Setter Property="BorderBrush" Value="#363535" />
@@ -1688,8 +1624,8 @@
         <Setter Property="BorderBrush" Value="#4C4C4C" />
     </Style>
     <Style x:Key="OverAllControls" TargetType="{x:Type Control}">
-        <Setter Property="Foreground" Value="#FFFFFF" />
-        <Setter Property="BorderBrush" Value="#4C4C4C" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource ProgressBarBrush}" />
     </Style>
     <Style x:Key="{x:Type Window}" BasedOn="{StaticResource OverAllControls}" TargetType="{x:Type Window}" />
     <Style x:Key="{x:Type Label}" BasedOn="{StaticResource OverAllControls}" TargetType="{x:Type Label}" />
@@ -1697,7 +1633,7 @@
     <Style x:Key="{x:Type ListView}" BasedOn="{StaticResource OverAllControls}" TargetType="{x:Type ListView}" />
     <Style x:Key="YesNoButton" TargetType="{x:Type Button}">
         <Setter Property="Background" Value="#4C4C4C" />
-        <Setter Property="Foreground" Value="#ffffff" />
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="FontSize" Value="14" />
         <Setter Property="Margin" Value="2" />

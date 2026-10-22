@@ -82,6 +82,15 @@ namespace KTWirzade.Shared.Rollback
             return Path.Combine(GetSessionDir(sessionId), "files");
         }
 
+        public static string GetOperationLockPath(string sessionId)
+        {
+            if (!Guid.TryParseExact(sessionId, "D", out var id))
+                throw new ArgumentException("Invalid rollback session ID.", nameof(sessionId));
+            string lockDir = Path.Combine(BaseDir, ".locks");
+            Directory.CreateDirectory(lockDir);
+            return Path.Combine(lockDir, id.ToString("D") + ".operation.lock");
+        }
+
         public static IEnumerable<RollbackSession> ListSessions()
         {
             if (!Directory.Exists(BaseDir))
@@ -117,6 +126,8 @@ namespace KTWirzade.Shared.Rollback
 
         private static readonly object SaveLock = new object();
 
+        public static event EventHandler<RollbackProgressEventArgs> ProgressChanged;
+
         public static RollbackSession CurrentSession { get; private set; }
 
         public static RollbackSession BeginSession(string playbookName)
@@ -144,10 +155,18 @@ namespace KTWirzade.Shared.Rollback
         public static void EndSession(bool wasSuccessful)
         {
             if (CurrentSession == null) return;
-            CurrentSession.WasSuccessful = wasSuccessful;
-            CurrentSession.CompletedAt = DateTime.UtcNow;
-            SaveSession();
-            CurrentSession = null;
+            try
+            {
+                CurrentSession.WasSuccessful = wasSuccessful;
+                CurrentSession.CompletedAt = DateTime.UtcNow;
+                SaveSession();
+            }
+            finally
+            {
+                // Always drop the in-memory session, even if saving fails,
+                // so the next call cannot reprocess the same session.
+                CurrentSession = null;
+            }
         }
 
         public static bool IsFullyReverted(RollbackSession session) =>
@@ -325,6 +344,8 @@ namespace KTWirzade.Shared.Rollback
                     {
                         try
                         {
+                            if (Path.GetFileName(dir).StartsWith(".", StringComparison.Ordinal))
+                                continue;
                             var hasJson = File.Exists(Path.Combine(dir, "session.json"));
                             if (!hasJson && Directory.GetLastWriteTimeUtc(dir) < cutoff)
                             {
@@ -379,7 +400,26 @@ namespace KTWirzade.Shared.Rollback
             try
             {
                 var dir = RollbackPaths.GetSessionDir(sessionId);
-                return Directory.Exists(dir) && ForceDeleteDirectory(dir);
+                if (!Directory.Exists(dir)) return false;
+
+                FileStream operationLock;
+                try
+                {
+                    operationLock = new FileStream(
+                        RollbackPaths.GetOperationLockPath(sessionId),
+                        FileMode.OpenOrCreate,
+                        FileAccess.ReadWrite,
+                        FileShare.None);
+                }
+                catch (IOException)
+                {
+                    return false;
+                }
+
+                using (operationLock)
+                {
+                    return Directory.Exists(dir) && ForceDeleteDirectory(dir);
+                }
             }
             catch
             {
@@ -482,6 +522,24 @@ namespace KTWirzade.Shared.Rollback
                 {
                     System.Threading.Thread.Sleep(50 * attempt);
                 }
+                catch (Exception replaceEx) when (replaceEx is PlatformNotSupportedException || replaceEx is NotSupportedException)
+                {
+                    // File.Replace is unsupported on some (network/removable) file
+                    // systems; fall back to an overwrite move so the rollback entry
+                    // is not silently lost.
+                    try
+                    {
+                        if (File.Exists(target)) File.Delete(target);
+                        File.Move(temp, target);
+                        break;
+                    }
+                    catch (Exception moveEx)
+                    {
+                        Log.WriteSafe(LogType.Warning, $"Could not persist rollback session file '{target}': {moveEx.Message}. The rollback entry may be lost.", null);
+                        try { File.Delete(temp); } catch { }
+                        throw;
+                    }
+                }
                 catch
                 {
                     try { File.Delete(temp); } catch { }
@@ -514,7 +572,7 @@ namespace KTWirzade.Shared.Rollback
 
         public static RollbackResult RollbackSession(string sessionId)
         {
-            using var operationLock = AcquireJournalLock(Path.Combine(RollbackPaths.GetSessionDir(sessionId), "rollback.lock"));
+            using var operationLock = AcquireJournalLock(RollbackPaths.GetOperationLockPath(sessionId));
             var session = LoadSession(sessionId);
             if (session == null)
                 return new RollbackResult { Success = false, Error = "Sessao nao encontrada." };
@@ -528,7 +586,10 @@ namespace KTWirzade.Shared.Rollback
             int failed = 0;
             int skipped = 0;
             int pending = 0;
+            int processed = 0;
             var errors = new List<string>();
+            if (session.Entries == null)
+                session.Entries = new List<RollbackEntry>();
 
             bool hiveMounted = false;
             try
@@ -548,6 +609,7 @@ namespace KTWirzade.Shared.Rollback
                 if (entry.RollbackCompleted)
                 {
                     skipped++;
+                    ReportProgress(sessionId, ++processed, session.Entries.Count, succeeded);
                     continue;
                 }
 
@@ -570,6 +632,8 @@ namespace KTWirzade.Shared.Rollback
                     failed++;
                     errors.Add($"[{entry.ActionType}] {entry.Target}: {ex.Message}");
                 }
+
+                ReportProgress(sessionId, ++processed, session.Entries.Count, succeeded);
 
                 if (i % 5 == 0)
                 {
@@ -597,6 +661,24 @@ namespace KTWirzade.Shared.Rollback
             {
                 if (hiveMounted)
                     UnloadDefaultUserHive();
+            }
+        }
+
+        private static void ReportProgress(string sessionId, int processed, int total, int reverted)
+        {
+            try
+            {
+                ProgressChanged?.Invoke(null, new RollbackProgressEventArgs
+                {
+                    SessionId = sessionId,
+                    Processed = processed,
+                    Total = total,
+                    Reverted = reverted
+                });
+            }
+            catch (Exception ex)
+            {
+                Log.WriteExceptionSafe(LogType.Warning, ex, "Rollback progress listener failed.", null);
             }
         }
 
@@ -1427,5 +1509,13 @@ namespace KTWirzade.Shared.Rollback
         public int Failed { get; set; }
         public int Skipped { get; set; }
         public int Pending { get; set; }
+    }
+
+    public class RollbackProgressEventArgs : EventArgs
+    {
+        public string SessionId { get; set; }
+        public int Processed { get; set; }
+        public int Total { get; set; }
+        public int Reverted { get; set; }
     }
 }

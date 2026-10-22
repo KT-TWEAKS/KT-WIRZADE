@@ -13,13 +13,14 @@
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
     <ApplicationIcon>Icons\ico.ico</ApplicationIcon>
-    <!-- Keep aligned with Globals.CurrentVersion and CHANGELOG/README. Release 1.0.1. -->
-    <Version>1.0.1</Version>
-    <AssemblyVersion>1.0.1.0</AssemblyVersion>
-    <FileVersion>1.0.1.0</FileVersion>
+    <!-- Keep aligned with Globals.CurrentVersion and CHANGELOG/README. Release 1.0.2. -->
+    <Version>1.0.2</Version>
+    <AssemblyVersion>1.0.2.0</AssemblyVersion>
+    <FileVersion>1.0.2.0</FileVersion>
 </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net48" Version="1.0.3" PrivateAssets="All" />
     <None Remove="Fonts\jetbrainsmono-regular.ttf" />
     <None Remove="Icons\activation_blue_gradient_128.png" />
     <None Remove="Icons\actrons.png" />

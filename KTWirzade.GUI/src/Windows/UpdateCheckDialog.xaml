@@ -6,46 +6,85 @@
                         xmlns:local="clr-namespace:KTWirzade.GUI.Windows"
                         xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
                         xmlns:wpf="clr-namespace:FluentIcons.Wpf;assembly=FluentIcons.Wpf"
-                        mc:Ignorable="d" Title="Atualizacoes - KT WIRZADE" Height="400" Width="500" Style="{DynamicResource Window}"
+                        mc:Ignorable="d" Title="Atualizacoes - KT WIRZADE" Height="468" Width="500" Style="{DynamicResource Window}"
                         WindowStartupLocation="CenterOwner" RenderTransformOrigin="0.5,0.5"
-                        d:DesignHeight="400" d:DesignWidth="500">
+                        d:DesignHeight="468" d:DesignWidth="500">
 
     <Border BorderBrush="{DynamicResource WindowBorder}" BorderThickness="1" ClipToBounds="True">
         <DockPanel Name="RootWindow" Background="{DynamicResource AboutBrush}">
             <DockPanel Name="TitleBar" Dock="Top" MaxHeight="36">
                 <Image Style="{StaticResource QualityImage}" Margin="7,7,0,0" VerticalAlignment="Top" Source="/Icons/ICO.ico" Width="16" Height="16" />
-                <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,36" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top" Click="CloseButton_Click" />
-                <TextBlock VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,9.5,0,5" FontSize="12" Text="Atualizacoes" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
+                <Button Name="CloseButton" Style="{DynamicResource CloseButton}" Padding="0,0,0,36" Visibility="Visible" IsEnabled="True" DockPanel.Dock="Right" HorizontalAlignment="Right" VerticalAlignment="Top" IsCancel="True" Click="CloseButton_Click" />
+                <TextBlock Name="TitleBarText" VerticalAlignment="Top" Margin="7,0,0,0" Padding="0,9.5,0,5" FontSize="12" Text="Atualizacoes" Height="25" MouseLeftButtonDown="TitleBar_MouseDown" />
             </DockPanel>
 
             <Grid Margin="20,8,20,16">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,8,0,0">
-                    <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}">
-                        <Run Text="Versao atual:" />
-                        <Run Name="CurrentVersionRun" Text="v1.0.1" />
-                    </TextBlock>
-                </StackPanel>
+                <!-- Versions -->
+                <Grid Grid.Row="0" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}">
+                            <Run Name="CurrentVersionLabelRun" Text="Versao atual:" />
+                            <Run Name="CurrentVersionRun" Text="v1.0.2" />
+                        </TextBlock>
+                        <TextBlock Name="LatestVersionText" FontSize="13" Margin="14,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Grid>
 
-                <Border Grid.Row="1" Name="StatusBox" Margin="0,12,0,0" CornerRadius="6" Padding="14,12" Background="{DynamicResource NoticeBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
+                <!-- Settings: auto-check at startup + update channel -->
+                <Grid Grid.Row="1" Name="SettingsRow" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <CheckBox Name="AutoCheckCheckBox" Margin="0,0,14,0" VerticalAlignment="Center" HorizontalAlignment="Left" Cursor="Hand" Checked="AutoCheckCheckBox_Toggled" Unchecked="AutoCheckCheckBox_Toggled">
+                        <TextBlock Name="AutoCheckText" FontSize="11" VerticalAlignment="Center" Text="Verificar ao iniciar" />
+                    </CheckBox>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Name="ChannelLabel" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" Margin="0,0,8,0" Text="Canal:" />
+                        <Button Name="ChannelToggleButton" Style="{DynamicResource BasicButton}" Padding="10,2" Click="ChannelToggleButton_Click" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <wpf:SymbolIcon Symbol="ArrowSync" FontSize="11" Margin="0,0,6,0" TextBlock.Foreground="{DynamicResource TextSecondaryBrush}" />
+                                <TextBlock Name="ChannelToggleText" FontSize="11" Text="Estavel" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Status box: icon + title + message + download progress -->
+                <Border Grid.Row="2" Name="StatusBox" Margin="0,12,0,0" CornerRadius="{DynamicResource PopupCornerRadius}" Padding="14,12" Background="{DynamicResource NoticeBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal">
-                            <wpf:SymbolIcon Name="StatusIcon" Symbol="ArrowSync" FontSize="16" Margin="0,0,10,0" TextBlock.Foreground="{DynamicResource ProgressBarBrush}" />
-                            <TextBlock Name="StatusText" FontSize="13" VerticalAlignment="Center" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap">
-                                Verificando atualizacoes...
-                            </TextBlock>
+                            <wpf:SymbolIcon Name="StatusIcon" Symbol="ArrowSync" FontSize="16" Margin="0,2,10,0" VerticalAlignment="Top" TextBlock.Foreground="{DynamicResource ProgressBarBrush}" />
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Name="StatusTitle" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" Text="Verificando atualizacoes..." />
+                                <TextBlock Name="StatusText" FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                            </StackPanel>
                         </StackPanel>
-                        <ProgressBar Name="DownloadProgressBar" Height="8" Margin="26,10,0,0" Minimum="0" Maximum="100" Value="0" Visibility="Collapsed" Foreground="{DynamicResource ProgressBarBrush}" Background="{DynamicResource StatusInfoSoftBrush}" />
+                        <Grid Name="DownloadProgressPanel" Margin="26,10,0,0" Visibility="Collapsed">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ProgressBar Name="DownloadProgressBar" Height="8" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Center" Foreground="{DynamicResource ProgressBarBrush}" Background="{DynamicResource StatusInfoSoftBrush}" />
+                            <TextBlock Name="DownloadProgressText" Grid.Column="1" Margin="10,0,0,0" FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 
-                <Border Grid.Row="2" Name="ReleaseNotesBox" Margin="0,12,0,0" CornerRadius="6" Padding="14,10" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Visibility="Collapsed">
+                <!-- Release info (name, date, scrollable notes) -->
+                <Border Grid.Row="3" Name="ReleaseNotesBox" Margin="0,12,0,0" CornerRadius="{DynamicResource PopupCornerRadius}" Padding="14,10" Background="{DynamicResource FakeBackgroundBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}" Visibility="Collapsed">
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <TextBlock Name="ReleaseTitleText" FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" TextWrapping="Wrap" />
@@ -55,26 +94,41 @@
                     </ScrollViewer>
                 </Border>
 
-                <DockPanel Grid.Row="3" Margin="0,12,0,0">
-                    <Button Name="DownloadButton" DockPanel.Dock="Left" Padding="14,8" MinWidth="120" Style="{DynamicResource BlueButton}" Click="DownloadButton_Click" Visibility="Collapsed" Cursor="Hand">
-                        <StackPanel Orientation="Horizontal">
-                            <wpf:SymbolIcon Symbol="ArrowDownload" FontSize="13" Foreground="White" Margin="0,0,8,0" />
-                            <TextBlock Text="Baixar EXE" FontSize="13" FontWeight="SemiBold" Foreground="White" />
-                        </StackPanel>
-                    </Button>
-                    <Button Name="RecheckButton" DockPanel.Dock="Right" Padding="14,8" MinWidth="120" Style="{DynamicResource BasicButton}" Click="RecheckButton_Click" Cursor="Hand">
-                        <StackPanel Orientation="Horizontal">
-                            <wpf:SymbolIcon Symbol="ArrowSync" FontSize="12" Margin="0,0,8,0" />
-                            <TextBlock Text="Verificar novamente" FontSize="12" />
-                        </StackPanel>
-                    </Button>
-                    <Button Name="SkipButton" DockPanel.Dock="Right" Padding="14,8" MinWidth="110" Style="{DynamicResource BasicButton}" Click="SkipButton_Click" Visibility="Collapsed" Cursor="Hand" Margin="0,0,8,0">
-                        <StackPanel Orientation="Horizontal">
-                            <wpf:SymbolIcon Symbol="Dismiss" FontSize="12" Margin="0,0,8,0" />
-                            <TextBlock Text="Ignorar esta versao" FontSize="12" />
-                        </StackPanel>
-                    </Button>
-                </DockPanel>
+                <!-- Actions -->
+                <Grid Grid.Row="4" Margin="0,12,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <Button Name="DownloadButton" Padding="14,8" MinWidth="120" Style="{DynamicResource BlueButton}" IsDefault="True" Click="DownloadButton_Click" Visibility="Collapsed" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <wpf:SymbolIcon Symbol="ArrowDownload" FontSize="13" Foreground="White" Margin="0,0,8,0" />
+                                <TextBlock Name="DownloadButtonText" Text="Baixar EXE" FontSize="13" FontWeight="SemiBold" Foreground="White" />
+                            </StackPanel>
+                        </Button>
+                        <Button Name="CancelDownloadButton" Padding="14,8" MinWidth="110" Style="{DynamicResource BasicButton}" Click="CancelDownloadButton_Click" Visibility="Collapsed" Cursor="Hand" Margin="8,0,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <wpf:SymbolIcon Symbol="Dismiss" FontSize="12" Margin="0,0,8,0" />
+                                <TextBlock Name="CancelDownloadButtonText" Text="Cancelar download" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Name="SkipButton" Padding="14,8" MinWidth="110" Style="{DynamicResource BasicButton}" Click="SkipButton_Click" Visibility="Collapsed" Cursor="Hand" Margin="0,0,8,0">
+                            <StackPanel Orientation="Horizontal">
+                                <wpf:SymbolIcon Symbol="Dismiss" FontSize="12" Margin="0,0,8,0" />
+                                <TextBlock Name="SkipButtonText" Text="Ignorar esta versao" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                        <Button Name="RecheckButton" Padding="14,8" MinWidth="120" Style="{DynamicResource BasicButton}" Click="RecheckButton_Click" Cursor="Hand">
+                            <StackPanel Orientation="Horizontal">
+                                <wpf:SymbolIcon Symbol="ArrowSync" FontSize="12" Margin="0,0,8,0" />
+                                <TextBlock Name="RecheckButtonText" Text="Verificar novamente" FontSize="12" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
             </Grid>
         </DockPanel>
     </Border>

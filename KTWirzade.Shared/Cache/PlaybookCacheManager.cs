@@ -235,7 +235,15 @@ namespace KTWirzade.Shared.Cache
                     return response.StatusCode == HttpStatusCode.OK;
                 }
             }
-            catch
+            catch (WebException)
+            {
+                return false;
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                return false;
+            }
+            catch (IOException)
             {
                 return false;
             }

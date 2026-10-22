@@ -98,6 +98,11 @@ namespace KTWirzade.GUI.Windows
 
         private bool animating;
 
+        // Last text pushed into Step2; the polling loop re-ran RefreshInlines on
+        // every iteration, forcing a re-layout (visible flicker) even when the
+        // detected antivirus had not changed.
+        private string _lastStep2Text;
+
         private System.Diagnostics.Process UninstallProcess;
 
         private List<UninstallKey> GetAVs()
@@ -106,38 +111,49 @@ namespace KTWirzade.GUI.Windows
             {
                 List<UninstallKey> Antiviruses = new List<UninstallKey>();
                 List<UninstallKey> UninstallKeys = new List<UninstallKey>();
-                RegistryKey key = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall");
-                string[] subKeyNames = key.GetSubKeyNames();
-                foreach (string subKey in subKeyNames)
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall"))
                 {
-                    UninstallKeys.Add(new UninstallKey
+                    if (key != null)
                     {
-                        RootKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\" + subKey
-                    });
+                        foreach (string subKey in key.GetSubKeyNames())
+                        {
+                            UninstallKeys.Add(new UninstallKey
+                            {
+                                RootKey = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\" + subKey
+                            });
+                        }
+                    }
                 }
-                key.Close();
-                key = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall");
-                subKeyNames = key.GetSubKeyNames();
-                foreach (string subKey2 in subKeyNames)
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"))
                 {
-                    UninstallKeys.Add(new UninstallKey
+                    if (key != null)
                     {
-                        RootKey = "SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\" + subKey2
-                    });
+                        foreach (string subKey2 in key.GetSubKeyNames())
+                        {
+                            UninstallKeys.Add(new UninstallKey
+                            {
+                                RootKey = "SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\" + subKey2
+                            });
+                        }
+                    }
                 }
-                key.Close();
                 foreach (UninstallKey uninstallKey in UninstallKeys)
                 {
                     try
                     {
-                        RegistryKey registryKey = Registry.LocalMachine.OpenSubKey(uninstallKey.RootKey);
-                        object val = registryKey.GetValue("DisplayName");
-                        uninstallKey.DisplayName = ((val == null) ? null : ((string)val));
-                        val = registryKey.GetValue("UninstallString");
-                        uninstallKey.UninstallString = ((val == null) ? null : ((string)val));
-                        val = registryKey.GetValue("InstallLocation");
-                        uninstallKey.InstallLocation = ((val == null) ? null : ((string)val));
-                        registryKey.Close();
+                        using (RegistryKey registryKey = Registry.LocalMachine.OpenSubKey(uninstallKey.RootKey))
+                        {
+                            if (registryKey == null)
+                            {
+                                continue;
+                            }
+                            object val = registryKey.GetValue("DisplayName");
+                            uninstallKey.DisplayName = ((val == null) ? null : ((string)val));
+                            val = registryKey.GetValue("UninstallString");
+                            uninstallKey.UninstallString = ((val == null) ? null : ((string)val));
+                            val = registryKey.GetValue("InstallLocation");
+                            uninstallKey.InstallLocation = ((val == null) ? null : ((string)val));
+                        }
                     }
                     catch (Exception)
                     {
@@ -210,7 +226,10 @@ namespace KTWirzade.GUI.Windows
             }
             catch (Exception)
             {
-                return null;
+                // Registry/WMI absence (or a transient read failure) must not be fatal;
+                // report an empty list instead of surfacing a misleading "Error
+                // checking Antivirus" dialog.
+                return new List<UninstallKey>();
             }
         }
 
@@ -253,52 +272,6 @@ namespace KTWirzade.GUI.Windows
             base.Loaded += OnLoaded;
         }
 
-        public static BitmapSource Convert(Bitmap bitmap)
-        {
-            using MemoryStream memory = new MemoryStream();
-            bitmap.Save(memory, ImageFormat.Png);
-            memory.Position = 0L;
-            BitmapImage bitmapImage = new BitmapImage();
-            bitmapImage.BeginInit();
-            bitmapImage.StreamSource = memory;
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.EndInit();
-            bitmapImage.Freeze();
-            return bitmapImage;
-        }
-
-        [DllImport("gdi32.dll")]
-        public static extern bool DeleteObject(IntPtr hObject);
-
-        private Bitmap BitmapImage2Bitmap(BitmapImage bitmapImage)
-        {
-            using MemoryStream outStream = new MemoryStream();
-            PngBitmapEncoder pngBitmapEncoder = new PngBitmapEncoder();
-            pngBitmapEncoder.Frames.Add(BitmapFrame.Create(bitmapImage));
-            pngBitmapEncoder.Save(outStream);
-            return new Bitmap(new Bitmap(outStream));
-        }
-
-        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
-        {
-            if (depObj == null)
-            {
-                yield break;
-            }
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
-            {
-                DependencyObject child = VisualTreeHelper.GetChild(depObj, i);
-                if (child != null && child is T)
-                {
-                    yield return (T)child;
-                }
-                foreach (T item in FindVisualChildren<T>(child))
-                {
-                    yield return item;
-                }
-            }
-        }
-
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             if (MaterialManager.IsVMwareVM && SystemInfoEx.WindowsVersion.BuildNumber >= 22523)
@@ -309,7 +282,7 @@ namespace KTWirzade.GUI.Windows
             double ppuX = PresentationSource.FromVisual(this).CompositionTarget.TransformToDevice.M11;
             double ppuY = PresentationSource.FromVisual(this).CompositionTarget.TransformToDevice.M22;
             List<ImageParams> images = new List<ImageParams>();
-            List<System.Windows.Controls.Image> raw = (from image in FindVisualChildren<System.Windows.Controls.Image>(LeftContainer)
+            List<System.Windows.Controls.Image> raw = (from image in DialogHelpers.FindVisualChildren<System.Windows.Controls.Image>(LeftContainer)
                                                        where image.Name != null && !image.Name.Contains("Icon")
                                                        select image).ToList();
             raw.ForEach(delegate (System.Windows.Controls.Image x)
@@ -326,7 +299,7 @@ namespace KTWirzade.GUI.Windows
             {
                 foreach (ImageParams current in images)
                 {
-                    sources.Add(Convert(ImageUtilities.ResizeImage(BitmapImage2Bitmap(current.raw), current.scaleX, current.scaleY)));
+                    sources.Add(DialogHelpers.Convert(ImageUtilities.ResizeImage(DialogHelpers.BitmapImage2Bitmap(current.raw), current.scaleX, current.scaleY)));
                 }
             });
             int i = 0;
@@ -816,7 +789,10 @@ namespace KTWirzade.GUI.Windows
                     {
                         if (UninstallProcess != null && !UninstallProcess.HasExited)
                         {
-                            await WaitForExitAsync(UninstallProcess, new CancellationTokenSource(500000).Token);
+                            using (var cts = new CancellationTokenSource(500000))
+                            {
+                                await WaitForExitAsync(UninstallProcess, cts.Token);
+                            }
                         }
                     }
                     catch (Exception)
@@ -875,14 +851,19 @@ namespace KTWirzade.GUI.Windows
                     Steps.BeginAnimation(OpacityProperty, opacityAnimSteps);
                     break;
                 }
-                Step2.Inlines = new List<Inline>
+                string step2Text = "Uninstall " + CurrentAV.DisplayName + " and reboot the system.";
+                if (step2Text != _lastStep2Text)
+                {
+                    _lastStep2Text = step2Text;
+                    Step2.Inlines = new List<Inline>
             {
-                new Run("Uninstall " + CurrentAV.DisplayName + " and reboot the system.")
+                new Run(step2Text)
                 {
                     FontSize = 13.0
                 }
             };
-                Step2.RefreshInlines();
+                    Step2.RefreshInlines();
+                }
                 if (!string.IsNullOrEmpty(CurrentAV.UninstallString))
                 {
                     UninstallerButton.Visibility = Visibility.Visible;
@@ -893,7 +874,9 @@ namespace KTWirzade.GUI.Windows
                 }
                 if (!Antiviruses.All((UninstallKey x) => x.Remnant) || RemnantsIgnored || RemnantGrid.Visibility == Visibility.Visible)
                 {
-                    await System.Threading.Tasks.Task.Delay(500);
+                    // Polling cadence: each iteration walks the registry Uninstall keys
+                    // and queries WMI; 500ms was far more aggressive than needed.
+                    await System.Threading.Tasks.Task.Delay(3000);
                     continue;
                 }
                 await System.Threading.Tasks.Task.Delay(1500);
@@ -1257,7 +1240,7 @@ namespace KTWirzade.GUI.Windows
             {
                 cancellationToken.Register(delegate
                 {
-                    tcs.SetCanceled();
+                    tcs.TrySetCanceled();
                 });
             }
             if (!process.HasExited)

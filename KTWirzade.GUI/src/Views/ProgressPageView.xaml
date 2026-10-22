@@ -29,7 +29,7 @@
 
         <Border Grid.Row="1" Margin="0,14,0,0" CornerRadius="6" Padding="12,10" Background="{DynamicResource NoticeBoxBrush}" BorderThickness="1" BorderBrush="{DynamicResource ContentBoxBorderBrush}">
             <StackPanel Orientation="Horizontal">
-                <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Info" TextBlock.Foreground="#71d4db" TextBlock.FontSize="16" Margin="0,0,8,0" />
+                <wpf:SymbolIcon wpf:SymbolIcon.Symbol="Info" TextBlock.Foreground="{DynamicResource BlueInfoCircleFill}" TextBlock.FontSize="16" Margin="0,0,8,0" />
                 <TextBlock FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="Mantenha o computador ligado e conectado a energia." />
             </StackPanel>
         </Border>
@@ -43,6 +43,16 @@
                                                  RectFill="{StaticResource ProgressFillBrush}"
                                                  AnimationDurationMs="280"
                                                  Value="{Binding Progress}" />
+            </Grid>
+            <Grid Margin="0,0,0,6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <!-- Current action: single line with ellipsis so long action names never
+                     push the elapsed-time readout out of the container. -->
+                <TextBlock Name="CurrentActionText" FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" TextTrimming="CharacterEllipsis" Text="—" />
+                <TextBlock Grid.Column="1" Name="ElapsedText" FontSize="12" Margin="12,0,0,0" VerticalAlignment="Center" Foreground="{DynamicResource TextSecondaryBrush}" Text="00:00" />
             </Grid>
             <TextBox Name="textBox" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" IsReadOnly="True" Style="{DynamicResource Output}" Padding="8,6,8,6" />
         </StackPanel>

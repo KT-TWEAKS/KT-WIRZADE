@@ -20,7 +20,9 @@ namespace KTWirzade.GUI
 
         private MessageBoxResult _result = MessageBoxResult.Unset;
 
-        private static string _logPath;
+        // Instance field (was static): a static field let two overlapping
+        // MessageBoxes overwrite each other's log path.
+        private string _logPath;
 
         public MessageBox()
         {
@@ -103,30 +105,7 @@ namespace KTWirzade.GUI
                     box.SecondButton.Visibility = Visibility.Collapsed;
                     break;
             }
-            if (icon == MessageBoxImage.NoImage)
-            {
-                box.DescriptionText.Width = 280.0;
-            }
-            box.DescriptionBox.Measure(new System.Windows.Size(348.0, double.MaxValue));
-            System.Windows.Size visualSize0 = box.DescriptionBox.DesiredSize;
-            box.DescriptionBox.Arrange(new Rect(new System.Windows.Point(0.0, 0.0), visualSize0));
-            box.DescriptionBox.UpdateLayout();
-            double descWidth = box.DescriptionBox.ActualWidth;
-            double descHeight = box.DescriptionBox.ActualHeight;
-            box.ContentStack.Measure(new System.Windows.Size(348.0, double.MaxValue));
-            double contentHeight = box.ContentStack.DesiredSize.Height;
-            if (contentHeight > SystemParameters.WorkArea.Height - 450.0)
-            {
-                box.ContentStack.Height = Math.Max(SystemParameters.WorkArea.Height - 450.0, 100.0);
-                box.MonoBox.Height = Math.Max(box.ContentStack.Height - (descHeight + 44.0) + 2.0, 0.0);
-            }
-            else
-            {
-                box.MonoBox.Height = Math.Max(contentHeight - (descHeight + 44.0) + 2.0, 0.0);
-            }
-            box.MainStack.Measure(new System.Windows.Size((monoText != null) ? 348.0 : descWidth, double.MaxValue));
-            box.Height = box.MainStack.DesiredSize.Height + 2.0;
-            box.Width = Math.Min(Math.Max(box.MainStack.DesiredSize.Width, 200.0) + 30.0, 350.0);
+            ConfigureBoxSizing(box, monoText, icon);
             Window window = (caller == null) ? null : GetWindow(GetWindow(caller));
             if (window != null && window.Topmost)
             {
@@ -180,30 +159,7 @@ namespace KTWirzade.GUI
                     box.SecondButtonText.Text = "Exit";
                     break;
             }
-            if (icon == MessageBoxImage.NoImage)
-            {
-                box.DescriptionText.Width = 280.0;
-            }
-            box.DescriptionBox.Measure(new System.Windows.Size(348.0, double.MaxValue));
-            System.Windows.Size visualSize0 = box.DescriptionBox.DesiredSize;
-            box.DescriptionBox.Arrange(new Rect(new System.Windows.Point(0.0, 0.0), visualSize0));
-            box.DescriptionBox.UpdateLayout();
-            double descWidth = box.DescriptionBox.ActualWidth;
-            double descHeight = box.DescriptionBox.ActualHeight;
-            box.ContentStack.Measure(new System.Windows.Size(348.0, double.MaxValue));
-            double contentHeight = box.ContentStack.DesiredSize.Height;
-            if (contentHeight > SystemParameters.WorkArea.Height - 450.0)
-            {
-                box.ContentStack.Height = Math.Max(SystemParameters.WorkArea.Height - 450.0, 100.0);
-                box.MonoBox.Height = Math.Max(box.ContentStack.Height - (descHeight + 44.0) + 2.0, 0.0);
-            }
-            else
-            {
-                box.MonoBox.Height = Math.Max(contentHeight - (descHeight + 44.0) + 2.0, 0.0);
-            }
-            box.MainStack.Measure(new System.Windows.Size((monoText != null) ? 348.0 : descWidth, double.MaxValue));
-            box.Height = box.MainStack.DesiredSize.Height + 2.0;
-            box.Width = Math.Min(Math.Max(box.MainStack.DesiredSize.Width, 200.0) + 30.0, 350.0);
+            ConfigureBoxSizing(box, monoText, icon);
             System.Windows.Application.Current.Dispatcher.InvokeAsync(delegate
             {
                 box.Show();
@@ -256,8 +212,8 @@ namespace KTWirzade.GUI
 
         public static MessageBoxResult Show(Type windowType, string message, string title = null, MessageBoxButton button = MessageBoxButton.OK, MessageBoxImage icon = MessageBoxImage.Information, string monoText = null, string logPath = null)
         {
-            _logPath = logPath;
             MessageBox box = new MessageBox();
+            box._logPath = logPath;
             box.TitleText.Text = ((title == null) ? icon.ToString() : title);
             box.Title = ((box.TitleText.Text.Length > 11) ? icon.ToString() : box.TitleText.Text);
             box.Button = button;
@@ -296,6 +252,23 @@ namespace KTWirzade.GUI
                     box.SecondButtonText.Text = "Exit";
                     break;
             }
+            ConfigureBoxSizing(box, monoText, icon);
+            Window window = GetWindowFromType(windowType);
+            if (window != null && window.Topmost)
+            {
+                box.Topmost = true;
+            }
+            if (!System.Windows.Application.Current.Dispatcher.CheckAccess())
+            {
+                return System.Windows.Application.Current.Dispatcher.Invoke(() => box.ShowDialog(window));
+            }
+            return box.ShowDialog(window);
+        }
+
+        // Shared measure/size pass. This block was byte-identical in all three
+        // entry points (Show(DependencyObject), ShowDetached and Show(Type)).
+        private static void ConfigureBoxSizing(MessageBox box, string monoText, MessageBoxImage icon)
+        {
             if (icon == MessageBoxImage.NoImage)
             {
                 box.DescriptionText.Width = 280.0;
@@ -320,16 +293,6 @@ namespace KTWirzade.GUI
             box.MainStack.Measure(new System.Windows.Size((monoText != null) ? 348.0 : descWidth, double.MaxValue));
             box.Height = box.MainStack.DesiredSize.Height + 2.0;
             box.Width = Math.Min(Math.Max(box.MainStack.DesiredSize.Width, 200.0) + 30.0, 350.0);
-            Window window = GetWindowFromType(windowType);
-            if (window != null && window.Topmost)
-            {
-                box.Topmost = true;
-            }
-            if (!System.Windows.Application.Current.Dispatcher.CheckAccess())
-            {
-                return System.Windows.Application.Current.Dispatcher.Invoke(() => box.ShowDialog(window));
-            }
-            return box.ShowDialog(window);
         }
 
         private void MainButton_OnClick(object sender, RoutedEventArgs e)

@@ -364,17 +364,14 @@ namespace KTWirzade.GUI.Views
         {
             if (page == Page.Username)
             {
-                PasswordBox.FocusVisualStyle = null;
                 PasswordBox.Focus();
             }
             if (page == Page.Password)
             {
-                PasswordBox.FocusVisualStyle = null;
                 PasswordBox.Focus();
             }
             if (page == Page.AdminPassword)
             {
-                AdminPasswordBox.FocusVisualStyle = null;
                 AdminPasswordBox.Focus();
             }
         }

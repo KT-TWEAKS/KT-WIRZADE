@@ -6,7 +6,7 @@
              xmlns:local="clr-namespace:KTWirzade.GUI.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Border Name="Container" Background="#00FFFFFF" Height="{Binding BarHeight}">
+    <Border Name="Container" Background="Transparent" Height="{Binding BarHeight}">
         <Border Name="Rect" HorizontalAlignment="Left" BorderThickness="{Binding RectBorderThickness}" BorderBrush="{Binding RectBorderBrush}" Background="{Binding RectFill}" Height="{Binding BarHeight}" Width="{Binding RectWidth}" CornerRadius="{Binding RectCornerRadius}" />
     </Border>
 </UserControl>

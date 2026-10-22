@@ -158,6 +158,9 @@ namespace KTWirzade.GUI.Windows
                             }
                             if (UsbWriteStack.Children.OfType<UsbProgressItem>().All((UsbProgressItem x) => x.Completed || x.Failed))
                             {
+                                // Every write finished (successfully or not) - never keep
+                                // Close disabled once there is nothing left to wait for.
+                                CloseButton.IsEnabled = true;
                                 Wrap.ExecuteSafe((Action)delegate
                                 {
                                     if (!base.IsActive)
@@ -189,9 +192,17 @@ namespace KTWirzade.GUI.Windows
             // Poll until the window is closed - a plain while(true) kept spinning forever
             // after the dialog was dismissed and dereferenced WriteTask before the
             // children were added (NRE in async void would crash the app).
+            DateTime writeStartedAt = DateTime.UtcNow;
             while (IsLoaded)
             {
                 await Task.Delay(500);
+                // Fail-safe: if a write hangs indefinitely, never leave the user
+                // trapped in this modal dialog - force-enable Close after 45 minutes.
+                if ((DateTime.UtcNow - writeStartedAt).TotalMinutes >= 45)
+                {
+                    CloseButton.IsEnabled = true;
+                    break;
+                }
                 var items = UsbWriteStack.Children.OfType<UsbProgressItem>().ToList();
                 if (items.All((UsbProgressItem x) => x.WriteTask?.IsCompleted != false))
                 {
@@ -214,10 +225,27 @@ namespace KTWirzade.GUI.Windows
             }
         }
 
-        private async void CloseButton_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            _usbNotifier.Unregister();
             CloseWindow(preparescale);
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            // Always release the native CM_NOTIFY registration, regardless of how the
+            // window was closed (close button, Alt+F4, programmatic Close, owner shutdown).
+            // Null out the static field first so the registration is never released twice.
+            NotificationContext notifier = _usbNotifier;
+            _usbNotifier = null;
+            try
+            {
+                notifier?.Unregister();
+            }
+            catch (Exception)
+            {
+                // Teardown of the native notification handle is best-effort only.
+            }
+            base.OnClosed(e);
         }
 
         private int NotificationReceived(IntPtr hNotify, IntPtr Context, CM_NOTIFY_ACTION Action, IntPtr EventDataPtr, int EventDataSize)

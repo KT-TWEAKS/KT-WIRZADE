@@ -6,7 +6,7 @@
                         xmlns:local="clr-namespace:KTWirzade.GUI"
                         xmlns:controls="clr-namespace:KTWirzade.GUI.Controls"
                         mc:Ignorable="d"
-                        Title="MessageBox" Height="450" Width="800">
+                        Title="MessageBox" Height="450" Width="800" Style="{DynamicResource Window}">
     
     <FrameworkElement.Resources>
         <ResourceDictionary>
@@ -39,10 +39,10 @@
         </Border>
         <Border UseLayoutRounding="True" BorderBrush="{DynamicResource LicensePopupSeparatorBrush}" VerticalAlignment="Bottom" Height="47" Background="{DynamicResource LicensePopupLowerBrush}" BorderThickness="0,1,0,0">
             <StackPanel UseLayoutRounding="True" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,2,13,0">
-                <Button Name="MainButton" UseLayoutRounding="True" Style="{DynamicResource BlueButton}" Click="MainButton_OnClick">
+                <Button Name="MainButton" UseLayoutRounding="True" IsDefault="True" Style="{DynamicResource BlueButton}" Click="MainButton_OnClick">
                     <TextBlock Name="MainButtonText" Text="Mostrar log" Foreground="#FFFFFFFF" FontSize="11" Margin="-4,0" />
                 </Button>
-                <Button Name="SecondButton" Margin="13,0,0,0" UseLayoutRounding="True" Padding="0" Width="78" Style="{DynamicResource SpecialButton}" Click="SecondButton_OnClick">
+                <Button Name="SecondButton" Margin="13,0,0,0" UseLayoutRounding="True" IsCancel="True" Padding="0" Width="78" Style="{DynamicResource SpecialButton}" Click="SecondButton_OnClick">
                     <TextBlock Name="SecondButtonText" Text="No" Margin="0,1,0,0" FontSize="11" />
                 </Button>
             </StackPanel>

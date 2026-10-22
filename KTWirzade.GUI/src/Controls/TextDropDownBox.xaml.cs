@@ -30,25 +30,8 @@ namespace KTWirzade.GUI.Controls
 
         public event RoutedEventHandler Click;
 
-        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
-        {
-            if (depObj == null)
-            {
-                yield break;
-            }
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
-            {
-                DependencyObject child = VisualTreeHelper.GetChild(depObj, i);
-                if (child != null && child is T)
-                {
-                    yield return (T)child;
-                }
-                foreach (T item in FindVisualChildren<T>(child))
-                {
-                    yield return item;
-                }
-            }
-        }
+        // FindVisualChildren now lives in Windows.DialogHelpers (shared with the
+        // dialogs); the local byte-identical copy was removed.
 
         public async Task Open()
         {
@@ -65,11 +48,11 @@ namespace KTWirzade.GUI.Controls
                     CenterX = 0.0,
                     CenterY = 0.0
                 };
-                SymbolIcon obj = FindVisualChildren<SymbolIcon>((DependencyObject)Button).Last();
+                SymbolIcon obj = KTWirzade.GUI.Windows.DialogHelpers.FindVisualChildren<SymbolIcon>((DependencyObject)Button).Last();
                 ((UIElement)(object)obj).RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
                 ((UIElement)(object)obj).RenderTransform = rotate;
                 ((UIElement)(object)obj).RenderTransform.BeginAnimation(RotateTransform.AngleProperty, chevanimation);
-                Border BoxContainer = FindVisualChildren<Border>(Button).First();
+                Border BoxContainer = KTWirzade.GUI.Windows.DialogHelpers.FindVisualChildren<Border>(Button).First();
                 if (BoxHeight == -1.0)
                 {
                     BoxHeight = BoxContainer.Height;
@@ -128,7 +111,7 @@ namespace KTWirzade.GUI.Controls
                     CenterX = 0.0,
                     CenterY = 0.0
                 };
-                SymbolIcon obj = FindVisualChildren<SymbolIcon>(Button).Last();
+                SymbolIcon obj = KTWirzade.GUI.Windows.DialogHelpers.FindVisualChildren<SymbolIcon>(Button).Last();
                 ((UIElement)(object)obj).RenderTransformOrigin = new System.Windows.Point(0.5, 0.5);
                 ((UIElement)(object)obj).RenderTransform = rotate;
                 ((UIElement)(object)obj).RenderTransform.BeginAnimation(RotateTransform.AngleProperty, chevanimation);
@@ -151,7 +134,7 @@ namespace KTWirzade.GUI.Controls
                 Storyboard.SetTarget(animation, ScrollBorder);
                 Storyboard.SetTargetProperty(animation, new PropertyPath(FrameworkElement.HeightProperty));
                 storyboard.Children.Add(animation);
-                Border BoxContainer = FindVisualChildren<Border>(Button).First();
+                Border BoxContainer = KTWirzade.GUI.Windows.DialogHelpers.FindVisualChildren<Border>(Button).First();
                 if (BoxHeight == -1.0)
                 {
                     BoxHeight = BoxContainer.Height;

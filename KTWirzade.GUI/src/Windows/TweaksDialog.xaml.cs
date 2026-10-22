@@ -177,64 +177,24 @@ namespace KTWirzade.GUI.Windows
             return new RectangleGeometry(new Rect(395.5, 40.5 + (double)(511 * index), 431.3, (index != lastIndex) ? 484 : 500), 8.0, 8.0);
         }
 
-        public static BitmapSource Convert(Bitmap bitmap)
-        {
-            using MemoryStream memory = new MemoryStream();
-            bitmap.Save(memory, ImageFormat.Png);
-            memory.Position = 0L;
-            BitmapImage bitmapImage = new BitmapImage();
-            bitmapImage.BeginInit();
-            bitmapImage.StreamSource = memory;
-            bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
-            bitmapImage.EndInit();
-            bitmapImage.Freeze();
-            return bitmapImage;
-        }
-
-        [DllImport("gdi32.dll")]
-        public static extern bool DeleteObject(IntPtr hObject);
-
-        private Bitmap BitmapImage2Bitmap(BitmapImage bitmapImage)
-        {
-            using MemoryStream outStream = new MemoryStream();
-            PngBitmapEncoder pngBitmapEncoder = new PngBitmapEncoder();
-            pngBitmapEncoder.Frames.Add(BitmapFrame.Create(bitmapImage));
-            pngBitmapEncoder.Save(outStream);
-            return new Bitmap(new Bitmap(outStream));
-        }
-
-        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
-        {
-            if (depObj == null)
-            {
-                yield break;
-            }
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
-            {
-                DependencyObject child = VisualTreeHelper.GetChild(depObj, i);
-                if (child != null && child is T)
-                {
-                    yield return (T)child;
-                }
-                foreach (T item in FindVisualChildren<T>(child))
-                {
-                    yield return item;
-                }
-            }
-        }
-
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
-            TweakStack.Children.Cast<ITweakModule>().Last().SetLast();
+            if (TweakStack.Children.Count > 0)
+            {
+                TweakStack.Children.Cast<ITweakModule>().Last().SetLast();
+            }
             if (MaterialManager.IsVMwareVM && SystemInfoEx.WindowsVersion.BuildNumber >= 22523)
             {
                 RootWindow.SetResourceReference(BackgroundProperty, "FakeBackgroundBrush");
             }
             double ppuX = PresentationSource.FromVisual(this).CompositionTarget.TransformToDevice.M11;
             double ppuY = PresentationSource.FromVisual(this).CompositionTarget.TransformToDevice.M22;
-            TweakStack.Children.Cast<ITweakModule>().First().StartOperations();
+            if (TweakStack.Children.Count > 0)
+            {
+                TweakStack.Children.Cast<ITweakModule>().First().StartOperations();
+            }
             List<ImageParams> images = new List<ImageParams>();
-            List<System.Windows.Controls.Image> raw = (from image in FindVisualChildren<System.Windows.Controls.Image>(TweakStack)
+            List<System.Windows.Controls.Image> raw = (from image in DialogHelpers.FindVisualChildren<System.Windows.Controls.Image>(TweakStack)
                                                        where image.Name != null && !image.Name.Contains("Icon")
                                                        select image).ToList();
             raw.ForEach(delegate (System.Windows.Controls.Image x)
@@ -251,7 +211,7 @@ namespace KTWirzade.GUI.Windows
             {
                 foreach (ImageParams current in images)
                 {
-                    sources.Add(Convert(ImageUtilities.ResizeImage(BitmapImage2Bitmap(current.raw), current.scaleX, current.scaleY)));
+                    sources.Add(DialogHelpers.Convert(ImageUtilities.ResizeImage(DialogHelpers.BitmapImage2Bitmap(current.raw), current.scaleX, current.scaleY)));
                 }
             });
             int i = 0;
@@ -283,6 +243,12 @@ namespace KTWirzade.GUI.Windows
 
         private async void SwitchPageButton_OnClick(object sender, RoutedEventArgs e)
         {
+            // Bounds guard: if there is no next page (or no clip geometry for it),
+            // do nothing instead of indexing out of range.
+            if (_pageIndex + 1 >= TweakStack.Children.Count || _pageIndex + 1 >= ExcludeGeometries.Children.Count)
+            {
+                return;
+            }
             Storyboard storyboard = new Storyboard();
             SwitchPageButton.IsEnabled = false;
             ThicknessAnimation buttonAnim = new ThicknessAnimation(new Thickness(0.0, SwitchPageButton.Margin.Top - 1300.0, 185.0, 0.0), new Duration(TimeSpan.FromMilliseconds(400.0)))

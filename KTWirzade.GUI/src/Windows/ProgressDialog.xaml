@@ -57,7 +57,7 @@
             </Grid>
             <Grid Column="1" Height="501" VerticalAlignment="Top">
                 <Border Background="{DynamicResource PageBackground}" CornerRadius="9,0,0,9" />
-                <Border Name="PageContainer" BorderBrush="{DynamicResource PageBorderBrush}" BorderThickness="1,1,0,1" Background="#00FFFFFF" CornerRadius="8,0,0,8" Padding="29,31,29,0">
+                <Border Name="PageContainer" BorderBrush="{DynamicResource PageBorderBrush}" BorderThickness="1,1,0,1" Background="{DynamicResource PageBackground}" CornerRadius="8,0,0,8" Padding="29,31,29,0">
                     <Grid>
                         <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top">
                             <TextBlock Name="PageTitleText" FontSize="16" FontWeight="Bold" Text="Aplicar playbook" MaxWidth="305" HorizontalAlignment="Left" VerticalAlignment="Top" DataContext="{Binding Source={x:Static gui:GlobalsGUI.Current}}" />

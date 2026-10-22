@@ -51,6 +51,7 @@ namespace KTWirzade.GUI.Controls
             DataContext = this;
             Rect.Margin = new Thickness(-RectWidth, 0.0, 0.0, 0.0);
             Loaded += OnLoaded;
+            Unloaded += OnUnloaded;
         }
 
         public async Task WaitForAnimation()
@@ -58,10 +59,14 @@ namespace KTWirzade.GUI.Controls
             if (board != null)
             {
                 pendingStop = true;
-                while (pendingStop)
+                // Time-bounded wait: if the loop is already gone (control removed),
+                // never spin forever on the 20ms poll.
+                DateTime deadline = DateTime.UtcNow.AddSeconds(5);
+                while (pendingStop && DateTime.UtcNow < deadline)
                 {
                     await Task.Delay(20);
                 }
+                pendingStop = false;
             }
         }
 
@@ -71,10 +76,13 @@ namespace KTWirzade.GUI.Controls
             {
                 board.SetSpeedRatio(multiplier);
                 pendingStop = true;
-                while (pendingStop)
+                // Time-bounded wait (see WaitForAnimation).
+                DateTime deadline = DateTime.UtcNow.AddSeconds(5);
+                while (pendingStop && DateTime.UtcNow < deadline)
                 {
                     await Task.Delay(20);
                 }
+                pendingStop = false;
             }
         }
 
@@ -90,6 +98,13 @@ namespace KTWirzade.GUI.Controls
         private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             Container.Clip = new RectangleGeometry(new Rect(0.0, 0.0, ActualWidth, BarHeight));
+        }
+
+        private void OnUnloaded(object sender, RoutedEventArgs e)
+        {
+            // Stop the self-rescheduling animation loop once the control leaves the
+            // visual tree, so it no longer keeps re-arming (and holds references).
+            pendingStop = true;
         }
 
         private async void RepeatBoard(object sender, EventArgs e)

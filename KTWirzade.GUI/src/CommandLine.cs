@@ -293,7 +293,8 @@ namespace KTWirzade.GUI
             }
             if (propertyType == typeof(string))
             {
-                return value;
+                // Undo the '::' escaping applied by SerializeArgument (see SplitEscapedFields).
+                return value?.Replace("::", ":");
             }
             if (propertyType == typeof(bool))
             {
@@ -322,7 +323,11 @@ namespace KTWirzade.GUI
             if (propertyType.IsClass)
             {
                 object instance = Activator.CreateInstance(propertyType);
-                string[] array2 = value.Split(':');
+                // SerializeArgument escapes ':' inside values as '::' and uses a single ':'
+                // between fields, so the value must be split on single colons ONLY (a naive
+                // Split(':') breaks every value containing an escaped colon, e.g. A=x::y) and
+                // each field unescaped back afterwards.
+                string[] array2 = SplitEscapedFields(value);
                 for (int i = 0; i < array2.Length; i++)
                 {
                     string[] parts = array2[i].Split('=');
@@ -342,6 +347,36 @@ namespace KTWirzade.GUI
                 return instance;
             }
             throw new SerializationException("Unexpected type '" + propertyType.Name + "' of property in class '" + data.GetType().Name + "'.");
+        }
+
+        /// <summary>
+        /// Splits a serialized value on its field separators. SerializeArgument escapes every
+        /// literal ':' inside a value as '::' and joins fields with a single ':', so a
+        /// separator is a ':' that is NOT the first half of a '::' pair when scanned
+        /// left-to-right. Example: "A=x::y:B=1" -> ["A=x::y", "B=1"] (A's value is "x:y"),
+        /// and "A=x:::B=1" -> ["A=x::", "B=1"] (A's value is "x:").
+        /// </summary>
+        private static string[] SplitEscapedFields(string value)
+        {
+            List<string> parts = new List<string>();
+            int start = 0;
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (value[i] != ':')
+                {
+                    continue;
+                }
+                if (i + 1 < value.Length && value[i + 1] == ':')
+                {
+                    // Escaped literal ':' inside the current value; consume both.
+                    i++;
+                    continue;
+                }
+                parts.Add(value.Substring(start, i - start));
+                start = i + 1;
+            }
+            parts.Add(value.Substring(start));
+            return parts.ToArray();
         }
 
         public static bool EnumValueHasAttribute(Type enumType, object enumValue, Type attributeType)

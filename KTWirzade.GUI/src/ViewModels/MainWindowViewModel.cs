@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using KTWirzade.GUI.Models;
 using KTWirzade.Shared.Cache;
+using KTWirzade.Shared.I18n;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -56,17 +57,17 @@ namespace KTWirzade.GUI.ViewModels
 
         private UIElement _NextButtonContent = new TextBlock
         {
-            Text = "Next"
+            Text = LanguageManager.T("Button.Next", "Next")
         };
 
         private UIElement _CancelButtonContent = new TextBlock
         {
-            Text = "Cancel"
+            Text = LanguageManager.T("Button.Cancel", "Cancel")
         };
 
         private UIElement _PreviousButtonContent = new TextBlock
         {
-            Text = "Back"
+            Text = LanguageManager.T("Button.Previous", "Back")
         };
 
         private ICommand _NextButtonCommand;
@@ -92,11 +93,11 @@ namespace KTWirzade.GUI.ViewModels
             set
             {
                 SetProperty(ref _isOnline, value);
-                NetworkStatusText = value ? "Online" : "Offline";
+                NetworkStatusText = value ? LanguageManager.T("Status.Online", "Online") : LanguageManager.T("Status.Offline", "Offline");
             }
         }
 
-        private string _networkStatusText = "Online";
+        private string _networkStatusText = LanguageManager.T("Status.Online", "Online");
         public string NetworkStatusText
         {
             get => _networkStatusText;
@@ -113,6 +114,12 @@ namespace KTWirzade.GUI.ViewModels
             }
             set
             {
+                // GetNextPage/GetPreviousPage return null for terminal pages; ignore so a
+                // finished wizard does not NRE on MainPreviousButtonActive below.
+                if (value == null)
+                {
+                    return;
+                }
                 Unsubscribe();
                 SetProperty(ref _currentViewModel, value, "CurrentViewModel");
                 if (!value.MainPreviousButtonActive.HasValue)
@@ -168,7 +175,7 @@ namespace KTWirzade.GUI.ViewModels
                 {
                     return _PreviousButtonActive.Value;
                 }
-                return _currentViewModel.HasPreviousPage();
+                return _currentViewModel != null && _currentViewModel.HasPreviousPage();
             }
             set
             {
@@ -324,7 +331,7 @@ namespace KTWirzade.GUI.ViewModels
         {
             get
             {
-                throw new NotImplementedException();
+                return _PulseNextButtonCommand;
             }
             set
             {
@@ -557,17 +564,20 @@ namespace KTWirzade.GUI.ViewModels
 
         public override ViewModelBase GetNextPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            // The main window VM is not part of the page flow; navigation is driven by the
+            // current page VM. Return null instead of throwing so bindings/command handlers
+            // that probe for a next page do not crash.
+            return null;
         }
 
         public override ViewModelBase GetPreviousPage(ApplicationState state)
         {
-            throw new NotImplementedException();
+            return null;
         }
 
         public override bool HasPreviousPage()
         {
-            throw new NotImplementedException();
+            return false;
         }
     }
 }

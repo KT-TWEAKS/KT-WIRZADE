@@ -22,6 +22,7 @@
     <SolidColorBrush x:Key="ProgressBarBrush" Color="#8b5cf6" />
     <SolidColorBrush x:Key="ContentBoxBorderBrush" Color="#661c1d1e" />
     <SolidColorBrush x:Key="FakeBackgroundBrush" Color="#A6161719" />
+    <SolidColorBrush x:Key="FakePageBackgroundBrush" Color="#181a1b" Opacity="1" />
     <SolidColorBrush x:Key="PrimaryBrush" Color="#99141517" />
     <SolidColorBrush x:Key="SecondaryBrush" Color="#A6232427" />
     <SolidColorBrush x:Key="VerificationPopupBackgroundBrush" Color="#2f2f30" />

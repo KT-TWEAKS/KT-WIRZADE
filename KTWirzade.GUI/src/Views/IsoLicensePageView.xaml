@@ -62,7 +62,7 @@
           </controls:TextDropDownBox>
       </StackPanel>
         <Popup Name="Popup" UseLayoutRounding="True" Width="700" Height="490" VerticalOffset="-490" IsOpen="False" StaysOpen="True" PopupAnimation="Fade" AllowsTransparency="True" PlacementTarget="{Binding RelativeSource={RelativeSource AncestorType=Window}}" MouseLeftButtonDown="FocusWindow">
-            <Border UseLayoutRounding="True" Padding="132,126,133,128" CornerRadius="{DynamicResource PopupCornerRadius}" Background="#44000000">
+            <Border UseLayoutRounding="True" Padding="132,126,133,128" CornerRadius="{DynamicResource PopupCornerRadius}" Background="{DynamicResource OverlayScrimBrush}">
                 <Border UseLayoutRounding="True" Width="365" Height="176" CornerRadius="9" BorderThickness="1" BorderBrush="{DynamicResource LicensePopupBorder}" Background="{DynamicResource LicensePopupBackground}">
                     <UIElement.Effect>
                         <DropShadowEffect ShadowDepth="0" BlurRadius="40" Opacity="0.27" />
