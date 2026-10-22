@@ -1,17 +1,39 @@
+<div align="center">
+
+<img src="KTWirzade.GUI/src/Icons/brand/kt-tweaks-icon.png" width="96" alt="Ícone do KT WIRZADE" />
+
 # KT WIRZADE
+
+**Motor de playbooks para otimização, desbloqueio e personalização do Windows 10/11** — interface própria em PT-BR/EN, rollback por sessão e atualizador com verificação de hash.
+
+[![Release](https://img.shields.io/github/v/release/KT-TWEAKS/KT-WIRZADE)](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/latest) [![Downloads](https://img.shields.io/github/downloads/KT-TWEAKS/KT-WIRZADE/total)](https://github.com/KT-TWEAKS/KT-WIRZADE/releases) [![Build](https://github.com/KT-TWEAKS/KT-WIRZADE/actions/workflows/build.yml/badge.svg)](https://github.com/KT-TWEAKS/KT-WIRZADE/actions) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/KT-TWEAKS/KT-WIRZADE?style=social)](https://github.com/KT-TWEAKS/KT-WIRZADE/stargazers)
+
+[**Baixar agora (v1.0.2)**](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/latest) · [Catálogo de playbooks verificados](https://github.com/KT-TWEAKS/KT-TWEAKS-APBX) · [Site oficial](https://kt-wirzade-site.vercel.app) · [Reportar problema](https://github.com/KT-TWEAKS/KT-WIRZADE/issues)
+
+</div>
 
 O **KT WIRZADE** é uma plataforma para criar, validar e executar playbooks de configuração do Windows. Ele transforma um pacote `.apbx` em uma experiência guiada: o usuário escolhe recursos na interface, acompanha a execução e pode consultar ou usar o rollback quando uma operação tiver backup.
 
 O projeto é uma versão customizada e expandida do [AME Wizard](https://ameliorated.io), com identidade própria, interface em PT-BR/EN, motor compartilhado entre GUI e CLI e foco em automação reproduzível para instalações, otimizações e personalizações do Windows.
 
-[![Build](https://github.com/KT-TWEAKS/KT-WIRZADE/actions/workflows/build.yml/badge.svg)](https://github.com/KT-TWEAKS/KT-WIRZADE/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-> **Versão estável atual:** `1.0.2` · [Baixar EXE x64](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/download/v1.0.2/KT-WIRZADE-v1.0.2-win-x64.exe) · [Release](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/tag/v1.0.2) · [Playbooks](https://github.com/KT-TWEAKS/KT-TWEAKS-APBX)
-
 ![Painel principal do KT WIRZADE 1.0.1](docs/imagens/painel-v1.0.1-hotfix.png)
 
 *Painel real da versão 1.0.1: seleção de playbooks, status online, atualizações, idioma e acesso ao rollback.*
+
+### Sumário
+
+1. [O que ele faz](#o-que-ele-faz)
+2. [Principais recursos](#principais-recursos)
+3. [Ações de playbook](#ações-de-playbook)
+4. [Rollback e limites](#rollback-e-limites)
+5. [Segurança e confiabilidade](#segurança-e-confiabilidade)
+6. [Instalação e uso](#instalação-e-uso)
+7. [Arquitetura do código](#arquitetura-do-código)
+8. [Build local](#build-local)
+9. [Update 1.0.2](#update-102)
+10. [Hotfix 1.0.1](#hotfix-101)
+
+> **Destaques da `1.0.2`:** diálogo único de Atualizações, correção do blur do Windows 10, paridade Win10/Win11 revisada, confirmação nos bypasses e rollback com "Abrir pasta". Detalhes na seção [Update 1.0.2](#update-102).
 
 ## O que ele faz
 
