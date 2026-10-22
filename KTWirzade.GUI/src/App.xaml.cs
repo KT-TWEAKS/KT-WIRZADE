@@ -33,6 +33,38 @@ namespace KTWirzade.GUI
 
         internal static string ActivePath = Environment.ExpandEnvironmentVariables("%TEMP%\\AME");
 
+        static App()
+        {
+            // The single EXE carries every runtime dependency inside itself. This class
+            // initializer runs BEFORE the JIT of OnStartup and any BAML: those mega-methods
+            // reference KTWirzade.Shared types, and on a clean machine (no runtime directory
+            // on disk) the JIT itself must bind that assembly while compiling them — dying
+            // with FileNotFoundException before a single statement of OnStartup could run.
+            // Two guarantees here, both required:
+            //   1) an assembly resolver whose IL references NO KTWirzade.Shared token loads
+            //      dependencies from the runtime directory for JIT/BAML binds, and
+            //   2) the embedded dependencies are extracted quietly (BCL-only paths) so the
+            //      resolver has real files to hand back on the very first run.
+            AppDomain.CurrentDomain.AssemblyResolve += EarlyRuntimeResolve;
+            BootEmbeddedDependencies();
+        }
+
+        private static Assembly EarlyRuntimeResolve(object sender, ResolveEventArgs args)
+        {
+            // BCL-only IL: this resolver fires before KTWirzade.Shared is guaranteed loadable
+            // (its first job may be loading exactly that assembly), so its body must not
+            // reference any Shared token — no Core.Log here.
+            try
+            {
+                string baseName = new AssemblyName(args.Name).Name;
+                string candidate = Path.Combine(ActivePath, baseName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ? baseName : baseName + ".dll");
+                if (File.Exists(candidate))
+                    return Assembly.LoadFrom(candidate);
+            }
+            catch { }
+            return null;
+        }
+
         public static bool DeCrippleDefender = false;
 
         private static Mutex _ktWirzadeMutex;
@@ -180,6 +212,55 @@ namespace KTWirzade.GUI
                     "https://dotnet.microsoft.com/download/dotnet-framework/net48\r\n\r\n" +
                     "(Detected .NET Framework release: " + release + ")",
                     "KT WIRZADE", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Hand);
+                Environment.Exit(-1);
+            }
+        }
+
+        /// <summary>
+        /// Extracts the embedded runtime dependencies and preloads KTWirzade.Shared from
+        /// the App class initializer — BEFORE OnStartup (or any other GUI method) is JIT'ed.
+        /// On the first run of the single EXE there is no runtime directory on disk yet and
+        /// neither JIT nor BAML fire AppDomain.AssemblyResolve, so the whole-body JIT of
+        /// OnStartup used to die with FileNotFoundException for KTWirzade.Shared. Called
+        /// from the App static constructor, this method's own IL references only BCL and
+        /// KTWirzade.GUI members: a partial failure must not make the JIT of the bootstrap
+        /// itself fail before its first statement runs (so its catch never touches Core.Log
+        /// — which lives in KTWirzade.Shared).
+        /// </summary>
+        private static void BootEmbeddedDependencies()
+        {
+            try
+            {
+                if (!Directory.Exists(ActivePath))
+                    Directory.CreateDirectory(ActivePath);
+                ExtractRuntimeDependencies(ActivePath, overwrite: false);
+                // Deliberately NOT Assembly.LoadFrom(KTWirzade.Shared.dll) here:
+                // methods called right after (ExtractFluentIconsToDisk) reference Core.Log
+                // (KTWirzade.Shared) in their catch handlers, so the JIT of those bodies must
+                // bind Shared — and once EarlyRuntimeResolve is registered the bind loads it
+                // from the runtime directory without any extra preload.
+            }
+            catch (Exception ex)
+            {
+                // NO Log here: Core.Log lives in KTWirzade.Shared and referencing it in this
+                // catch would poison the JIT of the whole bootstrap when Shared is exactly
+                // what failed to load. File + WPF MessageBox only.
+                try
+                {
+                    File.WriteAllText(
+                        Path.Combine(Path.GetTempPath(), "KTWirzade-bootstrap-error.txt"),
+                        DateTimeOffset.Now.ToString("o") + "\r\n" + ex);
+                }
+                catch { }
+                try
+                {
+                    System.Windows.MessageBox.Show(
+                        "Não foi possível preparar os arquivos de execução do KT WIRZADE.\r\n" +
+                        "Feche o aplicativo, limpe %TEMP%\\AME e execute novamente.\r\n\r\n" +
+                        "Detalhes:\r\n" + ex,
+                        "KT WIRZADE", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                }
+                catch { }
                 Environment.Exit(-1);
             }
         }
