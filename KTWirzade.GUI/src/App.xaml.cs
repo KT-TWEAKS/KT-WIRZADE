@@ -233,7 +233,14 @@ namespace KTWirzade.GUI
             {
                 if (!Directory.Exists(ActivePath))
                     Directory.CreateDirectory(ActivePath);
-                ExtractRuntimeDependencies(ActivePath, overwrite: false);
+                // UPGRADES KEEP STALE COPIES: %TEMP%\AME persists across releases. A copy of
+                // KTWirzade.Shared.dll left by an older build (missing methods/properties the
+                // current GUI calls) makes the JIT resolver load it and the process dies with
+                // MissingMethodException far into startup. The runtime directory is derived
+                // state from THIS executable, so embedded deps are always (re)extracted here —
+                // before any JIT bind can ever resolve from disk. The in-flow extraction in
+                // Extracted() also re-runs, but by then the assemblies are already bound.
+                ExtractRuntimeDependencies(ActivePath, overwrite: true);
                 // Deliberately NOT Assembly.LoadFrom(KTWirzade.Shared.dll) here:
                 // methods called right after (ExtractFluentIconsToDisk) reference Core.Log
                 // (KTWirzade.Shared) in their catch handlers, so the JIT of those bodies must
@@ -1318,7 +1325,18 @@ namespace KTWirzade.GUI
                     }
                     catch (Exception)
                     {
-                        goto end_IL_0059;
+                        // Antivirus or another process can keep the file open: renaming the
+                        // stale copy keeps the upgrade path alive instead of silently leaving
+                        // an outdated dependency on disk.
+                        try
+                        {
+                            string staleName = file + ".stale-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+                            File.Move(file, staleName);
+                        }
+                        catch (Exception)
+                        {
+                            goto end_IL_0059;
+                        }
                     }
                 }
                 using (FileStream fsDlst = new FileStream(file, FileMode.CreateNew, FileAccess.Write))
