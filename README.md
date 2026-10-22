@@ -7,7 +7,7 @@ O projeto é uma versão customizada e expandida do [AME Wizard](https://amelior
 [![Build](https://github.com/KT-TWEAKS/KT-WIRZADE/actions/workflows/build.yml/badge.svg)](https://github.com/KT-TWEAKS/KT-WIRZADE/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> **Versão estável atual:** `1.0.1` · [Baixar EXE x64](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/download/v1.0.1/KT-WIRZADE-v1.0.1-win-x64.exe) · [Release](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/tag/v1.0.1) · [Playbooks](https://github.com/KT-TWEAKS/KT-TWEAKS-APBX)
+> **Versão estável atual:** `1.0.2` · [Baixar EXE x64](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/download/v1.0.2/KT-WIRZADE-v1.0.2-win-x64.exe) · [Release](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/tag/v1.0.2) · [Playbooks](https://github.com/KT-TWEAKS/KT-TWEAKS-APBX)
 
 ![Painel principal do KT WIRZADE 1.0.1](docs/imagens/painel-v1.0.1-hotfix.png)
 
@@ -75,13 +75,13 @@ Rollback não é uma máquina do tempo: apps/pacotes removidos, comandos arbitr�
 
 ### Usuário final
 
-1. Baixe o [EXE final da release `v1.0.1`](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/tag/v1.0.1).
+1. Baixe o [EXE final da release `v1.0.2`](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/tag/v1.0.2).
 2. Execute no Windows 10/11 x64 e aceite a elevação quando necessário.
 3. Importe ou selecione um playbook `.apbx`.
 4. Revise as opções e os requisitos antes de iniciar.
 5. Acompanhe a execução e consulte o painel de rollback se precisar reverter operações compatíveis.
 
-Usuários da versão `1.0.0` devem fazer essa primeira atualização manualmente. A partir da `1.0.1`, o verificador de updates identifica versões antigas e oferece o download direto do EXE oficial.
+Usuários da versão `1.0.0` devem fazer essa primeira atualização manualmente. A partir da `1.0.1`, o verificador de updates identifica versões antigas e oferece o download direto do EXE oficial; desde a `1.0.2`, quando a API não publica o hash do asset, a conferência usa o `SHA256SUMS.txt` da própria release.
 
 ### Desenvolvedor de playbooks
 
@@ -152,12 +152,26 @@ O script restaura dependências, compila Shared/CLI/GUI, verifica recursos incor
 
 ```text
 artifacts/
-├── KT-WIRZADE-v1.0.1-win-x64.exe
-├── KT-WIRZADE-v1.0.1-manifest.json
+├── KT-WIRZADE-v1.0.2-win-x64.exe
+├── KT-WIRZADE-v1.0.2-manifest.json
 └── SHA256SUMS.txt
 ```
 
-A validação do hotfix `1.0.1` foi concluída em Windows sem erros de build. Permanecem apenas warnings legados de referências e nullable.
+A validação da `1.0.2` foi concluída em Windows sem erros de build: compilação do executável único, manifest com hash, `SHA256SUMS.txt` e suíte de regressão executada (99 verificações). Permanecem apenas warnings legados de referências e nullable.
+
+## Update 1.0.2
+
+O update consolida a experiência de atualização e a estabilidade do Windows 10/11. Principais mudanças em relação à `1.0.1`:
+
+- **Diálogo único de Atualizações**: o aviso de abertura, o botão da barra de título e o cartão do painel abrem a mesma janela, com download, barra de progresso em tempo real, conferência de SHA-256 e o controle "Verificar ao iniciar".
+- **Filtro de hash à prova de falha**: quando a API do GitHub não publica o `digest` do asset, o hash sai do `SHA256SUMS.txt` da própria release; HTTP 429 tratado sem loop; versões com quatro segmentos comparadas corretamente.
+- Estabilidade da interface: corrigidos os crashes ao abrir o menu Atualizações e ao trocar o canal estável/pré-release (o motivo da falha aparece dentro do diálogo, sem fechar o app).
+- **Blur do Windows 10 corrigido**: sem trilhas fantasma ao arrastar janelas, blur reaplicado ao maximizar/restaurar e superfície sólida do tema quando os "Efeitos de transparência" do sistema estão desligados.
+- **Paridade Win10/Win11 revisada**: auditoria completa de temas e recursos das duas famílias; o aviso de versão não suportada informa se a build é do Windows 10 ou do 11.
+- Playbooks: remoção de `.apbx` reconhecida em tempo real (a seleção do playbook é limpa sem erro no meio do fluxo); bypass de "instalação fresca" pede confirmação com o risco explicado; playbooks de builds anteriores continuam aplicáveis com aviso mais claro.
+- Rollback: botão "Abrir pasta" abre no Explorador os logs e backups da sessão selecionada.
+
+Detalhes em [RELEASE-1.0.2.md](RELEASE-1.0.2.md).
 
 ## Hotfix 1.0.1
 
@@ -174,6 +188,5 @@ MIT — veja [LICENSE](LICENSE).
 ## Organização dos repositórios
 
 Este repositório público mantém somente a source estável, os arquivos necessários
-para compilação/release e a documentação voltada ao usuário final. Suítes de
-regressão, diagnósticos, relatórios de auditoria e materiais de desenvolvimento
-ficam fora deste repositório público.
+para compilação/release e a documentação voltada ao usuário final. Suítes de regressão, diagnósticos, relatórios de auditoria e materiais de desenvolvimento ficam fora deste repositório público.
+
