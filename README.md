@@ -1,10 +1,6 @@
 <div align="center">
 
-<img src="KTWirzade.GUI/src/Icons/brand/kt-tweaks-icon.png" width="96" alt="Ícone do KT WIRZADE" />
-
-# KT WIRZADE
-
-**Motor de playbooks para otimização, desbloqueio e personalização do Windows 10/11** — interface própria em PT-BR/EN, rollback por sessão e atualizador com verificação de hash.
+<img src="docs/imagens/banner-wirzade.png" alt="KT WIRZADE — Motor de playbooks para otimização, desbloqueio e personalização do Windows 10/11" width="100%" />
 
 [![Release](https://img.shields.io/github/v/release/KT-TWEAKS/KT-WIRZADE)](https://github.com/KT-TWEAKS/KT-WIRZADE/releases/latest) [![Downloads](https://img.shields.io/github/downloads/KT-TWEAKS/KT-WIRZADE/total)](https://github.com/KT-TWEAKS/KT-WIRZADE/releases) [![Build](https://github.com/KT-TWEAKS/KT-WIRZADE/actions/workflows/build.yml/badge.svg)](https://github.com/KT-TWEAKS/KT-WIRZADE/actions) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/KT-TWEAKS/KT-WIRZADE?style=social)](https://github.com/KT-TWEAKS/KT-WIRZADE/stargazers)
 
